@@ -1,0 +1,84 @@
+policy:
+  product_model: proprietary_saas_with_distributed_pos_clients
+  default_action: deny_unless_reviewed
+  legal_review_required_for:
+    - LGPL
+    - MPL
+    - EPL
+    - GPL
+    - AGPL
+    - custom
+    - source_available
+    - unknown
+  prohibited_without_explicit_approval:
+    - copy_from_repository_without_license
+    - copy_gpl_or_agpl_into_proprietary_core
+    - remove_copyright_or_attribution
+    - copy_branding_images_or_proprietary_text
+    - copy_open_source_pos_without_required_footer
+
+status_values:
+  - proposed
+  - research_only
+  - approved_dependency
+  - approved_adaptation
+  - rejected
+  - removed
+
+entries: []
+
+entry_template:
+  id: OSS-0000
+  status: proposed
+  purpose: ""
+  reuse_mode: research_reference|dependency|adapted_component|platform_adoption
+  project: ""
+  repository: ""
+  exact_commit_or_tag: ""
+  files_or_packages: []
+  declared_license: ""
+  file_level_licenses_checked: false
+  notice_files: []
+  copyright_holders: []
+  modifications: ""
+  product_locations: []
+  distributed_to_customers: false
+  network_service_use: true
+  compatible_with_product_model: unknown
+  legal_review:
+    required: true
+    reviewer: ""
+    decision: pending
+    date: null
+  security_review:
+    owner: ""
+    result: pending
+  update_owner: ""
+  upstream_tracking: ""
+  sbom_component: ""
+  third_party_notice_entry: ""
+  tests: []
+  notes: ""
+
+known_projects:
+  erpnext:
+    observed_license: GPL-3.0
+    default_decision: research_only
+  frappe_framework:
+    observed_license: MIT
+    default_decision: file_level_review_required
+  odoo_community:
+    observed_license: LGPL-3.0_with_mixed_dependencies
+    default_decision: research_only_unless_legal_approval
+  oca_pos:
+    observed_license: AGPL-3.0_or_module_specific
+    default_decision: research_only
+  apache_ofbiz:
+    observed_license: Apache-2.0
+    default_decision: adaptation_possible_after_review
+  medusa:
+    observed_license: MIT
+    default_decision: dependency_or_adaptation_possible_after_review
+  opensourcepos:
+    observed_license: custom_modified_mit_visible_footer_requirement
+    default_decision: research_only_for_white_label_product
