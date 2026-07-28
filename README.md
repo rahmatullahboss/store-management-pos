@@ -4,15 +4,15 @@ Documentation-first product and architecture program for a multi-tenant, interna
 
 **Research baseline:** 2026-07-27  
 **Implementation checkpoint:** 2026-07-28  
-**Status:** Foundation active; business modules remain blocked until the Foundation Gate passes.
+**Status:** Foundation technical gate passed; handoff is blocked only by actual-worktree `.ai-bridge` review. Business modules remain blocked.
 
 ## Current implementation phase
 
-The `program/foundation-v1` branch is building the shared production baseline: Cloudflare application shells, direct Neon adapters, tenant/RLS enforcement, shared exact primitives, versioned contracts, identity/RBAC, audit, idempotency, outbox/inbox, preview automation and the reference vertical slice.
+The `program/foundation-v1` branch contains the shared production baseline: Cloudflare application shells, direct Neon adapters, tenant/RLS enforcement, shared exact primitives, versioned contracts, identity/RBAC, audit, idempotency, outbox/inbox, preview automation and the reference vertical slice.
 
-Foundation is owned by one exclusive agent. Small-task agents are prohibited. After the Foundation Gate passes, separate agents may own complete MOD-A through MOD-G workpacks in isolated Git worktrees, Git branches and Neon branches; integration remains serial.
+Foundation is `handoff_ready` and remains owned by one exclusive agent. Exact Neon p99/concurrency/cold-wake evidence, Cloudflare CPU/wall/memory evidence and a disposable Neon PITR/reconciliation drill have passed. Small-task agents are prohibited. After the actual worktree's ignored `.ai-bridge` instructions are reviewed and FOUNDATION is marked `complete`, separate agents may own complete MOD-A through MOD-G workpacks in isolated Git worktrees, Git branches and Neon branches; integration remains serial.
 
-Current machine-readable status and evidence are maintained in `docs/agent-workpacks/program-board.yaml`. Gate evidence and continuation blockers are maintained in `docs/architecture/foundation/foundation-gate.md` and `docs/agent-handoffs/FOUNDATION-handoff.md`.
+Current machine-readable status and evidence are maintained in `docs/agent-workpacks/program-board.yaml`. Gate evidence and the single remaining blocker are maintained in `docs/architecture/foundation/foundation-gate.md` and `docs/agent-handoffs/FOUNDATION-handoff.md`.
 
 ## Primary decision
 
