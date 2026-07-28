@@ -31,6 +31,8 @@ Before implementation, read:
 14. Relevant ADRs under `docs/adr/`
 15. `docs/agent-workpacks/program-board.yaml`
 16. `docs/open-source/reuse-register.yaml`
+17. `PRODUCT.md`
+18. `docs/18-IMPECCABLE-DESIGN-WORKFLOW.md`
 
 ## Architecture constraints
 
@@ -51,6 +53,17 @@ Before implementation, read:
 - ERPNext, Odoo/OCA, Dolibarr and other GPL/AGPL implementations are reference-only by default.
 - Do not copy GPL, AGPL, unknown or custom-license code into the proprietary core.
 - Record every approved dependency or adapted file in `docs/open-source/reuse-register.yaml`.
+
+## UI and design workflow
+
+- Impeccable is the mandatory project-local design skill for substantial frontend work.
+- Before editing UI, run `node .agents/skills/impeccable/scripts/context.mjs --target <primary-file-or-route>` once in the session.
+- Read the owning Impeccable command reference and `reference/craft-floor.md` before UI implementation.
+- New substantial screens/flows require shaping; completed UI requires hardening, deterministic detection, accessibility/responsive verification and a final polish/finish review.
+- Inherit the approved shared visual system. Do not create a parallel component library or module-specific visual language.
+- `PRODUCT.md` owns product truth. `DESIGN.md`, after it exists, owns durable implemented visual decisions.
+- Do not create speculative `DESIGN.md`; the Foundation Agent writes it only after the first real application shell is implemented and reviewed.
+- Record Impeccable commands, detector results, visual evidence and unresolved findings in every UI-bearing workpack handoff.
 
 ## Git and safety
 

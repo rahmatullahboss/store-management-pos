@@ -169,6 +169,16 @@ Observed GPL-3.0 licensing; use as a research reference unless licensing strateg
 
 Verify current repository and commercial/product terms before any use.
 
+### Impeccable
+
+- Repository: https://github.com/pbakaus/impeccable
+- Documentation: https://impeccable.style/
+- Pinned revision: `1cf7d7ab0f1ac0bb3319fd20be389a3009f4037d`
+- Vendored skill version: `4.0.3`
+- License: Apache-2.0
+
+Used as project-local Codex and GitHub Copilot design guidance and deterministic frontend quality tooling. Preserve the upstream license and notices, review executable scripts, and update only through a dedicated pinned tooling change.
+
 ## 4. Internationalization standards
 
 ### Unicode CLDR
