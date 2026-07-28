@@ -25,7 +25,7 @@
     "check:secrets": "node tooling/scripts/check-secrets.mjs",
     "check:licenses": "node tooling/scripts/check-licenses.mjs",
     "sbom": "node tooling/scripts/generate-sbom.mjs",
-    "verify": "npm run format:check && npm run lint && npm run check:boundaries && npm run typecheck && npm test && npm run check:secrets && npm run check:licenses && npm run sbom",
+    "verify": "npm run format:check && npm run lint && npm run check:boundaries && npm run typecheck && npm run db:validate && npm test && npm run check:secrets && npm run check:licenses && npm run sbom",
     "db:migrate": "node tooling/scripts/apply-migrations.mjs",
     "ci:neon-preview": "node tooling/scripts/neon-preview-ci.mjs",
     "ci:neon-recovery": "node tooling/scripts/run-neon-recovery-ci.mjs",
@@ -35,7 +35,8 @@
     "benchmark:neon": "node tooling/scripts/benchmark-neon.mjs",
     "design:detect": "node .agents/skills/impeccable/scripts/detect.mjs --json apps/admin-web apps/pos-web packages/ui",
     "design:evidence": "npm run build && node tooling/scripts/foundation-design-evidence.mjs",
-    "design:verify": "npm run design:detect && npm run design:evidence"
+    "design:verify": "npm run design:detect && npm run design:evidence",
+    "db:validate": "node tooling/scripts/validate-module-migrations.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "1.1.0"

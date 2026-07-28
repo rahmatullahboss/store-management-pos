@@ -1,0 +1,11 @@
+{
+  "module": "MOD-B-PROCUREMENT",
+  "version": 1,
+  "migrations": [
+    {
+      "id": "PUR-0001",
+      "file": "PUR-0001-procurement.sql",
+      "sha256": "e3c50b272ce00fa44fde26902d8d259282505b61a0ae0459dd7b9b2329e331b3"
+    }
+  ]
+}
