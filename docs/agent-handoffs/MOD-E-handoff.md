@@ -21,7 +21,7 @@
 
 ## Current checkpoint
 
-Activation and exact-domain/provider-contract checkpoints are complete. Database implementation is the current checkpoint.
+Activation, exact-domain/provider-contract and canonical database checkpoints are complete. Payment lifecycle orchestration is the current checkpoint.
 
 ## Rolling checkpoint evidence
 
@@ -29,7 +29,7 @@ Activation and exact-domain/provider-contract checkpoints are complete. Database
 |---|---|---|
 | E0 activation | complete | commit `2eba4e2`; exact Git/Neon isolation, Foundation parity, plan, programme-board activation |
 | E1 exact domain | complete | exact payment transitions/refund/settlement arithmetic; immutable balanced journals/reversals/period guards/trial balance; provider contract, deterministic recovery simulator, safe diagnostics; 12 focused tests |
-| E2 database | pending | — |
+| E2 database | complete | PAY-0001/ACC-0001/BNK-0001; 26 forced-RLS tables, 15 triggers, 5 views, 25 permissions, zero runtime direct DML; fresh rebuild and rollback-only invariant drill; isolated Neon deployment |
 | E3 payments | pending | — |
 | E4 accounting | pending | — |
 | E5 banking | pending | — |
@@ -38,5 +38,5 @@ Activation and exact-domain/provider-contract checkpoints are complete. Database
 
 ## Known limitations
 
-- No MOD-E business migration has been applied yet.
+- Database command functions are intentionally deferred to E3-E5; runtime has read-only table grants until security-definer task commands are installed.
 - No provider credential or live provider adapter is configured; the first adapter is a deterministic simulator.

@@ -4,6 +4,7 @@ import path from "node:path";
 import { performance } from "node:perf_hooks";
 import { Client } from "@neondatabase/serverless";
 import { fileURLToPath } from "node:url";
+import { discoverMigrationManifests } from "./migration-manifests.mjs";
 
 const { NEON_API_KEY, GITHUB_RUN_ID, GITHUB_SHA } = process.env;
 if (!NEON_API_KEY) throw new Error("NEON_API_KEY is required for the Neon recovery drill");
@@ -75,16 +76,18 @@ async function connectWithRetry(connectionString, attempts = 30) {
   throw lastError;
 }
 
-async function applyFoundation(client) {
-  const manifest = JSON.parse(await readFile(path.join(root, "database/foundation/manifest.json"), "utf8"));
-  for (const migration of manifest.migrations) {
-    const migrationSql = await readFile(path.join(root, "database/foundation/migrations", migration.file), "utf8");
-    const digest = createHash("sha256").update(migrationSql).digest("hex");
-    if (digest !== migration.sha256) throw new Error(`${migration.id} checksum does not match the manifest`);
-    await client.query(migrationSql);
+async function applyPlatformMigrations(client) {
+  const manifests = await discoverMigrationManifests(root);
+  for (const manifest of manifests) {
+    for (const migration of manifest.migrations) {
+      const migrationSql = await readFile(path.join(manifest.migrationsDirectory, migration.file), "utf8");
+      const digest = createHash("sha256").update(migrationSql).digest("hex");
+      if (digest !== migration.sha256) throw new Error(`${migration.id} checksum does not match the manifest`);
+      await client.query(migrationSql);
+    }
   }
   await client.query(await readFile(path.join(root, "database/foundation/seeds/dev.sql"), "utf8"));
-  return manifest.migrations.map((migration) => migration.id);
+  return manifests.flatMap((manifest) => manifest.migrations.map((migration) => migration.id));
 }
 
 async function createRecoveryMarker(client) {
@@ -185,7 +188,7 @@ try {
   let client = await connectWithRetry(initialUri);
   initialProjectConnectMs = performance.now() - initialConnectStarted;
   try {
-    migrationIds = await applyFoundation(client);
+    migrationIds = await applyPlatformMigrations(client);
     const marker = await createRecoveryMarker(client);
     markerId = marker.id;
     beforeMutation = await recoveryState(client, markerId);

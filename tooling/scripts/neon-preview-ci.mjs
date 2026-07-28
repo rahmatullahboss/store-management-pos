@@ -5,10 +5,11 @@ import path from "node:path";
 import { performance } from "node:perf_hooks";
 import { neon, Client } from "@neondatabase/serverless";
 import { fileURLToPath } from "node:url";
+import { discoverMigrationManifests } from "./migration-manifests.mjs";
 
 const { NEON_API_KEY, NEON_PROJECT_ID, NEON_PARENT_BRANCH_ID, GITHUB_HEAD_REF, GITHUB_RUN_ID, GITHUB_SHA } = process.env;
 if (!NEON_API_KEY || !NEON_PROJECT_ID || !NEON_PARENT_BRANCH_ID) {
-  throw new Error("NEON_API_KEY, NEON_PROJECT_ID and NEON_PARENT_BRANCH_ID are required for Foundation preview CI");
+  throw new Error("NEON_API_KEY, NEON_PROJECT_ID and NEON_PARENT_BRANCH_ID are required for preview CI");
 }
 
 const root = fileURLToPath(new URL("../..", import.meta.url));
@@ -90,18 +91,20 @@ try {
   const connectionString = uriResponse.uri;
   if (typeof connectionString !== "string") throw new Error("Neon API did not return a connection URI");
 
-  const manifest = JSON.parse(await readFile(path.join(root, "database/foundation/manifest.json"), "utf8"));
-  migrationIds = manifest.migrations.map((migration) => migration.id);
+  const manifests = await discoverMigrationManifests(root);
+  migrationIds = manifests.flatMap((manifest) => manifest.migrations.map((migration) => migration.id));
   const client = new Client({ connectionString });
   const connectStarted = performance.now();
   await client.connect();
   initialConnectMs = performance.now() - connectStarted;
   try {
-    for (const migration of manifest.migrations) {
-      const migrationSql = await readFile(path.join(root, "database/foundation/migrations", migration.file), "utf8");
-      const digest = createHash("sha256").update(migrationSql).digest("hex");
-      if (digest !== migration.sha256) throw new Error(`${migration.id} checksum does not match the manifest`);
-      await client.query(migrationSql);
+    for (const manifest of manifests) {
+      for (const migration of manifest.migrations) {
+        const migrationSql = await readFile(path.join(manifest.migrationsDirectory, migration.file), "utf8");
+        const digest = createHash("sha256").update(migrationSql).digest("hex");
+        if (digest !== migration.sha256) throw new Error(`${migration.id} checksum does not match the manifest`);
+        await client.query(migrationSql);
+      }
     }
     await client.query(await readFile(path.join(root, "database/foundation/seeds/dev.sql"), "utf8"));
   } finally {
@@ -111,7 +114,8 @@ try {
   await run("npm", ["run", "test:integration"], {
     ...process.env,
     DATABASE_URL: connectionString,
-    FND_NEON_INTEGRATION: "1"
+    FND_NEON_INTEGRATION: "1",
+    MOD_E_NEON_INTEGRATION: "1"
   });
 
   idleObservedAt = await waitForEndpointIdle(endpointId);
@@ -132,7 +136,7 @@ try {
   });
 
   status = "passed";
-  console.log(`Neon preview branch ${branchName} passed migrations, integration, cold-wake and benchmark checks`);
+  console.log(`Neon preview branch ${branchName} passed platform migrations, integration, cold-wake and benchmark checks`);
 } catch (error) {
   failure = error instanceof Error ? error.message : String(error);
   throw error;

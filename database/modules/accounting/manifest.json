@@ -1,0 +1,12 @@
+{
+  "module": "MOD-E-ACCOUNTING",
+  "version": 1,
+  "order": 20,
+  "migrations": [
+    {
+      "id": "ACC-0001",
+      "file": "ACC-0001-accounting-core.sql",
+      "sha256": "e8e7dba5c06d6213f41222f6504c488ca4c28f35b73e5712a282534d30453905"
+    }
+  ]
+}

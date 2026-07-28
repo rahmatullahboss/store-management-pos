@@ -9,7 +9,7 @@ test("Foundation direct Neon HTTP and WebSocket integration", { skip: !enabled, 
 
   const sql = neon(connectionString);
   const migrations = await sql`SELECT migration_id FROM platform.schema_migrations ORDER BY migration_id`;
-  assert.deepEqual(migrations.map((row) => row.migration_id), ["FND-0001", "FND-0002", "FND-0003", "FND-0004", "FND-0005"]);
+  assert.deepEqual(migrations.map((row) => row.migration_id).filter((id) => id.startsWith("FND-")), ["FND-0001", "FND-0002", "FND-0003", "FND-0004", "FND-0005"]);
   const policies = await sql`SELECT count(*)::int AS count FROM pg_policies WHERE schemaname = 'platform'`;
   assert.ok(policies[0].count >= 23);
 
