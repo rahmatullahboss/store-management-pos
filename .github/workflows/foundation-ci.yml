@@ -45,7 +45,7 @@ jobs:
 
   neon-preview:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     needs: verify
     env:
       NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
@@ -59,6 +59,39 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npm run build
       - run: npm run ci:neon-preview
+      - name: Upload Neon preview evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: neon-foundation-${{ github.run_id }}
+          path: |
+            artifacts/foundation/neon-benchmark-report.json
+            artifacts/foundation/neon-preview-lifecycle.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  neon-recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: verify
+    env:
+      NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - run: npm run ci:neon-recovery
+      - name: Upload Neon recovery evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: neon-recovery-${{ github.run_id }}
+          path: artifacts/foundation/neon-recovery-report.json
+          if-no-files-found: warn
+          retention-days: 14
 
   cloudflare-preview:
     runs-on: ubuntu-latest
