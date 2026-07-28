@@ -1,6 +1,6 @@
 program:
   name: international-store-management-pos
-  status: foundation_active
+  status: foundation_handoff_ready
   execution_mode: single_foundation_agent
   current_agent_scope: FOUNDATION
   delegation_unit: whole_module_workpack
@@ -23,8 +23,8 @@ activation_policy:
     owner_count: 1
     owner_workpack: FOUNDATION
     module_agents_allowed: false
-    reason: foundation_gate_not_passed
-    continuation: foundation_owner_continues_without_subtask_delegation
+    reason: ignored_ai_bridge_instruction_review_pending
+    continuation: foundation_owner_holds_handoff_until_actual_worktree_instructions_are_reviewed
   after_foundation_gate:
     module_agents_allowed: true
     assignment_rule: one_agent_one_complete_workpack
@@ -47,7 +47,7 @@ activation_policy:
 workpacks:
   - id: FOUNDATION
     title: Foundation Platform
-    status: active
+    status: handoff_ready
     wave: 0
     exclusive: true
     agent_assignment: single_complete_workpack_owner
@@ -57,8 +57,8 @@ workpacks:
     depends_on: []
     document: docs/agent-workpacks/FOUNDATION-PLATFORM.md
     integration_order: 0
-    evidence: [monorepo_and_boundary_baseline, contract_pack_v1, foundation_migrations_fnd_0001_to_fnd_0005, oidc_jwks_mfa_identity_baseline, identity_session_device_revocation, session_revocation_function_only_write_path, repository_owned_typescript_5_8_3, connected_core_ci_all_steps_pass, dependency_audit_pass, parent_child_schema_diff_reviewed, dedicated_nonproduction_neon_branch, live_tenant_rls_isolation_23_tables, reference_vertical_slice, live_idempotency_audit_outbox_inbox, local_verification_suite_14_tests, foundation_checkpoint_handoff, fresh_neon_rebuild_and_cleanup, manual_neon_preview_lifecycle_and_cleanup, automated_fnd_0001_to_fnd_0005_preview_lifecycle_and_cleanup, direct_neon_driver_baseline_executed, cloudflare_worker_deploy_version_preview_health_bundle_startup_latency_and_cleanup]
-    remaining_gate_blockers: [neon_exact_benchmark_artifact_p99_concurrency_and_cold_wake, cloudflare_per_invocation_cpu_wall_time_and_memory_evidence, pitr_restore_and_reconciliation_drill, ignored_ai_bridge_instruction_review]
+    evidence: [monorepo_and_boundary_baseline, contract_pack_v1, foundation_migrations_fnd_0001_to_fnd_0005, oidc_jwks_mfa_identity_baseline, identity_session_device_revocation, session_revocation_function_only_write_path, repository_owned_typescript_5_8_3, connected_core_ci_all_steps_pass, dependency_audit_pass, parent_child_schema_diff_reviewed, dedicated_nonproduction_neon_branch, live_tenant_rls_isolation_23_tables, reference_vertical_slice, live_idempotency_audit_outbox_inbox, local_verification_suite_14_tests, foundation_checkpoint_handoff, fresh_neon_rebuild_and_cleanup, manual_neon_preview_lifecycle_and_cleanup, automated_fnd_0001_to_fnd_0005_preview_lifecycle_and_cleanup, direct_neon_http_batch_websocket_p50_p95_p99_and_concurrency_artifact, genuine_neon_scale_to_zero_cold_wake, neon_transaction_rollback_recovery, disposable_neon_pitr_restore_and_reconciliation, cloudflare_worker_deploy_version_preview_health_bundle_latency_and_cleanup, cloudflare_graphql_cpu_wall_time_and_memory_evidence, canceled_ci_preview_branch_cleanup]
+    remaining_gate_blockers: [ignored_ai_bridge_instruction_review]
 
   - { id: MOD-A, title: Catalog Pricing and Tax, status: blocked, wave: 1, agent_assignment: whole_workpack_only, exclusive: false, git_branch: module/catalog-pricing-tax-v1, worktree: .worktrees/catalog-pricing-tax, neon_branch: dev/module-catalog-pricing-tax, depends_on: [FOUNDATION], document: docs/agent-workpacks/MOD-A-CATALOG-PRICING-TAX.md, integration_order: 1, evidence: [] }
   - { id: MOD-B, title: Inventory and Procurement, status: blocked, wave: 1, agent_assignment: whole_workpack_only, exclusive: false, git_branch: module/inventory-procurement-v1, worktree: .worktrees/inventory-procurement, neon_branch: dev/module-inventory-procurement, depends_on: [FOUNDATION], contract_dependencies: [MOD-A], document: docs/agent-workpacks/MOD-B-INVENTORY-PROCUREMENT.md, integration_order: 2, evidence: [] }
