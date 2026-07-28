@@ -18,6 +18,15 @@
 - No production or unrelated Neon project was used. A dedicated non-production project was created for this program.
 - MOD-A through MOD-G were not started and remain blocked.
 
+## Delegation and execution decision
+
+- Foundation remains owned by one exclusive agent until every Foundation Gate item passes.
+- Small-task agents are prohibited; Foundation work is not split into infrastructure, database, identity, UI, testing or documentation subagents.
+- After Foundation is complete, one separate agent may own each complete MOD-A through MOD-G workpack.
+- Module agents use isolated Git branches, worktrees and Neon branches and may not spawn internal subagents.
+- Parallel development is allowed only after Foundation completion; integration and merging remain serial in the order MOD-A, MOD-B, MOD-C, MOD-E, MOD-D, MOD-F, MOD-G.
+- Activation, ownership, blockers, checkpoints and evidence are tracked in `docs/agent-workpacks/program-board.yaml` and governed by `docs/agent-workpacks/MODULE-AGENT-ACTIVATION-POLICY.md`.
+
 ## Checkpoint implementation
 
 - Production monorepo/workspace layout with API, jobs, admin and POS shells.
@@ -92,4 +101,4 @@ Foundation is **not complete** and the PR must remain draft. MOD-A through MOD-G
 
 ## Exact continuation action
 
-From the actual `.worktrees/foundation-v1` checkout, read all applicable `.ai-bridge` instructions, pull the published checkpoint without discarding local changes, configure the three Neon CI secrets with `NEON_PROJECT_ID=twilight-boat-26805962` and `NEON_PARENT_BRANCH_ID=br-autumn-pine-axuo502u`, execute the preview job, then record branch cleanup and direct-driver benchmark evidence. Keep Foundation active and every module blocked until all remaining items in `docs/architecture/foundation/foundation-gate.md` pass.
+Continue Foundation under the single assigned owner. From the actual `.worktrees/foundation-v1` checkout, read all applicable `.ai-bridge` instructions, pull the published checkpoint without discarding local changes, configure the required Neon CI secrets, execute the preview job, and record branch cleanup and direct-driver benchmark evidence. Do not activate any module agent until `program-board.yaml` marks FOUNDATION complete and the selected module workpacks ready.

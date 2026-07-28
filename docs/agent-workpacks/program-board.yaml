@@ -1,8 +1,13 @@
 program:
   name: international-store-management-pos
   status: foundation_active
+  execution_mode: single_foundation_agent
+  current_agent_scope: FOUNDATION
   delegation_unit: whole_module_workpack
   prohibit_subtask_agents: true
+  module_agent_launch_condition: foundation_gate_passed
+  post_foundation_execution_mode: controlled_parallel_module_agents
+  integration_mode: serial
   integration_branch: program/integration-v1
   foundation_branch: program/foundation-v1
   foundation_neon_branch: dev/foundation-v1
@@ -13,12 +18,39 @@ program:
 
 status_values: [blocked, ready, active, handoff_ready, integration_review, integrated, rework, complete]
 
+activation_policy:
+  current_phase:
+    owner_count: 1
+    owner_workpack: FOUNDATION
+    module_agents_allowed: false
+    reason: foundation_gate_not_passed
+    continuation: foundation_owner_continues_without_subtask_delegation
+  after_foundation_gate:
+    module_agents_allowed: true
+    assignment_rule: one_agent_one_complete_workpack
+    maximum_parallel_workpacks: 7
+    development_parallelism: allowed_in_isolated_branches
+    integration_parallelism: prohibited
+    dependency_strategy: frozen_contracts_and_approved_simulators
+    recommended_launch_waves:
+      - wave: 1
+        workpacks: [MOD-A, MOD-B, MOD-C, MOD-E]
+        prerequisites: [foundation_complete, contracts_v1_frozen, dependency_fixtures_ready]
+      - wave: 2
+        workpacks: [MOD-D, MOD-F]
+        prerequisites: [wave_1_contract_checkpoints_available]
+      - wave: 3
+        workpacks: [MOD-G]
+        prerequisites: [cross_module_reporting_and_integration_contracts_stable]
+    integration_order: [MOD-A, MOD-B, MOD-C, MOD-E, MOD-D, MOD-F, MOD-G]
+
 workpacks:
   - id: FOUNDATION
     title: Foundation Platform
     status: active
     wave: 0
     exclusive: true
+    agent_assignment: single_complete_workpack_owner
     git_branch: program/foundation-v1
     worktree: .worktrees/foundation-v1
     neon_branch: dev/foundation-v1
@@ -28,13 +60,13 @@ workpacks:
     evidence: [monorepo_and_boundary_baseline, contract_pack_v1, foundation_migrations_fnd_0001_to_fnd_0003, dedicated_nonproduction_neon_branch, live_tenant_rls_isolation, reference_vertical_slice, live_idempotency_audit_outbox_inbox, local_verification_suite, foundation_checkpoint_handoff, fresh_neon_rebuild_and_cleanup]
     remaining_gate_blockers: [live_cloudflare_worker_deployment_and_cpu_memory_bundle_benchmark, live_direct_neon_http_websocket_latency_and_concurrency_benchmark, pr_preview_neon_branch_lifecycle_ci_execution, pitr_restore_and_reconciliation_drill]
 
-  - { id: MOD-A, title: Catalog Pricing and Tax, status: blocked, wave: 1, exclusive: false, git_branch: module/catalog-pricing-tax-v1, worktree: .worktrees/catalog-pricing-tax, neon_branch: dev/module-catalog-pricing-tax, depends_on: [FOUNDATION], document: docs/agent-workpacks/MOD-A-CATALOG-PRICING-TAX.md, integration_order: 1, evidence: [] }
-  - { id: MOD-B, title: Inventory and Procurement, status: blocked, wave: 1, exclusive: false, git_branch: module/inventory-procurement-v1, worktree: .worktrees/inventory-procurement, neon_branch: dev/module-inventory-procurement, depends_on: [FOUNDATION], contract_dependencies: [MOD-A], document: docs/agent-workpacks/MOD-B-INVENTORY-PROCUREMENT.md, integration_order: 2, evidence: [] }
-  - { id: MOD-C, title: Customer Sales and Fulfillment, status: blocked, wave: 1, exclusive: false, git_branch: module/customer-sales-fulfillment-v1, worktree: .worktrees/customer-sales-fulfillment, neon_branch: dev/module-customer-sales-fulfillment, depends_on: [FOUNDATION], contract_dependencies: [MOD-A, MOD-B], document: docs/agent-workpacks/MOD-C-CUSTOMER-SALES-FULFILLMENT.md, integration_order: 3, evidence: [] }
-  - { id: MOD-D, title: POS Cash Offline and Hardware, status: blocked, wave: 1, exclusive: false, git_branch: module/pos-cash-offline-v1, worktree: .worktrees/pos-cash-offline, neon_branch: dev/module-pos-cash-offline, depends_on: [FOUNDATION], contract_dependencies: [MOD-A, MOD-B, MOD-C, MOD-E], document: docs/agent-workpacks/MOD-D-POS-CASH-OFFLINE.md, integration_order: 5, evidence: [] }
-  - { id: MOD-E, title: Payments Accounting and Banking, status: blocked, wave: 1, exclusive: false, git_branch: module/payments-accounting-banking-v1, worktree: .worktrees/payments-accounting-banking, neon_branch: dev/module-payments-accounting-banking, depends_on: [FOUNDATION], contract_dependencies: [MOD-B, MOD-C], document: docs/agent-workpacks/MOD-E-PAYMENTS-ACCOUNTING-BANKING.md, integration_order: 4, evidence: [] }
-  - { id: MOD-F, title: Localization Country Packs and Compliance, status: blocked, wave: 1, exclusive: false, git_branch: module/localization-compliance-v1, worktree: .worktrees/localization-compliance, neon_branch: dev/module-localization-compliance, depends_on: [FOUNDATION], contract_dependencies: [MOD-A, MOD-C, MOD-D, MOD-E], document: docs/agent-workpacks/MOD-F-LOCALIZATION-COMPLIANCE.md, integration_order: 6, evidence: [] }
-  - { id: MOD-G, title: Reporting Integrations and SaaS Administration, status: blocked, wave: 1, exclusive: false, git_branch: module/reporting-integrations-saas-v1, worktree: .worktrees/reporting-integrations-saas, neon_branch: dev/module/reporting-integrations, depends_on: [FOUNDATION], contract_dependencies: [MOD-A, MOD-B, MOD-C, MOD-D, MOD-E, MOD-F], document: docs/agent-workpacks/MOD-G-REPORTING-INTEGRATIONS-SAAS.md, integration_order: 7, evidence: [] }
+  - { id: MOD-A, title: Catalog Pricing and Tax, status: blocked, wave: 1, agent_assignment: whole_workpack_only, exclusive: false, git_branch: module/catalog-pricing-tax-v1, worktree: .worktrees/catalog-pricing-tax, neon_branch: dev/module-catalog-pricing-tax, depends_on: [FOUNDATION], document: docs/agent-workpacks/MOD-A-CATALOG-PRICING-TAX.md, integration_order: 1, evidence: [] }
+  - { id: MOD-B, title: Inventory and Procurement, status: blocked, wave: 1, agent_assignment: whole_workpack_only, exclusive: false, git_branch: module/inventory-procurement-v1, worktree: .worktrees/inventory-procurement, neon_branch: dev/module-inventory-procurement, depends_on: [FOUNDATION], contract_dependencies: [MOD-A], document: docs/agent-workpacks/MOD-B-INVENTORY-PROCUREMENT.md, integration_order: 2, evidence: [] }
+  - { id: MOD-C, title: Customer Sales and Fulfillment, status: blocked, wave: 1, agent_assignment: whole_workpack_only, exclusive: false, git_branch: module/customer-sales-fulfillment-v1, worktree: .worktrees/customer-sales-fulfillment, neon_branch: dev/module-customer-sales-fulfillment, depends_on: [FOUNDATION], contract_dependencies: [MOD-A, MOD-B], document: docs/agent-workpacks/MOD-C-CUSTOMER-SALES-FULFILLMENT.md, integration_order: 3, evidence: [] }
+  - { id: MOD-D, title: POS Cash Offline and Hardware, status: blocked, wave: 2, agent_assignment: whole_workpack_only, exclusive: false, git_branch: module/pos-cash-offline-v1, worktree: .worktrees/pos-cash-offline, neon_branch: dev/module-pos-cash-offline, depends_on: [FOUNDATION], contract_dependencies: [MOD-A, MOD-B, MOD-C, MOD-E], document: docs/agent-workpacks/MOD-D-POS-CASH-OFFLINE.md, integration_order: 5, evidence: [] }
+  - { id: MOD-E, title: Payments Accounting and Banking, status: blocked, wave: 1, agent_assignment: whole_workpack_only, exclusive: false, git_branch: module/payments-accounting-banking-v1, worktree: .worktrees/payments-accounting-banking, neon_branch: dev/module-payments-accounting-banking, depends_on: [FOUNDATION], contract_dependencies: [MOD-B, MOD-C], document: docs/agent-workpacks/MOD-E-PAYMENTS-ACCOUNTING-BANKING.md, integration_order: 4, evidence: [] }
+  - { id: MOD-F, title: Localization Country Packs and Compliance, status: blocked, wave: 2, agent_assignment: whole_workpack_only, exclusive: false, git_branch: module/localization-compliance-v1, worktree: .worktrees/localization-compliance, neon_branch: dev/module-localization-compliance, depends_on: [FOUNDATION], contract_dependencies: [MOD-A, MOD-C, MOD-D, MOD-E], document: docs/agent-workpacks/MOD-F-LOCALIZATION-COMPLIANCE.md, integration_order: 6, evidence: [] }
+  - { id: MOD-G, title: Reporting Integrations and SaaS Administration, status: blocked, wave: 3, agent_assignment: whole_workpack_only, exclusive: false, git_branch: module/reporting-integrations-saas-v1, worktree: .worktrees/reporting-integrations-saas, neon_branch: dev/module-reporting-integrations, depends_on: [FOUNDATION], contract_dependencies: [MOD-A, MOD-B, MOD-C, MOD-D, MOD-E, MOD-F], document: docs/agent-workpacks/MOD-G-REPORTING-INTEGRATIONS-SAAS.md, integration_order: 7, evidence: [] }
 
 rules:
   one_owner_per_workpack: true
@@ -42,6 +74,7 @@ rules:
   one_worktree_per_workpack: true
   one_neon_branch_per_workpack: true
   module_agent_may_spawn_subagents: false
+  small_task_agent_assignment: prohibited
   module_agent_may_edit_shared_contracts: false
   module_agent_may_edit_other_module_paths: false
   shared_contract_change_requires_cr: true
@@ -49,3 +82,7 @@ rules:
   production_data_in_preview_branches: false
   module_merge_parallelism: one_at_a_time
   development_parallelism_after_foundation: true
+  tracker_update_required_at_each_checkpoint: true
+  documentation_update_required_before_status_transition: true
+  handoff_required_before_owner_change: true
+  evidence_required_before_status_change: true
