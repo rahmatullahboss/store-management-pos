@@ -22,8 +22,10 @@ for (const file of await walk(root)) {
   const content = await readFile(file, "utf8");
   const relative = path.relative(root, file);
   if (!content.endsWith("\n")) failures.push(`${relative}: missing final newline`);
+  const extension = path.extname(file);
   content.split("\n").forEach((line, index) => {
-    if (/[ \t]+$/.test(line)) failures.push(`${relative}:${index + 1}: trailing whitespace`);
+    const markdownHardBreak = extension === ".md" && /[^ ] {2}$/.test(line);
+    if (/[ \t]+$/.test(line) && !markdownHardBreak) failures.push(`${relative}:${index + 1}: trailing whitespace`);
     if (line.includes("\t")) failures.push(`${relative}:${index + 1}: tab character`);
   });
 }
