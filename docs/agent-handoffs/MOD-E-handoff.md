@@ -21,14 +21,14 @@
 
 ## Current checkpoint
 
-Activation and implementation planning are complete. Domain implementation begins with failing invariant tests before production code.
+Activation and exact-domain/provider-contract checkpoints are complete. Database implementation is the current checkpoint.
 
 ## Rolling checkpoint evidence
 
 | Checkpoint | State | Evidence |
 |---|---|---|
-| E0 activation | active | exact Git/Neon isolation, Foundation parity, plan, programme-board activation |
-| E1 exact domain | pending | — |
+| E0 activation | complete | commit `2eba4e2`; exact Git/Neon isolation, Foundation parity, plan, programme-board activation |
+| E1 exact domain | complete | exact payment transitions/refund/settlement arithmetic; immutable balanced journals/reversals/period guards/trial balance; provider contract, deterministic recovery simulator, safe diagnostics; 12 focused tests |
 | E2 database | pending | — |
 | E3 payments | pending | — |
 | E4 accounting | pending | — |
