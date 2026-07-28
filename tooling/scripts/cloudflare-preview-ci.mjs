@@ -25,6 +25,7 @@ const configPath = path.join(root, `.wrangler-${workerName}.json`);
 const metafilePath = path.join(artifactsDir, "cloudflare-bundle-meta.json");
 const reportPath = path.join(artifactsDir, "cloudflare-preview-report.json");
 const apiBase = `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}`;
+let deployOutput = "";
 
 function redact(value) {
   return String(value || "")
@@ -98,9 +99,15 @@ async function requestHealth(url) {
   const started = performance.now();
   const response = await fetch(url, { headers: { "x-foundation-gate": GITHUB_RUN_ID || "manual" } });
   const elapsedMs = performance.now() - started;
-  const body = await response.json().catch(() => null);
+  const responseText = await response.text();
+  let body = null;
+  try {
+    body = JSON.parse(responseText);
+  } catch {
+    body = null;
+  }
   if (!response.ok || body?.status !== "healthy" || body?.service !== "api") {
-    throw new Error(`Cloudflare health check failed with HTTP ${response.status}`);
+    throw new Error(`Cloudflare health check failed at ${url} with HTTP ${response.status}: ${responseText.slice(0, 300)}`);
   }
   return { elapsedMs, body };
 }
@@ -111,25 +118,36 @@ function percentile(values, percentage) {
   return sorted[index];
 }
 
-async function resolveWorkerUrl(deployOutput) {
-  const match = deployOutput.match(/https:\/\/[a-z0-9.-]+\.workers\.dev/iu);
-  if (match) return `${match[0]}/health`;
-  const subdomain = await cloudflare("/workers/subdomain");
-  if (!subdomain?.subdomain) throw new Error("Cloudflare Workers subdomain is unavailable");
-  return `https://${workerName}.${subdomain.subdomain}.workers.dev/health`;
+async function resolveWorkerUrl(output) {
+  try {
+    const subdomain = await cloudflare("/workers/subdomain");
+    if (subdomain?.subdomain) return `https://${workerName}.${subdomain.subdomain}.workers.dev/health`;
+  } catch (error) {
+    console.warn(`could not resolve canonical Workers subdomain: ${error.message}`);
+  }
+  const matches = [...output.matchAll(/https:\/\/[a-z0-9.-]+\.workers\.dev/giu)].map((match) => match[0]);
+  if (!matches.length) throw new Error("Cloudflare deployment URL is unavailable");
+  return `${matches.at(-1)}/health`;
 }
 
-async function readBundleBytes() {
+async function readBundleMetrics() {
   const metafile = JSON.parse(await readFile(metafilePath, "utf8"));
-  return Object.values(metafile.outputs || {}).reduce((total, output) => total + Number(output.bytes || 0), 0);
+  const outputs = Object.entries(metafile.outputs || {});
+  const scriptBytes = outputs
+    .filter(([name]) => name.endsWith(".js"))
+    .reduce((total, [, output]) => total + Number(output.bytes || 0), 0);
+  const sourceMapBytes = outputs
+    .filter(([name]) => name.endsWith(".map"))
+    .reduce((total, [, output]) => total + Number(output.bytes || 0), 0);
+  return { scriptBytes, sourceMapBytes, totalBytes: scriptBytes + sourceMapBytes };
 }
 
 async function writeFailureReport(error) {
-  let bundleBytes = null;
+  let bundle = null;
   try {
-    bundleBytes = await readBundleBytes();
+    bundle = await readBundleMetrics();
   } catch {
-    bundleBytes = null;
+    bundle = null;
   }
   const report = {
     schemaVersion: 1,
@@ -138,9 +156,9 @@ async function writeFailureReport(error) {
     wranglerVersion: WRANGLER_VERSION,
     gitSha: GITHUB_SHA || null,
     runId: GITHUB_RUN_ID || null,
-    bundleBytes,
+    bundle,
     error: redact(error?.message || error),
-    commandOutput: error?.commandOutput || null
+    commandOutput: error?.commandOutput || (deployOutput ? redact(deployOutput) : null)
   };
   await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
 }
@@ -171,7 +189,7 @@ await writeFile(configPath, `${JSON.stringify({
 }, null, 2)}\n`, "utf8");
 
 try {
-  const deployOutput = await run("npx", [
+  deployOutput = await run("npx", [
     "--yes",
     `wrangler@${WRANGLER_VERSION}`,
     "deploy",
@@ -204,7 +222,7 @@ try {
   for (let index = 0; index < 20; index += 1) sequential.push((await requestHealth(healthUrl)).elapsedMs);
   const concurrent = await Promise.all(Array.from({ length: 20 }, () => requestHealth(healthUrl)));
   const concurrentLatencies = concurrent.map((result) => result.elapsedMs);
-  const bundleBytes = await readBundleBytes();
+  const bundle = await readBundleMetrics();
   const report = {
     schemaVersion: 1,
     status: "passed",
@@ -213,7 +231,7 @@ try {
     wranglerVersion: WRANGLER_VERSION,
     gitSha: GITHUB_SHA || null,
     runId: GITHUB_RUN_ID || null,
-    bundleBytes,
+    bundle,
     firstRequestMs: Number(firstRequest.elapsedMs.toFixed(2)),
     sequential: {
       count: sequential.length,
