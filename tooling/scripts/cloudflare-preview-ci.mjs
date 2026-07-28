@@ -25,7 +25,13 @@ const configPath = path.join(root, `.wrangler-${workerName}.json`);
 const metafilePath = path.join(artifactsDir, "cloudflare-bundle-meta.json");
 const reportPath = path.join(artifactsDir, "cloudflare-preview-report.json");
 const apiBase = `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}`;
-let deployed = false;
+
+function redact(value) {
+  return String(value || "")
+    .replaceAll(CLOUDFLARE_API_TOKEN, "[REDACTED_TOKEN]")
+    .replaceAll(CLOUDFLARE_ACCOUNT_ID, "[REDACTED_ACCOUNT]")
+    .replace(/\u001b\[[0-9;]*m/gu, "");
+}
 
 function run(command, args) {
   return new Promise((resolve, reject) => {
@@ -44,7 +50,11 @@ function run(command, args) {
     child.on("error", reject);
     child.on("exit", (code) => {
       if (code === 0) resolve(output);
-      else reject(new Error(`${command} exited with code ${code}`));
+      else {
+        const error = new Error(`${command} exited with code ${code}`);
+        error.commandOutput = redact(output);
+        reject(error);
+      }
     });
   });
 }
@@ -64,6 +74,20 @@ async function cloudflare(pathname, init = {}) {
     throw new Error(`Cloudflare API ${response.status}${messages ? `: ${messages}` : ""}`);
   }
   return payload?.result;
+}
+
+async function deleteWorker() {
+  const response = await fetch(`${apiBase}/workers/scripts/${encodeURIComponent(workerName)}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${CLOUDFLARE_API_TOKEN}` }
+  });
+  if (response.status === 404) return false;
+  const payload = await response.json().catch(() => null);
+  if (!response.ok || payload?.success === false) {
+    const messages = payload?.errors?.map((error) => error.message).filter(Boolean).join("; ");
+    throw new Error(`Cloudflare cleanup ${response.status}${messages ? `: ${messages}` : ""}`);
+  }
+  return true;
 }
 
 async function sleep(milliseconds) {
@@ -98,6 +122,27 @@ async function resolveWorkerUrl(deployOutput) {
 async function readBundleBytes() {
   const metafile = JSON.parse(await readFile(metafilePath, "utf8"));
   return Object.values(metafile.outputs || {}).reduce((total, output) => total + Number(output.bytes || 0), 0);
+}
+
+async function writeFailureReport(error) {
+  let bundleBytes = null;
+  try {
+    bundleBytes = await readBundleBytes();
+  } catch {
+    bundleBytes = null;
+  }
+  const report = {
+    schemaVersion: 1,
+    status: "failed",
+    workerName,
+    wranglerVersion: WRANGLER_VERSION,
+    gitSha: GITHUB_SHA || null,
+    runId: GITHUB_RUN_ID || null,
+    bundleBytes,
+    error: redact(error?.message || error),
+    commandOutput: error?.commandOutput || null
+  };
+  await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
 }
 
 await mkdir(artifactsDir, { recursive: true });
@@ -140,7 +185,6 @@ try {
     "--message",
     `Foundation gate ${GITHUB_SHA || "manual"}`
   ]);
-  deployed = true;
 
   const healthUrl = await resolveWorkerUrl(deployOutput);
   let firstRequest;
@@ -163,6 +207,7 @@ try {
   const bundleBytes = await readBundleBytes();
   const report = {
     schemaVersion: 1,
+    status: "passed",
     workerName,
     healthUrl,
     wranglerVersion: WRANGLER_VERSION,
@@ -186,15 +231,15 @@ try {
   };
   await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
   console.log(JSON.stringify(report, null, 2));
+} catch (error) {
+  await writeFailureReport(error);
+  throw error;
 } finally {
-  if (deployed) {
-    try {
-      await cloudflare(`/workers/scripts/${encodeURIComponent(workerName)}`, { method: "DELETE" });
-      console.log(`deleted Cloudflare preview worker ${workerName}`);
-    } catch (error) {
-      console.error(`failed to delete Cloudflare preview worker ${workerName}: ${error.message}`);
-      process.exitCode = 1;
-    }
+  try {
+    if (await deleteWorker()) console.log(`deleted Cloudflare preview worker ${workerName}`);
+  } catch (error) {
+    console.error(`failed to delete Cloudflare preview worker ${workerName}: ${error.message}`);
+    process.exitCode = 1;
   }
   await rm(configPath, { force: true });
 }
