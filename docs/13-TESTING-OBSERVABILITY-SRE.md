@@ -4,6 +4,8 @@
 
 This product manages money, tax, inventory and legal documents. Quality cannot rely mainly on UI testing. The test strategy must prove domain invariants, transaction recovery, tenant isolation, offline replay and operational restoration.
 
+Frontend quality also follows `docs/18-IMPECCABLE-DESIGN-WORKFLOW.md`. Deterministic Impeccable detection is a required UI check but does not replace browser rendering, accessibility, responsive, localisation or user-task testing.
+
 Use layered tests:
 
 - pure domain/unit tests;

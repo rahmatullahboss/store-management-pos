@@ -25,7 +25,56 @@ status_values:
   - rejected
   - removed
 
-entries: []
+entries:
+  - id: OSS-0001
+    status: approved_adaptation
+    purpose: AI-assisted frontend design guidance and deterministic UI quality detection for Codex and GitHub Copilot
+    reuse_mode: adapted_component
+    project: Impeccable
+    repository: https://github.com/pbakaus/impeccable
+    exact_commit_or_tag: 1cf7d7ab0f1ac0bb3319fd20be389a3009f4037d
+    version: 4.0.3
+    files_or_packages:
+      - upstream:.agents/skills/impeccable/**
+      - local:.agents/skills/impeccable/**
+      - local:.github/skills/impeccable/**
+      - upstream:.codex/hooks.json
+      - upstream:.github/hooks/impeccable.json
+    declared_license: Apache-2.0
+    file_level_licenses_checked: true
+    notice_files:
+      - third_party/impeccable/LICENSE
+      - third_party/impeccable/NOTICE.md
+    copyright_holders:
+      - Impeccable contributors
+      - Paul Bakaus
+    modifications: Skill payload mirrored for two provider locations; Codex hook command changed from an absolute/global source path to the repository-local .agents path; project workflow and product context authored independently.
+    product_locations:
+      - .agents/skills/impeccable
+      - .github/skills/impeccable
+      - .codex/hooks.json
+      - .github/hooks/impeccable.json
+    distributed_to_customers: false
+    network_service_use: false
+    compatible_with_product_model: true
+    legal_review:
+      required: false
+      reviewer: engineering_policy
+      decision: approved_permissive_license
+      date: 2026-07-28
+    security_review:
+      owner: foundation_agent
+      result: initial_source_and_executable_tooling_review_required_before_release
+    update_owner: foundation_agent
+    upstream_tracking: Pin exact upstream commit; update only through a dedicated reviewed tooling branch.
+    sbom_component: pkg:github/pbakaus/impeccable@1cf7d7ab0f1ac0bb3319fd20be389a3009f4037d
+    third_party_notice_entry: third_party/impeccable/NOTICE.md
+    tests:
+      - JSON parse for Codex and GitHub hook manifests
+      - project skill discovery
+      - context.mjs execution
+      - detect.mjs help and representative scan
+    notes: Development tooling only. Do not grant production credentials or process production customer data through live-mode artifacts.
 
 entry_template:
   id: OSS-0000
@@ -82,3 +131,6 @@ known_projects:
   opensourcepos:
     observed_license: custom_modified_mit_visible_footer_requirement
     default_decision: research_only_for_white_label_product
+  impeccable:
+    observed_license: Apache-2.0
+    default_decision: approved_project_local_development_tooling_when_pinned_and_reviewed

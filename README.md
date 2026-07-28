@@ -53,6 +53,11 @@ The recommended product is a **multi-tenant modular monolith with event-driven i
 24. [Module Agent Workpacks](docs/agent-workpacks/README.md)
 25. [Open-Source Reuse Register](docs/open-source/reuse-register.yaml)
 26. [Foundation Agent One-Shot Prompt](docs/agent-prompts/FOUNDATION-ONE-SHOT-PROMPT.md)
+27. [Impeccable Design Skill Workflow](docs/18-IMPECCABLE-DESIGN-WORKFLOW.md)
+
+## Design tooling
+
+Impeccable 4.0.3 is vendored for project-local Codex and GitHub Copilot use. UI agents must read `PRODUCT.md`, follow `docs/18-IMPECCABLE-DESIGN-WORKFLOW.md`, and pass its UI completion gate. `DESIGN.md` will be created by the Foundation Agent only after the first implemented admin/POS visual system passes finish review.
 
 ## Non-negotiable product principles
 
