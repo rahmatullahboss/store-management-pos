@@ -1,0 +1,11 @@
+{
+  "module": "MOD-C-CUSTOMER",
+  "version": 1,
+  "migrations": [
+    {
+      "id": "CUS-0001",
+      "file": "CUS-0001-customer.sql",
+      "sha256": "2f7a1961bfb45b70f2c417c21581f7ae10d6e20cce5a6b2d2151cc47d96446d0"
+    }
+  ]
+}
