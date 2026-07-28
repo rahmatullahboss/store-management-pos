@@ -1,0 +1,36 @@
+{
+  "name": "@ozzyl/store-management-pos",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22",
+    "npm": ">=10"
+  },
+  "scripts": {
+    "clean": "node tooling/scripts/clean.mjs",
+    "format:check": "node tooling/scripts/check-format.mjs",
+    "lint": "node tooling/scripts/lint.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "node tooling/scripts/clean.mjs && tsc -p tsconfig.build.json",
+    "test": "npm run build && node --test tests/unit/*.test.mjs tests/architecture/*.test.mjs",
+    "test:unit": "npm run build && node --test tests/unit/*.test.mjs",
+    "test:architecture": "node --test tests/architecture/*.test.mjs",
+    "test:integration": "node --test tests/integration/*.test.mjs",
+    "check:boundaries": "node tooling/scripts/check-boundaries.mjs",
+    "check:secrets": "node tooling/scripts/check-secrets.mjs",
+    "check:licenses": "node tooling/scripts/check-licenses.mjs",
+    "sbom": "node tooling/scripts/generate-sbom.mjs",
+    "verify": "npm run format:check && npm run lint && npm run check:boundaries && npm run typecheck && npm test && npm run check:secrets && npm run check:licenses && npm run sbom",
+    "db:migrate": "node tooling/scripts/apply-migrations.mjs",
+    "ci:neon-preview": "node tooling/scripts/neon-preview-ci.mjs",
+    "benchmark:neon": "node tooling/scripts/benchmark-neon.mjs"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "1.1.0"
+  }
+}

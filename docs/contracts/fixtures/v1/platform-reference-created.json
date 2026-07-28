@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0",
+  "eventId": "018f0000-0000-7000-8000-000000000901",
+  "eventType": "platform.reference.created.v1",
+  "aggregateType": "platform.reference_record",
+  "aggregateId": "018f0000-0000-7000-8000-000000000902",
+  "tenantId": "018f0000-0000-7000-8000-000000000001",
+  "occurredAt": "2026-07-28T00:00:00.000Z",
+  "businessDate": "2026-07-28",
+  "correlationId": "foundation-fixture-001",
+  "actorId": "018f0000-0000-7000-8000-000000000101",
+  "payload": {
+    "id": "018f0000-0000-7000-8000-000000000902",
+    "name": "Foundation fixture",
+    "version": "1"
+  },
+  "metadata": {
+    "requestId": "foundation-fixture-001"
+  }
+}

@@ -1,15 +1,7 @@
 policy:
   product_model: proprietary_saas_with_distributed_pos_clients
   default_action: deny_unless_reviewed
-  legal_review_required_for:
-    - LGPL
-    - MPL
-    - EPL
-    - GPL
-    - AGPL
-    - custom
-    - source_available
-    - unknown
+  legal_review_required_for: [LGPL, MPL, EPL, GPL, AGPL, custom, source_available, unknown]
   prohibited_without_explicit_approval:
     - copy_from_repository_without_license
     - copy_gpl_or_agpl_into_proprietary_core
@@ -17,15 +9,40 @@ policy:
     - copy_branding_images_or_proprietary_text
     - copy_open_source_pos_without_required_footer
 
-status_values:
-  - proposed
-  - research_only
-  - approved_dependency
-  - approved_adaptation
-  - rejected
-  - removed
+status_values: [proposed, research_only, approved_dependency, approved_adaptation, rejected, removed]
 
-entries: []
+entries:
+  - id: OSS-0001
+    status: approved_dependency
+    purpose: Direct HTTP and request-scoped WebSocket access from Cloudflare Workers to Neon PostgreSQL.
+    reuse_mode: dependency
+    project: "@neondatabase/serverless"
+    repository: "https://github.com/neondatabase/serverless"
+    exact_commit_or_tag: "1.1.0"
+    files_or_packages: ["@neondatabase/serverless"]
+    declared_license: MIT
+    file_level_licenses_checked: true
+    notice_files: ["LICENSE"]
+    copyright_holders: ["Neon, Inc. and contributors"]
+    modifications: "No upstream source copied or modified; consumed as an npm dependency."
+    product_locations: ["packages/foundation/src/db.ts", "tests/integration/neon.test.mjs"]
+    distributed_to_customers: true
+    network_service_use: true
+    compatible_with_product_model: approved
+    legal_review:
+      required: false
+      reviewer: foundation-agent
+      decision: approved
+      date: 2026-07-28
+    security_review:
+      owner: foundation-agent
+      result: baseline_review_complete
+    update_owner: foundation-platform
+    upstream_tracking: "npm exact version; updates require tests and register review"
+    sbom_component: "pkg:npm/%40neondatabase%2Fserverless@1.1.0"
+    third_party_notice_entry: "docs/THIRD_PARTY_NOTICES.md"
+    tests: ["tests/unit/database.test.mjs", "tests/integration/neon.test.mjs"]
+    notes: "Hyperdrive is not part of the baseline connection path."
 
 entry_template:
   id: OSS-0000
@@ -45,40 +62,11 @@ entry_template:
   distributed_to_customers: false
   network_service_use: true
   compatible_with_product_model: unknown
-  legal_review:
-    required: true
-    reviewer: ""
-    decision: pending
-    date: null
-  security_review:
-    owner: ""
-    result: pending
+  legal_review: { required: true, reviewer: "", decision: pending, date: null }
+  security_review: { owner: "", result: pending }
   update_owner: ""
   upstream_tracking: ""
   sbom_component: ""
   third_party_notice_entry: ""
   tests: []
   notes: ""
-
-known_projects:
-  erpnext:
-    observed_license: GPL-3.0
-    default_decision: research_only
-  frappe_framework:
-    observed_license: MIT
-    default_decision: file_level_review_required
-  odoo_community:
-    observed_license: LGPL-3.0_with_mixed_dependencies
-    default_decision: research_only_unless_legal_approval
-  oca_pos:
-    observed_license: AGPL-3.0_or_module_specific
-    default_decision: research_only
-  apache_ofbiz:
-    observed_license: Apache-2.0
-    default_decision: adaptation_possible_after_review
-  medusa:
-    observed_license: MIT
-    default_decision: dependency_or_adaptation_possible_after_review
-  opensourcepos:
-    observed_license: custom_modified_mit_visible_footer_requirement
-    default_decision: research_only_for_white_label_product

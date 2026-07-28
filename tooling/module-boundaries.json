@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "foundationPrivateRoots": ["packages/foundation/src/internal", "database/foundation"],
+  "workpacks": {
+    "MOD-A": {"paths": ["modules/catalog", "modules/pricing", "modules/tax"], "schemas": ["catalog", "pricing", "tax"], "dependsOn": []},
+    "MOD-B": {"paths": ["modules/inventory", "modules/procurement"], "schemas": ["inventory", "procurement"], "dependsOn": ["MOD-A"]},
+    "MOD-C": {"paths": ["modules/customer", "modules/sales", "modules/fulfillment"], "schemas": ["customer", "sales", "fulfillment"], "dependsOn": ["MOD-A", "MOD-B"]},
+    "MOD-D": {"paths": ["modules/pos", "modules/cash", "modules/offline"], "schemas": ["pos", "cash"], "dependsOn": ["MOD-A", "MOD-B", "MOD-C", "MOD-E"]},
+    "MOD-E": {"paths": ["modules/payments", "modules/accounting", "modules/banking"], "schemas": ["payment", "accounting", "banking"], "dependsOn": ["MOD-B", "MOD-C"]},
+    "MOD-F": {"paths": ["modules/localization", "modules/compliance"], "schemas": ["localization"], "dependsOn": ["MOD-A", "MOD-C", "MOD-D", "MOD-E"]},
+    "MOD-G": {"paths": ["modules/reporting", "modules/integrations", "modules/saas-admin"], "schemas": ["reporting", "integration"], "dependsOn": ["MOD-A", "MOD-B", "MOD-C", "MOD-D", "MOD-E", "MOD-F"]}
+  },
+  "rules": {
+    "privateImportSegment": "/src/internal/",
+    "forbidCrossModulePersistenceImports": true,
+    "forbidCycles": true,
+    "sharedContractRoot": "packages/contracts/src/v1"
+  }
+}

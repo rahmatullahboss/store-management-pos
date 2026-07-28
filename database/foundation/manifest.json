@@ -1,0 +1,21 @@
+{
+  "module": "FOUNDATION",
+  "version": 1,
+  "migrations": [
+    {
+      "id": "FND-0001",
+      "file": "FND-0001-platform.sql",
+      "sha256": "d1e88fc41fb94fab4e77aebd53a723288a212d4133aea6b7b9412f53e94581d2"
+    },
+    {
+      "id": "FND-0002",
+      "file": "FND-0002-rls.sql",
+      "sha256": "b2789ce56ff1e31f731765b6d18bc7acd92d587ae178a4831cd7a42f927698dd"
+    },
+    {
+      "id": "FND-0003",
+      "file": "FND-0003-reference-slice.sql",
+      "sha256": "3e51f91fe005b5cf6d976bcd473ac902bd03e4423a9f764c8eafbec9719f1a34"
+    }
+  ]
+}

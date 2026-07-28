@@ -1,0 +1,20 @@
+name = "store-management-api"
+main = "src/index.ts"
+compatibility_date = "2026-07-27"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+APP_ENV = "development"
+REGION = "aws-us-east-2"
+
+[[queues.producers]]
+binding = "DOMAIN_EVENTS"
+queue = "store-management-domain-events"
+
+[[r2_buckets]]
+binding = "OBJECTS"
+bucket_name = "store-management-nonprod"
+
+[[kv_namespaces]]
+binding = "CONFIG_CACHE"
+id = "replace-in-deployment"
