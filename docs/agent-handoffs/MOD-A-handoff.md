@@ -39,6 +39,19 @@
 4. PostgreSQL migrations, forced RLS, privileges, idempotent commands, audit events and outbox events.
 5. Module APIs, admin UI, permissions, approvals, imports/exports, observability, tests, performance evidence, runbooks and final integration handoff.
 
+## Catalog checkpoint
+
+Catalog domain, persistence, APIs, import/export and live Neon validation are complete for this checkpoint.
+
+Evidence:
+
+- `docs/architecture/mod-a/catalog-checkpoint.md`
+- `database/migrations/catalog/CAT-0001-core.sql`
+- migration SHA-256 `d9ab2ffcc9c4cc16d873608a297b508f24bed31e796470bbd684bcd7570232d0`
+- 18/18 unit tests passed;
+- runtime-role tenant isolation passed: Alpha saw one product/search result, Beta saw zero;
+- initial save and idempotent replay, audit and outbox effects passed on the isolated Neon branch.
+
 ## Current checkpoint
 
-Activation and Foundation-schema bootstrap are complete. Domain implementation starts with catalog migrations and exact domain primitives.
+Catalog is complete at module checkpoint level. Pricing, promotions, controlled discounts, tax, admin UI, scale evidence, runbooks and final integration handoff remain active.

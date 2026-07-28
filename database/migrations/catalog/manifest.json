@@ -1,0 +1,11 @@
+{
+  "module": "MOD-A-CATALOG",
+  "version": 1,
+  "migrations": [
+    {
+      "id": "CAT-0001",
+      "file": "CAT-0001-core.sql",
+      "sha256": "d9ab2ffcc9c4cc16d873608a297b508f24bed31e796470bbd684bcd7570232d0"
+    }
+  ]
+}
