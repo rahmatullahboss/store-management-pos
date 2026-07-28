@@ -28,8 +28,8 @@ jobs:
     needs: verify
     env:
       NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
-      NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
-      NEON_PARENT_BRANCH_ID: ${{ secrets.NEON_PARENT_BRANCH_ID }}
+      NEON_PROJECT_ID: twilight-boat-26805962
+      NEON_PARENT_BRANCH_ID: br-spring-grass-ax3ptydv
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

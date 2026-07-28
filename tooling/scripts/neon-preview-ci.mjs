@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import path from "node:path";
@@ -34,7 +35,12 @@ try {
   const client = new Client({ connectionString });
   await client.connect();
   try {
-    for (const migration of manifest.migrations) await client.query(await readFile(path.join(root, "database/foundation/migrations", migration.file), "utf8"));
+    for (const migration of manifest.migrations) {
+      const migrationSql = await readFile(path.join(root, "database/foundation/migrations", migration.file), "utf8");
+      const digest = createHash("sha256").update(migrationSql).digest("hex");
+      if (digest !== migration.sha256) throw new Error(`${migration.id} checksum does not match the manifest`);
+      await client.query(migrationSql);
+    }
     await client.query(await readFile(path.join(root, "database/foundation/seeds/dev.sql"), "utf8"));
   } finally {
     await client.end();

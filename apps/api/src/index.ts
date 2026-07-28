@@ -1,7 +1,7 @@
 import { NeonDatabase } from "../../../packages/foundation/src/db.js";
 import { errorResponse } from "../../../packages/foundation/src/errors.js";
 import { uuidV7 } from "../../../packages/foundation/src/ids.js";
-import { DevelopmentTokenVerifier } from "./auth.js";
+import { createTokenVerifier } from "./token-verifier.js";
 import { buildRequestContext } from "./request-context.js";
 import { handleCreateReference } from "./reference-handler.js";
 
@@ -9,6 +9,10 @@ export interface ApiEnvironment {
   readonly DATABASE_URL: string;
   readonly APP_ENV: string;
   readonly REGION: string;
+  readonly OIDC_ISSUER?: string;
+  readonly OIDC_AUDIENCE?: string;
+  readonly OIDC_JWKS_URI?: string;
+  readonly OIDC_MFA_ACR_VALUES?: string;
 }
 
 export default {
@@ -17,9 +21,9 @@ export default {
     try {
       const url = new URL(request.url);
       if (request.method === "GET" && url.pathname === "/health") return Response.json({ status: "healthy", service: "api", databaseMode: "direct-neon", region: env.REGION });
-      const verifier = new DevelopmentTokenVerifier(env.APP_ENV === "local" || env.APP_ENV === "development" || env.APP_ENV === "preview");
-      const context = await buildRequestContext(new Request(request, { headers: new Headers([...request.headers, ["x-request-id", requestId]]) }), verifier, env.REGION);
       const database = new NeonDatabase({ connectionString: env.DATABASE_URL });
+      const verifier = createTokenVerifier(env, database);
+      const context = await buildRequestContext(new Request(request, { headers: new Headers([...request.headers, ["x-request-id", requestId]]) }), verifier, env.REGION);
       if (request.method === "POST" && url.pathname === "/v1/platform/reference-records") return await handleCreateReference(request, context, database);
       return Response.json({ error: { code: "NOT_FOUND", message: "Route not found", requestId } }, { status: 404 });
     } catch (error) {

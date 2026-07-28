@@ -9,9 +9,9 @@ test("Foundation direct Neon HTTP and WebSocket integration", { skip: !enabled, 
 
   const sql = neon(connectionString);
   const migrations = await sql`SELECT migration_id FROM platform.schema_migrations ORDER BY migration_id`;
-  assert.deepEqual(migrations.map((row) => row.migration_id), ["FND-0001", "FND-0002", "FND-0003"]);
+  assert.deepEqual(migrations.map((row) => row.migration_id), ["FND-0001", "FND-0002", "FND-0003", "FND-0004"]);
   const policies = await sql`SELECT count(*)::int AS count FROM pg_policies WHERE schemaname = 'platform'`;
-  assert.ok(policies[0].count >= 22);
+  assert.ok(policies[0].count >= 23);
 
   const client = new Client({ connectionString });
   await client.connect();
@@ -45,6 +45,24 @@ test("Foundation direct Neon HTTP and WebSocket integration", { skip: !enabled, 
     const duplicate = await client.query("SELECT platform.claim_inbox_event($1,$2,$3) AS claimed", ["ci-foundation-consumer-v1", eventId, "ci-event-hash"]);
     assert.equal(claimed.rows[0].claimed, true);
     assert.equal(duplicate.rows[0].claimed, false);
+
+    const activeSession = await client.query("SELECT platform.is_identity_revoked($1,$2,$3,NULL) AS revoked", [
+      "018f0000-0000-7000-8000-000000000001",
+      "018f0000-0000-7000-8000-000000000101",
+      "ci-active-session",
+    ]);
+    assert.equal(activeSession.rows[0].revoked, false);
+    const sessionId = `ci-session-${crypto.randomUUID()}`;
+    const firstRevocation = await client.query("SELECT platform.revoke_identity_session($1,$2,$3) AS revoked", [sessionId, "018f0000-0000-7000-8000-000000000101", "CI revocation verification"]);
+    const duplicateRevocation = await client.query("SELECT platform.revoke_identity_session($1,$2,$3) AS revoked", [sessionId, "018f0000-0000-7000-8000-000000000101", "CI revocation verification"]);
+    const revokedSession = await client.query("SELECT platform.is_identity_revoked($1,$2,$3,NULL) AS revoked", [
+      "018f0000-0000-7000-8000-000000000001",
+      "018f0000-0000-7000-8000-000000000101",
+      sessionId,
+    ]);
+    assert.equal(firstRevocation.rows[0].revoked, true);
+    assert.equal(duplicateRevocation.rows[0].revoked, false);
+    assert.equal(revokedSession.rows[0].revoked, true);
 
     await client.query("SELECT platform.set_request_context($1,$2,NULL,NULL,NULL,NULL,$3,$4,$5)", [
       "018f0000-0000-7000-8000-000000000002",

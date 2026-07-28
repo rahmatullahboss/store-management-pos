@@ -6,6 +6,10 @@ compatibility_flags = ["nodejs_compat"]
 [vars]
 APP_ENV = "development"
 REGION = "aws-us-east-2"
+OIDC_ISSUER = "replace-in-deployment"
+OIDC_AUDIENCE = "store-management-api"
+OIDC_JWKS_URI = "replace-in-deployment"
+OIDC_MFA_ACR_VALUES = "replace-in-deployment"
 
 [[queues.producers]]
 binding = "DOMAIN_EVENTS"

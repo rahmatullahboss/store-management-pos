@@ -2,8 +2,12 @@ import { PlatformError } from "../../../packages/foundation/src/errors.js";
 
 export interface VerifiedIdentity {
   readonly userId: string;
+  readonly identitySubject?: string;
   readonly tenantId: string;
   readonly permissions: readonly string[];
+  readonly sessionId?: string;
+  readonly authenticationMethods?: readonly string[];
+  readonly authenticationContext?: string;
   readonly legalEntityId?: string;
   readonly storeId?: string;
   readonly warehouseId?: string;

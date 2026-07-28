@@ -12,10 +12,10 @@
 
 ## Safety and instruction review
 
-- Root `AGENTS.md`, Foundation workpack, program board, architecture/security/testing documents and ADR-002 through ADR-005 were reviewed.
+- Root `AGENTS.md`, Foundation workpack, program board, architecture/security/testing documents and ADR-002 through ADR-006 were reviewed or created as applicable.
 - `program/foundation-v1` was verified identical to `main` at the base SHA before implementation.
 - The current execution environment did not expose the repository's real local checkout/worktree or ignored `.ai-bridge` files. No existing local state was reset, discarded or overwritten. GitHub remained the authoritative branch source.
-- No production or unrelated Neon project was used. A dedicated non-production project was created for this program.
+- No production or unrelated Neon project was used. All database work used the dedicated non-production project.
 - MOD-A through MOD-G were not started and remain blocked.
 
 ## Delegation and execution decision
@@ -34,8 +34,9 @@
 - Direct Neon HTTP, HTTP transaction-batch and request-scoped WebSocket Client/Pool adapters with transaction-local tenant context, timeouts, rollback and cleanup.
 - Shared UUIDv7/opaque identifiers, exact Money/Currency/Quantity, Locale/Timezone/BusinessDate, actor/scope, optimistic concurrency, errors and pagination foundations.
 - Contract pack v1 for catalog, pricing/tax, inventory, customer/sales, payment/refund, accounting, receipt/fiscal, event/inbox, file/job, health and reconciliation boundaries.
-- Foundation PostgreSQL schema for tenancy hierarchy, users/memberships/RBAC, approvals, devices/register bindings, entitlements, support impersonation, audit, idempotency, outbox, inbox, DLQ, workflows and the reference record.
-- Forced RLS and runtime/migration/reporting privilege separation; append-only audit and immutable outbox content.
+- Foundation PostgreSQL schema for tenancy hierarchy, users/memberships/RBAC, approvals, devices/register bindings, entitlements, support impersonation, audit, idempotency, outbox, inbox, DLQ, workflows, reference records and session revocations.
+- Forced RLS and runtime/migration/reporting privilege separation; append-only audit, immutable outbox content and append-only session revocations.
+- OIDC/JWKS identity baseline with RS256 allow-listing, exact issuer/audience validation, bounded token lifetime, MFA assurance, separate provider subject/internal user ID and fail-closed database revocation checks.
 - Disposable reference vertical slice: authenticated tenant command → request-scoped transaction/RLS → reference record → audit → outbox → inbox-backed consumer fixture → admin readback contract.
 - Architecture boundary enforcement, unit/contract/UI tests, secret/license checks, SBOM, preview branch lifecycle workflow, release-canary skeleton and operational documentation.
 
@@ -46,42 +47,43 @@
 | `FND-0001-platform.sql` | `d1e88fc41fb94fab4e77aebd53a723288a212d4133aea6b7b9412f53e94581d2` | Schemas, roles, tenancy/RBAC/audit/event/job baseline |
 | `FND-0002-rls.sql` | `b2789ce56ff1e31f731765b6d18bc7acd92d587ae178a4831cd7a42f927698dd` | Transaction context, forced RLS, append-only protections and privilege hardening |
 | `FND-0003-reference-slice.sql` | `3e51f91fe005b5cf6d976bcd473ac902bd03e4423a9f764c8eafbec9719f1a34` | Reference record, idempotent posting kernel and inbox claim/complete functions |
+| `FND-0004-identity-revocation.sql` | `485e579520910e16df9f6a076e579246da5d372ded3dc966a0c701571289d6a3` | Session revocation table, RLS, revocation checks and audit/outbox effects |
 
-All three migrations and synthetic development fixtures were applied only to `dev/foundation-v1`. The parent branch was not migrated.
+All four migrations and synthetic development fixtures are applied to `dev/foundation-v1`. The parent branch remains unmigrated.
 
 ## Live Neon evidence
 
-- Migration registry: `FND-0001`, `FND-0002`, `FND-0003`.
+- Migration registry: `FND-0001`, `FND-0002`, `FND-0003`, `FND-0004`.
 - Registered module/schema ownership entries: 17.
-- Forced-RLS tables: 22.
-- Tenant Alpha runtime context: 1 tenant, 1 legal entity, store `LON-01`, user `Alpha Owner`.
-- Tenant Beta runtime context: 1 tenant, 1 legal entity, store `DHK-01`, user `Beta Owner`.
-- Reference command first execution created ID `90cf804e-f4aa-4dc9-8346-2e4d2074117f`; same key/hash replay returned the same ID.
-- Reference effects after replay: 1 record, 1 audit event, 1 outbox event; idempotency status `completed`, HTTP result status 201.
-- Same idempotency key with a different request hash was rejected.
-- Inbox first claim returned true; duplicate claim returned false; final status completed with one attempt.
-- Runtime role cannot delete reference records, update audit records or update migration metadata.
-- Audit mutation and outbox-content mutation were rejected by database protections.
-- Parent/child schema diff contains only expected Foundation and module-namespace additions; no parent migration was applied.
-- Fresh recovery rebuild project `broad-cloud-22671424` applied `FND-0001`–`FND-0003` and synthetic fixtures from an empty database, reproduced 22 forced-RLS tables and one-record/one-audit/one-outbox idempotent effects, then was deleted.
+- Forced-RLS platform tables: 23.
+- Tenant Alpha runtime context sees store `LON-01` and user `Alpha Owner` only.
+- Tenant Beta runtime context sees store `DHK-01` and user `Beta Owner` only.
+- Reference command first execution returned `replayed=false`; same key/hash replay returned `replayed=true` with the same ID.
+- Reference effects after replay: exactly 1 record, 1 audit event and 1 outbox event.
+- Inbox first claim returned true and duplicate claim returned false.
+- Active membership/session returned not revoked; first session revocation returned true; duplicate revocation returned false; the session then returned revoked.
+- Session revocation effects: exactly 1 revocation row, 1 audit event and 1 outbox event.
+- Runtime role cannot delete reference records, mutate audit records or change migration metadata; audit and outbox protections reject content mutation.
+- Parent/child schema changes contain only expected Foundation and module-namespace additions; no parent migration was applied.
 
-## Verification commands and results
+## Fresh rebuild and preview lifecycle evidence
 
-- `npm run verify` — passed locally and in connected GitHub Actions CI.
-  - format check: passed
-  - lint: passed
-  - module boundary check: passed for 7 workpacks and 16 schemas
-  - TypeScript typecheck: passed
-  - build: passed
-  - unit/architecture/contract/UI tests: 11 passed, 0 failed, 0 skipped
-  - secret scan: passed
-  - license register check: passed
-  - CycloneDX SBOM generation: passed
-  - pinned lockfile generated by connected CI and committed
-  - `npm audit --audit-level=high`: passed in connected CI
-- `node --check` for all tooling/test `.mjs` files — passed.
-- Migration manifest SHA-256 values match all three SQL files — passed.
-- Live database isolation/idempotency/outbox/inbox/immutability checks listed above — passed.
+- Earlier temporary recovery project `broad-cloud-22671424` rebuilt `FND-0001`–`FND-0003`, synthetic fixtures, 22 forced-RLS tables and reference effects from an empty database, then was deleted.
+- Temporary branch `test/foundation-fnd0004-manual` (`br-rapid-cloud-ax97f9ic`) rebuilt `FND-0001`–`FND-0004`, synthetic fixtures, 23 forced-RLS tables and reference/revocation effects, then was deleted.
+- Latest disposable branch `test/foundation-gate-manual-20260728` (`br-sweet-mode-axxx2970`) was created from empty non-production `main`, applied `FND-0001`–`FND-0004` plus seed, reproduced migration/RLS/isolation/reference/inbox/revocation evidence, rolled back verification writes and was deleted.
+
+## Verification results
+
+- Full identity checkpoint `npm run verify` passed locally before publication:
+  - format, lint, boundary and type checks passed;
+  - build passed;
+  - 14 unit/architecture/contract/UI tests passed with 0 failures;
+  - secret and licence checks passed;
+  - CycloneDX SBOM generation passed.
+- Connected CI on the prior checkpoint passed `npm ci --ignore-scripts`, full verification and `npm audit --audit-level=high`.
+- `node --check` for tooling/test `.mjs` files passed.
+- Migration manifest SHA-256 values match all four SQL files.
+- The manual fresh-branch lifecycle and deletion passed; the automated PR workflow remains blocked by the missing repository API-key secret.
 
 ## Open-source provenance
 
@@ -92,13 +94,12 @@ All three migrations and synthetic development fixtures were applied only to `de
 
 Foundation is **not complete** and the PR must remain draft. MOD-A through MOD-G remain blocked.
 
-1. The PR preview Neon branch lifecycle workflow cannot execute until repository secrets `NEON_API_KEY`, `NEON_PROJECT_ID` and `NEON_PARENT_BRANCH_ID` are configured. Core CI, lockfile generation and dependency audit pass.
-2. Direct HTTP/HTTP-batch/WebSocket p50/p95/p99, cold compute wake-up and concurrency measurements are not yet captured.
-3. Cloudflare non-production deployment, bundle size, CPU and memory evidence are not yet captured.
-4. Fresh empty-database rebuild and cleanup passed; Neon PITR/history restore and reconciliation drill is not yet run.
-5. The production identity-provider/MFA/session adapter is intentionally not selected; only a development verifier is enabled outside production.
-6. Ignored local `.ai-bridge` instructions could not be read because the real checkout/worktree was not mounted in this execution environment.
+1. Configure repository secret `NEON_API_KEY`. Project `twilight-boat-26805962` and empty parent `br-spring-grass-ax3ptydv` are pinned in the workflow; execute automated preview create/migrate/seed/integration/benchmark/delete.
+2. Capture direct HTTP, HTTP-batch and request-scoped WebSocket p50/p95/p99, cold-wake, failure and concurrency measurements.
+3. Deploy non-production Cloudflare API/jobs shells and capture bundle size, CPU and memory evidence.
+4. Perform a Neon PITR/history restore and reconciliation drill.
+5. Read ignored local `.ai-bridge` instructions when the actual `.worktrees/foundation-v1` checkout is mounted.
 
 ## Exact continuation action
 
-Continue Foundation under the single assigned owner. From the actual `.worktrees/foundation-v1` checkout, read all applicable `.ai-bridge` instructions, pull the published checkpoint without discarding local changes, configure the required Neon CI secrets, execute the preview job, and record branch cleanup and direct-driver benchmark evidence. Do not activate any module agent until `program-board.yaml` marks FOUNDATION complete and the selected module workpacks ready.
+Continue Foundation under the single assigned owner. Publish this identity/revocation checkpoint, verify connected CI, configure the missing Neon API-key secret, execute the automated preview benchmark lifecycle, then complete Cloudflare and PITR evidence. Do not activate a module agent until `program-board.yaml` marks FOUNDATION `complete` and selected module workpacks `ready`.

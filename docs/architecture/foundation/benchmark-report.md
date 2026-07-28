@@ -2,33 +2,37 @@
 
 **Date:** 2026-07-28
 
-## Completed in this checkpoint
+## Completed evidence
 
 | Check | Result |
 |---|---|
-| Format/lint/typecheck/build | Passed locally |
-| Unit, architecture, contract and UI tests | 11 passed, 0 failed |
+| Format/lint/typecheck/build | Passed on the identity checkpoint locally; connected CI revalidation follows the push |
+| Unit, architecture, contract and UI tests | 14 passed, 0 failed in the identity checkpoint verification |
 | Request-scoped Client success/rollback/cleanup simulation | Passed |
+| OIDC/JWKS signature and claim validation | Passed unit tests, including issuer, audience, time, algorithm, MFA and revocation failure cases |
 | Idempotency duplicate replay | Passed locally and on Neon |
 | Inbox duplicate delivery | Passed locally and on Neon |
 | Tenant/store/user RLS isolation | Passed on Neon for two synthetic tenants |
-| Audit/outbox immutability | Passed on Neon |
+| Session/device/membership revocation | Passed on Neon |
+| Audit/outbox immutability and duplicate effects | Passed on Neon |
 | Route permission filtering | Passed |
 | Module ownership/cycle enforcement | Passed for 7 workpacks and 16 schemas |
-| Secret/license checks and CycloneDX SBOM | Passed locally and in CI |
+| Secret/license checks and CycloneDX SBOM | Passed locally; core connected CI passed on the previous checkpoint |
 | Dedicated non-production Neon project/branch | Created and migrated |
-| Fresh empty-database recovery rebuild | Passed in temporary project; verified and deleted |
+| Fresh empty-parent rebuild and cleanup | Passed through `FND-0004` on a disposable branch and deleted |
 
 ## Live Neon evidence
 
-Foundation migrations `FND-0001` through `FND-0003`, synthetic fixtures, 22 forced-RLS tables, reference-slice duplicate replay and inbox duplicate claim were executed against `dev/foundation-v1`. Exact query results are recorded in `docs/agent-handoffs/FOUNDATION-handoff.md`.
+The long-lived development branch `dev/foundation-v1` contains `FND-0001` through `FND-0004`. It has 23 forced-RLS platform tables and verified two-tenant isolation, idempotent reference effects, inbox duplicate handling and membership/session/device revocation behavior.
 
-The parent Neon branch was not migrated. Schema comparison shows expected Foundation/module namespace additions on the child branch. A separate temporary project rebuilt the complete Foundation schema and synthetic evidence from empty state, verified RLS/idempotency/audit/outbox behavior, and was deleted.
+A second lifecycle run used disposable branch `test/foundation-gate-manual-20260728` (`br-sweet-mode-axxx2970`) created from the untouched non-production `main` parent. `FND-0001` through `FND-0004` and synthetic fixtures were applied from empty state. The run reproduced Alpha/Beta isolation, one-record/one-audit/one-outbox reference replay effects, inbox first/duplicate claims and one-revocation/one-audit/one-outbox session effects. Verification writes were rolled back and the branch was deleted.
+
+This manual lifecycle establishes that the current migration set is rebuildable and cleanup works. It does not replace the required automated PR workflow.
 
 ## Deferred runtime benchmarks
 
-Connected GitHub Actions installed the pinned dependency from the committed lockfile, passed the complete verification suite and passed `npm audit --audit-level=high`. The current execution runtime still cannot deploy a Cloudflare Worker. Therefore p50/p95/p99 direct-driver latency, cold compute wake-up, Worker CPU/memory and bundle limits are not claimed as passed.
+The local container has no usable outbound DNS path to the Neon endpoint/package registry, so it cannot truthfully produce direct-driver latency numbers. No p50/p95/p99, cold-wake or concurrency result is claimed from that runtime.
 
-`tooling/scripts/benchmark-neon.mjs` and the isolated preview branch CI workflow are committed. CI must install dependencies, create a preview branch from `dev/foundation-v1`, run migrations, fixtures, HTTP/WebSocket integration and latency benchmarks, then delete the branch. Missing CI secrets now fail rather than silently skip the database gate.
+`tooling/scripts/benchmark-neon.mjs` and `tooling/scripts/neon-preview-ci.mjs` are committed to run with the pinned `@neondatabase/serverless` dependency. The workflow creates a preview branch from non-production `main`, validates manifest checksums, applies migrations and fixtures, runs direct HTTP/WebSocket integration and latency benchmarks, and deletes the branch in a `finally` cleanup path. Only repository secret `NEON_API_KEY` remains required because project and parent IDs are pinned.
 
-Hyperdrive was not introduced. Any comparison follows only after the direct Neon baseline is measured.
+Cloudflare Worker bundle, CPU and memory evidence also remains pending because no authorised Cloudflare deployment target is connected. Hyperdrive has not been introduced; any comparison occurs only after the direct Neon baseline is recorded.

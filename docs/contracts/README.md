@@ -15,4 +15,4 @@ Contract pack version `1.0.0` is the frozen Foundation baseline for MOD-A throug
 
 The TypeScript contracts under `packages/contracts/src/v1` cover catalog references, price/tax requests and snapshots, stock availability/reservation/posting, customer and sales references, payment/refund state, accounting instructions/results, receipts/fiscal documents, event envelopes, file jobs, module health and reconciliation results.
 
-`schemas/v1/domain-event-envelope.schema.json` is the canonical JSON Schema for the shared event envelope.
+`schemas/v1/domain-event-envelope.schema.json` is the canonical JSON Schema for the shared event envelope. `identity-token-v1.md` freezes the provider-neutral OIDC/JWKS access-token claim contract.
