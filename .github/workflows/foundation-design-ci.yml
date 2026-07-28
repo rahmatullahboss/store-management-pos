@@ -1,0 +1,42 @@
+name: Foundation Design CI
+
+on:
+  push:
+    branches: [program/foundation-v1]
+    paths:
+      - "apps/admin-web/**"
+      - "apps/pos-web/**"
+      - "packages/ui/**"
+      - "PRODUCT.md"
+      - "DESIGN.md"
+      - ".impeccable/**"
+      - ".agents/skills/impeccable/**"
+      - "tooling/scripts/foundation-design-evidence.mjs"
+      - ".github/workflows/foundation-design-ci.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/admin-web/**"
+      - "apps/pos-web/**"
+      - "packages/ui/**"
+      - "PRODUCT.md"
+      - "DESIGN.md"
+      - ".impeccable/**"
+      - ".agents/skills/impeccable/**"
+      - "tooling/scripts/foundation-design-evidence.mjs"
+      - ".github/workflows/foundation-design-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  context:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Load Foundation UI context
+        run: node .agents/skills/impeccable/scripts/context.mjs --target packages/ui/src/app-shell.ts
