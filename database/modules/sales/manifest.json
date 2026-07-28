@@ -1,11 +1,16 @@
 {
   "module": "MOD-C-SALES",
-  "version": 1,
+  "version": 2,
   "migrations": [
     {
       "id": "SAL-0001",
       "file": "SAL-0001-sales.sql",
       "sha256": "4134d0d4d714c310f0f763fe754acd3ef4bc91fbd5184accca5a6d48f91ba427"
+    },
+    {
+      "id": "SAL-0002",
+      "file": "SAL-0002-sales-operations.sql",
+      "sha256": "7e96b0e12c41a5114e9d61258e33ee1d914b044d2883a01339e44e4c2f49a40e"
     }
   ]
 }

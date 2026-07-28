@@ -184,6 +184,7 @@ test("return authorization preserves original snapshot and prevents cumulative o
     originalPaymentAllocations: [{ paymentIntentId: "payment-intent-001", amountMinor: 12_000n, currency: "GBP" }],
   });
   assert.equal(first.lines[0].originalPriceTaxSnapshot.calculationId, order.lines[0].priceTaxSnapshot.calculationId);
+  assert.equal(first.lines[0].allocatedGrossMinor, 6_000n);
   assert.equal(first.status, "requested");
   await assert.rejects(() => service.requestReturn(context(), {
     idempotencyKey: "return-request-over",
@@ -203,8 +204,8 @@ test("received return can restock, refund original allocation and create exchang
   let authorization = await service.requestReturn(context(), {
     idempotencyKey: "return-resolution-001",
     order,
-    reason: "One unit damaged in transit",
-    lines: [{ orderLineId: order.lines[0].id, quantity: { amount: "1", unit: "EA", scale: 0 }, expectedCondition: "damaged", proposedDisposition: "quarantine" }],
+    reason: "Two units require mixed refund and exchange resolution",
+    lines: [{ orderLineId: order.lines[0].id, quantity: { amount: "2", unit: "EA", scale: 0 }, expectedCondition: "damaged", proposedDisposition: "quarantine" }],
     originalPaymentAllocations: [
       { paymentIntentId: "payment-card-001", amountMinor: 6_000n, currency: "GBP" },
       { paymentIntentId: "payment-gift-001", amountMinor: 6_000n, currency: "GBP" },
@@ -224,17 +225,48 @@ test("received return can restock, refund original allocation and create exchang
     expectedVersion: authorization.version,
     idempotencyKey: "return-refund-001",
     resolutions: [
-      { type: "refund", paymentIntentId: "payment-card-001", amountMinor: 6_000n, currency: "GBP", reason: "Refund damaged returned unit" },
+      { type: "refund", returnLineId: authorization.lines[0].id, paymentIntentId: "payment-card-001", amountMinor: 6_000n, currency: "GBP", reason: "Refund one damaged returned unit" },
       { type: "exchange", returnLineId: authorization.lines[0].id, replacementVariantId: "018f0000-0000-7000-8000-000000001102", quantity: { amount: "1", unit: "EA", scale: 0 } },
     ],
   });
   assert.equal(resolved.status, "completed");
+  assert.equal(resolved.refundRequests[0].returnLineId, authorization.lines[0].id);
   assert.equal(resolved.refundRequests[0].paymentIntentId, "payment-card-001");
   assert.equal(resolved.exchangeRequests[0].sourceReturnId, authorization.id);
   assert.equal(simulators.refunds.requests.length, 1);
   assert.equal(simulators.refunds.requests[0].amount.amountMinor, "6000");
   assert.equal(simulators.exchange.requests.length, 1);
   await assert.rejects(() => service.receiveReturn(context(), { returnId: resolved.id, expectedVersion: resolved.version, receivedLines: [] }), /immutable|completed/i);
+});
+
+test("return resolution validates the complete batch before external side effects", async () => {
+  const order = await createOrder("1");
+  const simulators = createDeterministicFulfillmentSimulators();
+  const service = new FulfillmentService(new InMemoryFulfillmentRepository(), simulators);
+  let authorization = await service.requestReturn(context(), {
+    idempotencyKey: "return-atomic-validation-001",
+    order,
+    reason: "Validate complete return resolution before side effects",
+    lines: [{ orderLineId: order.lines[0].id, quantity: { amount: "1", unit: "EA", scale: 0 }, expectedCondition: "resalable", proposedDisposition: "restock" }],
+    originalPaymentAllocations: [{ paymentIntentId: "payment-intent-atomic", amountMinor: 6_000n, currency: "GBP" }],
+  });
+  authorization = await service.approveReturn(context(), { returnId: authorization.id, expectedVersion: authorization.version, decision: "approved", reason: "Return approved" });
+  authorization = await service.receiveReturn(context(), {
+    returnId: authorization.id,
+    expectedVersion: authorization.version,
+    receivedLines: [{ returnLineId: authorization.lines[0].id, actualCondition: "resalable", disposition: "restock", warehouseId }],
+  });
+  await assert.rejects(() => service.resolveReturn(context(), {
+    returnId: authorization.id,
+    expectedVersion: authorization.version,
+    idempotencyKey: "return-atomic-resolution-001",
+    resolutions: [
+      { type: "refund", returnLineId: authorization.lines[0].id, paymentIntentId: "payment-intent-atomic", amountMinor: 6_000n, currency: "GBP", reason: "Valid first resolution" },
+      { type: "exchange", returnLineId: "018f0000-0000-7000-8000-000000009999", replacementVariantId: "018f0000-0000-7000-8000-000000001102", quantity: { amount: "1", unit: "EA", scale: 0 } },
+    ],
+  }), /return line not found/i);
+  assert.equal(simulators.refunds.requests.length, 0);
+  assert.equal(simulators.exchange.requests.length, 0);
 });
 
 test("return refund cannot exceed the named original payment allocation", async () => {
@@ -257,7 +289,7 @@ test("return refund cannot exceed the named original payment allocation", async 
     returnId: authorization.id,
     expectedVersion: authorization.version,
     idempotencyKey: "return-allocation-over",
-    resolutions: [{ type: "refund", paymentIntentId: "payment-intent-limited", amountMinor: 6_001n, currency: "GBP", reason: "Too much" }],
+    resolutions: [{ type: "refund", returnLineId: authorization.lines[0].id, paymentIntentId: "payment-intent-limited", amountMinor: 6_001n, currency: "GBP", reason: "Too much" }],
   }), /allocation/i);
 });
 
@@ -286,4 +318,12 @@ test("fulfillment migration declares workflow, returns, immutable completion and
   assert.match(sql, /fulfillment_work_queue_idx/);
   assert.match(sql, /return\.override_policy/);
   assert.match(sql, /FUL-0001/);
+});
+
+test("return allocation migration binds refunds to immutable return-line value", async () => {
+  const sql = await readFile("database/modules/fulfillment/migrations/FUL-0002-return-allocation.sql", "utf8");
+  assert.match(sql, /allocation_snapshot/);
+  assert.match(sql, /return_line_id/);
+  assert.match(sql, /fulfillment_refund_return_line_idx/);
+  assert.match(sql, /FUL-0002/);
 });

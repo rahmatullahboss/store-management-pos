@@ -25,6 +25,7 @@ export type OrderReturnStatus = "not_returned" | "partially_returned" | "returne
 export type BackorderStatus = "none" | "backordered" | "released";
 export type FulfillmentMethod = "pickup" | "local_delivery" | "ship_from_store" | "split";
 export type PaymentTerms = "prepaid" | "deposit" | "layaway" | "on_account";
+export type AvailabilityMode = "standard" | "preorder" | "backorder";
 
 export interface SalesLineInput {
   readonly item: CatalogItemReferenceV1;
@@ -47,6 +48,35 @@ export interface DocumentTotal {
   readonly grossMinor: bigint;
   readonly currency: string;
   readonly scale: number;
+}
+
+export interface OrderImportRow {
+  readonly externalSource: string;
+  readonly externalOrderId: string;
+  readonly customer: CustomerReferenceV1;
+  readonly currency: string;
+  readonly lines: readonly SalesLineInput[];
+  readonly fulfillmentMethod: FulfillmentMethod;
+  readonly warehouseId: string;
+  readonly paymentTerms: PaymentTerms;
+  readonly availabilityMode?: AvailabilityMode;
+}
+
+export interface OrderExportRow {
+  readonly orderId: string;
+  readonly externalSource?: string;
+  readonly externalOrderId?: string;
+  readonly documentNumber: string;
+  readonly customerId: string;
+  readonly currency: string;
+  readonly grossMinor: string;
+  readonly orderStatus: OrderStatus;
+  readonly paymentStatus: OrderPaymentStatus;
+  readonly fulfillmentStatus: OrderFulfillmentStatus;
+  readonly invoiceStatus: OrderInvoiceStatus;
+  readonly returnStatus: OrderReturnStatus;
+  readonly availabilityMode: AvailabilityMode;
+  readonly version: string;
 }
 
 export interface QuoteRevision {
@@ -105,6 +135,8 @@ export interface SalesOrder {
   readonly storeId: string;
   readonly documentNumber: string;
   readonly sourceQuoteId?: string;
+  readonly externalSource?: string;
+  readonly externalOrderId?: string;
   readonly customer: CustomerReferenceV1;
   readonly currency: string;
   readonly lines: readonly SalesDocumentLine[];
@@ -112,6 +144,7 @@ export interface SalesOrder {
   readonly fulfillmentMethod: FulfillmentMethod;
   readonly warehouseId: string;
   readonly paymentTerms: PaymentTerms;
+  readonly availabilityMode: AvailabilityMode;
   readonly reservationId: string;
   readonly creditDecision?: "approved" | "approval_required";
   readonly creditApprovalId?: string;
@@ -203,13 +236,19 @@ export interface SalesAuditEvent {
   readonly metadata: Readonly<Record<string, unknown>>;
 }
 
-type IdempotencyRecord = { readonly hash: string; readonly kind: "quote" | "order" | "invoice" | "credit_note"; readonly documentId: string };
+type IdempotencyRecord = {
+  readonly hash: string;
+  readonly kind: "quote" | "order" | "invoice" | "credit_note" | "result";
+  readonly documentId?: string;
+  readonly result?: unknown;
+};
 
 export interface SalesRepository {
   getQuote(tenantId: string, id: string): Promise<SalesQuote | null>;
   saveQuote(quote: SalesQuote): Promise<void>;
   getOrder(tenantId: string, id: string): Promise<SalesOrder | null>;
   saveOrder(order: SalesOrder): Promise<void>;
+  listOrders(tenantId: string): Promise<readonly SalesOrder[]>;
   getInvoice(tenantId: string, id: string): Promise<OperationalInvoice | null>;
   saveInvoice(invoice: OperationalInvoice): Promise<void>;
   getCreditNote(tenantId: string, id: string): Promise<CreditNote | null>;
@@ -254,6 +293,7 @@ export class InMemorySalesRepository implements SalesRepository {
   async saveQuote(quote: SalesQuote): Promise<void> { this.quotes.set(this.key(quote.tenantId, quote.id), deepClone(quote)); }
   async getOrder(tenantId: string, id: string): Promise<SalesOrder | null> { const value = this.orders.get(this.key(tenantId, id)); return value ? deepClone(value) : null; }
   async saveOrder(order: SalesOrder): Promise<void> { this.orders.set(this.key(order.tenantId, order.id), deepClone(order)); }
+  async listOrders(tenantId: string): Promise<readonly SalesOrder[]> { return [...this.orders.values()].filter((order) => order.tenantId === tenantId).map(deepClone); }
   async getInvoice(tenantId: string, id: string): Promise<OperationalInvoice | null> { const value = this.invoices.get(this.key(tenantId, id)); return value ? deepClone(value) : null; }
   async saveInvoice(invoice: OperationalInvoice): Promise<void> { this.invoices.set(this.key(invoice.tenantId, invoice.id), deepClone(invoice)); }
   async getCreditNote(tenantId: string, id: string): Promise<CreditNote | null> { const value = this.creditNotes.get(this.key(tenantId, id)); return value ? deepClone(value) : null; }
@@ -452,7 +492,7 @@ export class SalesService {
     return output(order);
   }
 
-  async createOrder(context: RequestContext, input: { readonly idempotencyKey: string; readonly customer: CustomerReferenceV1; readonly currency: string; readonly lines: readonly SalesLineInput[]; readonly fulfillmentMethod: FulfillmentMethod; readonly warehouseId: string; readonly paymentTerms: PaymentTerms; readonly salespersonId?: string; readonly commissionBasisMetadata?: Readonly<Record<string, string>>; readonly notes?: readonly string[] }): Promise<SalesOrder> {
+  async createOrder(context: RequestContext, input: { readonly idempotencyKey: string; readonly customer: CustomerReferenceV1; readonly currency: string; readonly lines: readonly SalesLineInput[]; readonly fulfillmentMethod: FulfillmentMethod; readonly warehouseId: string; readonly paymentTerms: PaymentTerms; readonly availabilityMode?: AvailabilityMode; readonly externalSource?: string; readonly externalOrderId?: string; readonly salespersonId?: string; readonly commissionBasisMetadata?: Readonly<Record<string, string>>; readonly notes?: readonly string[] }): Promise<SalesOrder> {
     requirePermission(context, "sales.order.create");
     const replay = await this.replay<SalesOrder>(context, "sales.order.create", input.idempotencyKey, input);
     if (replay) return replay;
@@ -467,6 +507,9 @@ export class SalesService {
       fulfillmentMethod: input.fulfillmentMethod,
       warehouseId: input.warehouseId,
       paymentTerms: input.paymentTerms,
+      availabilityMode: input.availabilityMode ?? "standard",
+      ...(input.externalSource ? { externalSource: input.externalSource.trim() } : {}),
+      ...(input.externalOrderId ? { externalOrderId: input.externalOrderId.trim() } : {}),
       ...(input.salespersonId ? { salespersonId: input.salespersonId } : {}),
       ...(input.commissionBasisMetadata ? { commissionBasisMetadata: input.commissionBasisMetadata } : {}),
       notes: input.notes ?? [],
@@ -476,6 +519,117 @@ export class SalesService {
   async getOrder(context: RequestContext, orderId: string): Promise<SalesOrder> {
     requirePermission(context, "sales.order.read");
     return output(await this.requireOrder(context.tenantId, orderId));
+  }
+
+  async importOrders(context: RequestContext, input: { readonly idempotencyKey: string; readonly rows: readonly OrderImportRow[] }): Promise<{ readonly imported: number; readonly skipped: number; readonly errors: readonly { readonly row: number; readonly message: string }[] }> {
+    requirePermission(context, "sales.order.import");
+    if (input.rows.length > 500) throw new PlatformError("VALIDATION_FAILED", "Order imports are limited to 500 rows per job", 400);
+    const replay = await this.replay<{ readonly imported: number; readonly skipped: number; readonly errors: readonly { readonly row: number; readonly message: string }[] }>(context, "sales.order.import", input.idempotencyKey, input);
+    if (replay) return replay;
+    let imported = 0;
+    let skipped = 0;
+    const errors: { row: number; message: string }[] = [];
+    for (const [index, row] of input.rows.entries()) {
+      try {
+        const externalSource = row.externalSource.trim().toLowerCase();
+        const externalOrderId = row.externalOrderId.trim();
+        if (!externalSource || !externalOrderId) throw new PlatformError("VALIDATION_FAILED", "externalSource and externalOrderId are required", 400);
+        const exists = (await this.repository.listOrders(context.tenantId)).some((order) => order.externalSource === externalSource && order.externalOrderId === externalOrderId);
+        if (exists) {
+          skipped += 1;
+          continue;
+        }
+        await this.createOrder({ ...context, permissions: new Set([...context.permissions, "sales.order.create"]) }, {
+          idempotencyKey: `${input.idempotencyKey}:${externalSource}:${externalOrderId}`,
+          externalSource,
+          externalOrderId,
+          customer: row.customer,
+          currency: row.currency,
+          lines: row.lines,
+          fulfillmentMethod: row.fulfillmentMethod,
+          warehouseId: row.warehouseId,
+          paymentTerms: row.paymentTerms,
+          availabilityMode: row.availabilityMode ?? "standard",
+        });
+        imported += 1;
+      } catch (error) {
+        errors.push({ row: index + 1, message: error instanceof Error ? error.message : "Unknown order import error" });
+      }
+    }
+    const result = { imported, skipped, errors };
+    await this.rememberResult(context, "sales.order.import", input.idempotencyKey, input, result);
+    await this.audit(context, "sales.order.import", input.idempotencyKey, this.now(), { imported, skipped, errors: errors.length });
+    return output(result);
+  }
+
+  async exportOrders(context: RequestContext, input: { readonly cursor?: string; readonly limit?: number } = {}): Promise<{ readonly rows: readonly OrderExportRow[]; readonly nextCursor?: string }> {
+    requirePermission(context, "sales.order.export");
+    const limit = input.limit ?? 100;
+    if (!Number.isInteger(limit) || limit < 1 || limit > 500) throw new PlatformError("VALIDATION_FAILED", "limit must be between 1 and 500", 400);
+    const orders = [...await this.repository.listOrders(context.tenantId)].sort((left, right) => {
+      const leftKey = `${left.externalSource ?? "~"}:${left.externalOrderId ?? left.documentNumber}:${left.id}`;
+      const rightKey = `${right.externalSource ?? "~"}:${right.externalOrderId ?? right.documentNumber}:${right.id}`;
+      return leftKey.localeCompare(rightKey);
+    });
+    const start = input.cursor ? Math.max(0, orders.findIndex((order) => order.id === input.cursor) + 1) : 0;
+    const page = orders.slice(start, start + limit);
+    const rows: OrderExportRow[] = page.map((order) => ({
+      orderId: order.id,
+      ...(order.externalSource ? { externalSource: order.externalSource } : {}),
+      ...(order.externalOrderId ? { externalOrderId: order.externalOrderId } : {}),
+      documentNumber: order.documentNumber,
+      customerId: order.customer.customerId,
+      currency: order.currency,
+      grossMinor: order.total.grossMinor.toString(),
+      orderStatus: order.orderStatus,
+      paymentStatus: order.paymentStatus,
+      fulfillmentStatus: order.fulfillmentStatus,
+      invoiceStatus: order.invoiceStatus,
+      returnStatus: order.returnStatus,
+      availabilityMode: order.availabilityMode,
+      version: order.version.toString(),
+    }));
+    const next = orders[start + limit];
+    return output({ rows, ...(next && page.length > 0 ? { nextCursor: page.at(-1)!.id } : {}) });
+  }
+
+  async addOrderNote(context: RequestContext, input: { readonly orderId: string; readonly expectedVersion: bigint; readonly note: string; readonly visibility: "internal" | "customer" }): Promise<SalesOrder> {
+    requirePermission(context, "sales.order.update");
+    const order = await this.requireOrder(context.tenantId, input.orderId);
+    assertVersion(order.version, input.expectedVersion, "Order");
+    const note = input.note.trim();
+    if (note.length < 1 || note.length > 4_000) throw new PlatformError("VALIDATION_FAILED", "Order note must contain 1 to 4000 characters", 400);
+    const occurredAt = this.now();
+    const updated: SalesOrder = { ...order, notes: [...order.notes, `[${input.visibility}] ${note}`], updatedAt: occurredAt, updatedBy: context.actorId, version: order.version + 1n };
+    await this.repository.saveOrder(updated);
+    await this.audit(context, "sales.order.note.add", order.id, occurredAt, { visibility: input.visibility });
+    return output(updated);
+  }
+
+  async attachOrderFile(context: RequestContext, input: { readonly orderId: string; readonly expectedVersion: bigint; readonly name: string; readonly objectKey: string }): Promise<SalesOrder> {
+    requirePermission(context, "sales.order.update");
+    const order = await this.requireOrder(context.tenantId, input.orderId);
+    assertVersion(order.version, input.expectedVersion, "Order");
+    const occurredAt = this.now();
+    const attachment = { id: this.id(), name: input.name.trim(), objectKey: input.objectKey.trim() };
+    if (!attachment.name || !attachment.objectKey) throw new PlatformError("VALIDATION_FAILED", "Attachment name and objectKey are required", 400);
+    const updated: SalesOrder = { ...order, attachments: [...order.attachments, attachment], updatedAt: occurredAt, updatedBy: context.actorId, version: order.version + 1n };
+    await this.repository.saveOrder(updated);
+    await this.audit(context, "sales.order.attachment.add", order.id, occurredAt, { attachmentId: attachment.id });
+    return output(updated);
+  }
+
+  async recordCustomerCommunication(context: RequestContext, input: { readonly orderId: string; readonly expectedVersion: bigint; readonly channel: string; readonly subject: string }): Promise<SalesOrder> {
+    requirePermission(context, "sales.order.update");
+    const order = await this.requireOrder(context.tenantId, input.orderId);
+    assertVersion(order.version, input.expectedVersion, "Order");
+    const occurredAt = this.now();
+    const communication = { id: this.id(), channel: input.channel.trim(), subject: input.subject.trim(), recordedAt: occurredAt };
+    if (!communication.channel || !communication.subject) throw new PlatformError("VALIDATION_FAILED", "Communication channel and subject are required", 400);
+    const updated: SalesOrder = { ...order, communications: [...order.communications, communication], updatedAt: occurredAt, updatedBy: context.actorId, version: order.version + 1n };
+    await this.repository.saveOrder(updated);
+    await this.audit(context, "sales.customer_communication.record", order.id, occurredAt, { communicationId: communication.id, channel: communication.channel });
+    return output(updated);
   }
 
   async recordPayment(context: RequestContext, orderId: string, input: { readonly intentId: string; readonly status: PaymentStatusV1; readonly amountMinor: bigint; readonly currency: string; readonly expectedVersion: bigint }): Promise<SalesOrder> {
@@ -720,7 +874,10 @@ export class SalesService {
     readonly fulfillmentMethod: FulfillmentMethod;
     readonly warehouseId: string;
     readonly paymentTerms: PaymentTerms;
+    readonly availabilityMode?: AvailabilityMode;
     readonly sourceQuoteId?: string;
+    readonly externalSource?: string;
+    readonly externalOrderId?: string;
     readonly salespersonId?: string;
     readonly commissionBasisMetadata?: Readonly<Record<string, string>>;
     readonly notes: readonly string[];
@@ -755,6 +912,8 @@ export class SalesService {
       storeId,
       documentNumber: await this.repository.nextDocumentNumber(context.tenantId, legalEntityId, "order", context.businessDate),
       ...(input.sourceQuoteId ? { sourceQuoteId: input.sourceQuoteId } : {}),
+      ...(input.externalSource ? { externalSource: input.externalSource } : {}),
+      ...(input.externalOrderId ? { externalOrderId: input.externalOrderId } : {}),
       customer: deepClone(input.customer),
       currency: input.currency,
       lines: deepClone(input.lines),
@@ -762,6 +921,7 @@ export class SalesService {
       fulfillmentMethod: input.fulfillmentMethod,
       warehouseId: input.warehouseId,
       paymentTerms: input.paymentTerms,
+      availabilityMode: input.availabilityMode ?? "standard",
       reservationId,
       ...(creditDecision ? { creditDecision } : {}),
       ...(creditApprovalId ? { creditApprovalId } : {}),
@@ -770,7 +930,7 @@ export class SalesService {
       fulfillmentStatus: "unfulfilled",
       invoiceStatus: "not_invoiced",
       returnStatus: "not_returned",
-      backorderStatus: "none",
+      backorderStatus: input.availabilityMode === "backorder" ? "backordered" : "none",
       payments: [],
       fulfillmentObservations: [],
       ...(input.salespersonId ? { salespersonId: input.salespersonId } : {}),
@@ -808,14 +968,20 @@ export class SalesService {
     const record = await this.repository.getIdempotency(context.tenantId, scopeName, key);
     if (!record) return null;
     if (record.hash !== stable(payload)) throw new PlatformError("IDEMPOTENCY_CONFLICT", "Idempotency key was reused with a different sales payload", 409);
+    if (record.kind === "result") return output(record.result) as T;
+    if (!record.documentId) throw new PlatformError("CONFLICT", "Idempotent sales operation has no document result", 409);
     if (record.kind === "quote") return output(await this.requireQuote(context.tenantId, record.documentId)) as T;
     if (record.kind === "order") return output(await this.requireOrder(context.tenantId, record.documentId)) as T;
     if (record.kind === "invoice") return output(await this.requireInvoice(context.tenantId, record.documentId)) as T;
     return output(await this.requireCreditNote(context.tenantId, record.documentId)) as T;
   }
 
-  private async remember(context: RequestContext, scopeName: string, key: string, payload: unknown, kind: IdempotencyRecord["kind"], documentId: string): Promise<void> {
+  private async remember(context: RequestContext, scopeName: string, key: string, payload: unknown, kind: Exclude<IdempotencyRecord["kind"], "result">, documentId: string): Promise<void> {
     await this.repository.putIdempotency(context.tenantId, scopeName, key, { hash: stable(payload), kind, documentId });
+  }
+
+  private async rememberResult(context: RequestContext, scopeName: string, key: string, payload: unknown, result: unknown): Promise<void> {
+    await this.repository.putIdempotency(context.tenantId, scopeName, key, { hash: stable(payload), kind: "result", result: deepClone(result) });
   }
 
   private async requireQuote(tenantId: string, id: string): Promise<SalesQuote> { const value = await this.repository.getQuote(tenantId, id); if (!value) throw new PlatformError("NOT_FOUND", "Quote not found", 404); return value; }

@@ -21,6 +21,8 @@ function context(permissions = [
   "sales.order.create",
   "sales.order.read",
   "sales.order.update",
+  "sales.order.import",
+  "sales.order.export",
   "sales.invoice.create",
   "sales.invoice.post",
   "sales.credit_note.create",
@@ -246,6 +248,83 @@ test("order cancellation after payment or fulfillment requires explicit approval
   assert.equal(cancelled.paymentStatus, "paid");
 });
 
+test("preorder and backorder availability remain explicit and stock conflicts fail before events", async () => {
+  const preorder = await new SalesService(new InMemorySalesRepository(), createDeterministicSalesSimulators()).createOrder(context(), {
+    idempotencyKey: "preorder-order-001",
+    customer: { customerId: "018f0000-0000-7000-8000-000000002001" },
+    currency: "GBP",
+    lines: [line()],
+    fulfillmentMethod: "pickup",
+    warehouseId,
+    paymentTerms: "deposit",
+    availabilityMode: "preorder",
+  });
+  assert.equal(preorder.availabilityMode, "preorder");
+  assert.equal(preorder.backorderStatus, "none");
+
+  const repository = new InMemorySalesRepository();
+  const conflicting = createDeterministicSalesSimulators({ inventoryStatus: "conflict" });
+  const service = new SalesService(repository, conflicting);
+  await assert.rejects(() => service.createOrder(context(), {
+    idempotencyKey: "stock-conflict-001",
+    customer: preorder.customer,
+    currency: "GBP",
+    lines: [line()],
+    fulfillmentMethod: "ship_from_store",
+    warehouseId,
+    paymentTerms: "prepaid",
+    availabilityMode: "backorder",
+  }), /stock conflict/i);
+  assert.equal(repository.outboxEvents.length, 0);
+});
+
+test("order import/export and operational activity are deterministic and audited", async () => {
+  const repository = new InMemorySalesRepository();
+  const service = new SalesService(repository, createDeterministicSalesSimulators(), { now: () => "2026-07-28T11:00:00.000Z" });
+  const input = {
+    idempotencyKey: "order-import-001",
+    rows: [
+      {
+        externalSource: "marketplace",
+        externalOrderId: "MKT-001",
+        customer: { customerId: "018f0000-0000-7000-8000-000000002001" },
+        currency: "GBP",
+        lines: [line({ quantity: { amount: "1", unit: "EA", scale: 0 } })],
+        fulfillmentMethod: "pickup",
+        warehouseId,
+        paymentTerms: "prepaid",
+        availabilityMode: "standard",
+      },
+      {
+        externalSource: "marketplace",
+        externalOrderId: "MKT-002",
+        customer: { customerId: "018f0000-0000-7000-8000-000000002002" },
+        currency: "GBP",
+        lines: [line({ quantity: { amount: "1", unit: "EA", scale: 0 } })],
+        fulfillmentMethod: "ship_from_store",
+        warehouseId,
+        paymentTerms: "deposit",
+        availabilityMode: "preorder",
+      },
+    ],
+  };
+  assert.deepEqual(await service.importOrders(context(), input), { imported: 2, skipped: 0, errors: [] });
+  assert.deepEqual(await service.importOrders(context(), input), { imported: 2, skipped: 0, errors: [] });
+  const exported = await service.exportOrders(context(), { limit: 50 });
+  assert.deepEqual(exported.rows.map((row) => row.externalOrderId), ["MKT-001", "MKT-002"]);
+  assert.equal(exported.rows[1].availabilityMode, "preorder");
+
+  let order = await service.getOrder(context(), exported.rows[0].orderId);
+  order = await service.addOrderNote(context(), { orderId: order.id, expectedVersion: order.version, note: "Customer requested gift packaging", visibility: "internal" });
+  order = await service.attachOrderFile(context(), { orderId: order.id, expectedVersion: order.version, name: "purchase-order.pdf", objectKey: "orders/MKT-001/purchase-order.pdf" });
+  order = await service.recordCustomerCommunication(context(), { orderId: order.id, expectedVersion: order.version, channel: "email", subject: "Pickup date confirmed" });
+  assert.equal(order.notes.at(-1), "[internal] Customer requested gift packaging");
+  assert.equal(order.attachments[0].name, "purchase-order.pdf");
+  assert.equal(order.communications[0].channel, "email");
+  assert.equal(repository.auditEvents.filter((event) => event.action.startsWith("sales.order.") || event.action === "sales.customer_communication.record").length >= 4, true);
+  await assert.rejects(() => service.importOrders(context(), { idempotencyKey: "too-many-orders", rows: Array.from({ length: 501 }, (_, index) => ({ ...input.rows[0], externalOrderId: `MKT-${index + 100}` })) }), /500/);
+});
+
 test("sales permissions and tenant lookup fail closed", async () => {
   const repository = new InMemorySalesRepository();
   const service = new SalesService(repository, createDeterministicSalesSimulators());
@@ -276,4 +355,16 @@ test("sales migration declares independent states, immutable documents, RLS and 
   assert.match(sql, /sales_order_query_idx/);
   assert.match(sql, /sales\.order\.cancel_after_effects/);
   assert.match(sql, /SAL-0001/);
+});
+
+test("sales operations migration adds preorder identity and import/export permissions", async () => {
+  const sql = await readFile("database/modules/sales/migrations/SAL-0002-sales-operations.sql", "utf8");
+  assert.match(sql, /availability_mode/);
+  assert.match(sql, /external_order_id/);
+  assert.match(sql, /sales_external_order_unique/);
+  assert.match(sql, /sales\.import_batches/);
+  assert.match(sql, /sales\.order\.import/);
+  assert.match(sql, /sales\.order\.export/);
+  assert.match(sql, /FORCE ROW LEVEL SECURITY/);
+  assert.match(sql, /SAL-0002/);
 });

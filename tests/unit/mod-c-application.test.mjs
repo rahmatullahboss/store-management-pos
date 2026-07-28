@@ -43,6 +43,8 @@ function context(permissions = [
   "sales.order.create",
   "sales.order.read",
   "sales.order.update",
+  "sales.order.import",
+  "sales.order.export",
   "sales.invoice.create",
   "sales.invoice.post",
   "sales.credit_note.create",
@@ -169,6 +171,49 @@ test("MOD-C API creates quote, order and fulfillment plan through public module 
   }), context());
   assert.equal(planResponse.status, 201);
   assert.equal((await json(planResponse)).data.status, "allocated");
+});
+
+test("MOD-C API exposes bounded customer and order import/export", async () => {
+  const app = services();
+  const router = createModCRouter(app);
+  const customerImport = await router(new Request("https://store.example/api/v1/customers/import", {
+    method: "POST",
+    headers: { "content-type": "application/json", "idempotency-key": "api-customer-import-001" },
+    body: JSON.stringify({ rows: [{ externalId: "CRM-API-001", kind: "person", displayName: "API Imported Customer", email: "api@example.com", countryCode: "GB" }] }),
+  }), context());
+  assert.equal(customerImport.status, 201);
+  assert.equal((await json(customerImport)).data.imported, 1);
+  const customerExport = await router(new Request("https://store.example/api/v1/customers/export?limit=50"), context());
+  assert.equal(customerExport.status, 200);
+  assert.equal((await json(customerExport)).data.rows[0].externalId, "CRM-API-001");
+
+  const orderImport = await router(new Request("https://store.example/api/v1/orders/import", {
+    method: "POST",
+    headers: { "content-type": "application/json", "idempotency-key": "api-order-import-001" },
+    body: JSON.stringify({ rows: [{
+      externalSource: "marketplace",
+      externalOrderId: "API-MKT-001",
+      customer: { customerId: "018f0000-0000-7000-8000-000000002001" },
+      currency: "GBP",
+      fulfillmentMethod: "pickup",
+      warehouseId,
+      paymentTerms: "deposit",
+      availabilityMode: "preorder",
+      lines: [{
+        item: { itemId: "018f0000-0000-7000-8000-000000001001", variantId: "018f0000-0000-7000-8000-000000001101" },
+        quantity: { amount: "1", unit: "EA", scale: 0 },
+        unitPriceMinor: "5000",
+        taxRateBasisPoints: 2000,
+      }],
+    }] }),
+  }), context());
+  assert.equal(orderImport.status, 201);
+  assert.equal((await json(orderImport)).data.imported, 1);
+  const orderExport = await router(new Request("https://store.example/api/v1/orders/export?limit=50"), context());
+  assert.equal(orderExport.status, 200);
+  const exported = (await json(orderExport)).data.rows[0];
+  assert.equal(exported.externalOrderId, "API-MKT-001");
+  assert.equal(exported.availabilityMode, "preorder");
 });
 
 test("event projector processes at-least-once events exactly once and exposes queue metrics", async () => {

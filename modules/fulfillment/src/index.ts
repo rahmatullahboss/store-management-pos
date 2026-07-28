@@ -70,6 +70,9 @@ export interface ReturnLine {
   readonly quantity: QuantityV1;
   readonly originalQuantity: QuantityV1;
   readonly originalPriceTaxSnapshot: PriceTaxSnapshotV1;
+  readonly allocatedNetMinor: bigint;
+  readonly allocatedTaxMinor: bigint;
+  readonly allocatedGrossMinor: bigint;
   readonly expectedCondition: ReturnCondition;
   readonly proposedDisposition: ReturnDisposition;
   readonly actualCondition?: ReturnCondition;
@@ -79,6 +82,7 @@ export interface ReturnLine {
 
 export interface RefundOrchestrationRecord {
   readonly refundId: string;
+  readonly returnLineId: string;
   readonly paymentIntentId: string;
   readonly amountMinor: bigint;
   readonly currency: string;
@@ -190,6 +194,17 @@ function audit(context: RequestContext, reason?: string, approverId?: string): A
   return { actorId: context.actorId, ...(reason ? { reason } : {}), ...(approverId ? { approverId } : {}), requestId: context.requestId, traceId: context.traceId, ...(context.deviceId ? { deviceId: context.deviceId } : {}) };
 }
 function money(amountMinor: bigint, currency: string): MoneyV1 { return { amountMinor: amountMinor.toString(), currency, scale: 2 }; }
+function allocateReturnSnapshot(snapshot: PriceTaxSnapshotV1, requestedQuantity: QuantityV1, originalQuantity: QuantityV1): { readonly netMinor: bigint; readonly taxMinor: bigint; readonly grossMinor: bigint } {
+  const requested = quantityAmount(requestedQuantity);
+  const original = quantityAmount(originalQuantity);
+  if (requested > original) throw new PlatformError("CONFLICT", "Returned quantity cannot exceed original quantity", 409);
+  const allocate = (amountMinor: string) => (BigInt(amountMinor) * requested) / original;
+  return {
+    netMinor: allocate(snapshot.taxableBase.amountMinor),
+    taxMinor: snapshot.taxes.reduce((sum, tax) => sum + allocate(tax.amount.amountMinor), 0n),
+    grossMinor: allocate(snapshot.grossTotal.amountMinor),
+  };
+}
 function assertVersion(actual: bigint, expected: bigint, label: string): void {
   if (actual !== expected) throw new PlatformError("VERSION_CONFLICT", `${label} version conflict: expected ${expected.toString()}, found ${actual.toString()}`, 409);
 }
@@ -345,7 +360,20 @@ export class FulfillmentService {
       id: this.id(), tenantId: context.tenantId, legalEntityId: input.order.legalEntityId, storeId: input.order.storeId, orderId: input.order.id, orderNumber: input.order.documentNumber, reason: input.reason.trim(),
       lines: input.lines.map((requestLine) => {
         const orderLine = input.order.lines.find((line) => line.id === requestLine.orderLineId)!;
-        return { id: this.id(), orderLineId: orderLine.id, item: clone(orderLine.item), quantity: clone(requestLine.quantity), originalQuantity: clone(orderLine.quantity), originalPriceTaxSnapshot: clone(orderLine.priceTaxSnapshot), expectedCondition: requestLine.expectedCondition, proposedDisposition: requestLine.proposedDisposition };
+        const allocation = allocateReturnSnapshot(orderLine.priceTaxSnapshot, requestLine.quantity, orderLine.quantity);
+        return {
+          id: this.id(),
+          orderLineId: orderLine.id,
+          item: clone(orderLine.item),
+          quantity: clone(requestLine.quantity),
+          originalQuantity: clone(orderLine.quantity),
+          originalPriceTaxSnapshot: clone(orderLine.priceTaxSnapshot),
+          allocatedNetMinor: allocation.netMinor,
+          allocatedTaxMinor: allocation.taxMinor,
+          allocatedGrossMinor: allocation.grossMinor,
+          expectedCondition: requestLine.expectedCondition,
+          proposedDisposition: requestLine.proposedDisposition,
+        };
       }),
       originalPaymentAllocations: input.originalPaymentAllocations.map((allocation) => ({ ...allocation, currency: allocation.currency.toUpperCase() })),
       status: "requested", refundRequests: [], exchangeRequests: [], createdAt: occurredAt, updatedAt: occurredAt, createdBy: context.actorId, updatedBy: context.actorId, version: 1n,
@@ -381,23 +409,57 @@ export class FulfillmentService {
     await this.repository.saveReturn(updated); await this.event(context, "sales.return.received.v1", "return", updated.id, updated.version, { orderId: updated.orderId }); return output(updated);
   }
 
-  async resolveReturn(context: RequestContext, input: { readonly returnId: string; readonly expectedVersion: bigint; readonly idempotencyKey: string; readonly resolutions: readonly ({ readonly type: "refund"; readonly paymentIntentId: string; readonly amountMinor: bigint; readonly currency: string; readonly reason: string } | { readonly type: "exchange"; readonly returnLineId: string; readonly replacementVariantId: string; readonly quantity: QuantityV1 })[] }): Promise<ReturnAuthorization> {
+  async resolveReturn(context: RequestContext, input: { readonly returnId: string; readonly expectedVersion: bigint; readonly idempotencyKey: string; readonly resolutions: readonly ({ readonly type: "refund"; readonly returnLineId: string; readonly paymentIntentId: string; readonly amountMinor: bigint; readonly currency: string; readonly reason: string } | { readonly type: "exchange"; readonly returnLineId: string; readonly replacementVariantId: string; readonly quantity: QuantityV1 })[] }): Promise<ReturnAuthorization> {
     requirePermission(context, "return.resolve");
     const replay = await this.replay<ReturnAuthorization>(context, "return.resolve", input.idempotencyKey, input); if (replay) return replay;
     const authorization = await this.requireReturn(context.tenantId, input.returnId); assertVersion(authorization.version, input.expectedVersion, "Return");
     if (authorization.status !== "received") throw new PlatformError("CONFLICT", "Return must be received before resolution", 409);
+    if (input.resolutions.length < 1) throw new PlatformError("VALIDATION_FAILED", "At least one return resolution is required", 400);
+
+    for (const resolution of input.resolutions) {
+      const line = authorization.lines.find((item) => item.id === resolution.returnLineId);
+      if (!line) throw new PlatformError("NOT_FOUND", "Return line not found", 404);
+      if (resolution.type === "refund") {
+        if (resolution.amountMinor <= 0n) throw new PlatformError("VALIDATION_FAILED", "Refund amount must be positive", 400);
+        const currency = resolution.currency.toUpperCase();
+        const allocation = authorization.originalPaymentAllocations.find((item) => item.paymentIntentId === resolution.paymentIntentId && item.currency === currency);
+        if (!allocation) throw new PlatformError("CONFLICT", "Refund must target an original payment allocation", 409);
+      }
+    }
+
+    for (const line of authorization.lines) {
+      const lineQuantity = quantityAmount(line.quantity);
+      const existingExchangeQuantity = authorization.exchangeRequests.filter((item) => item.sourceReturnLineId === line.id).reduce((sum, item) => sum + quantityAmount(item.quantity), 0n);
+      const requestedExchangeQuantity = input.resolutions.filter((item): item is Extract<(typeof input.resolutions)[number], { readonly type: "exchange" }> => item.type === "exchange" && item.returnLineId === line.id).reduce((sum, item) => sum + quantityAmount(item.quantity), 0n);
+      const totalExchangeQuantity = existingExchangeQuantity + requestedExchangeQuantity;
+      if (totalExchangeQuantity > lineQuantity) throw new PlatformError("CONFLICT", "Exchange quantity cannot exceed returned quantity", 409);
+      const exchangedValue = (line.allocatedGrossMinor * totalExchangeQuantity) / lineQuantity;
+      const refundableCapacity = line.allocatedGrossMinor - exchangedValue;
+      const existingRefunded = authorization.refundRequests.filter((item) => item.returnLineId === line.id).reduce((sum, item) => sum + item.amountMinor, 0n);
+      const requestedRefund = input.resolutions.filter((item): item is Extract<(typeof input.resolutions)[number], { readonly type: "refund" }> => item.type === "refund" && item.returnLineId === line.id).reduce((sum, item) => sum + item.amountMinor, 0n);
+      if (existingRefunded + requestedRefund > refundableCapacity) throw new PlatformError("CONFLICT", "Refund exceeds the return-line price and tax allocation after exchanges", 409);
+    }
+
+    for (const allocation of authorization.originalPaymentAllocations) {
+      const existingRefunded = authorization.refundRequests.filter((item) => item.paymentIntentId === allocation.paymentIntentId && item.currency === allocation.currency).reduce((sum, item) => sum + item.amountMinor, 0n);
+      const requestedRefund = input.resolutions.filter((item): item is Extract<(typeof input.resolutions)[number], { readonly type: "refund" }> => item.type === "refund" && item.paymentIntentId === allocation.paymentIntentId && item.currency.toUpperCase() === allocation.currency).reduce((sum, item) => sum + item.amountMinor, 0n);
+      if (existingRefunded + requestedRefund > allocation.amountMinor) throw new PlatformError("CONFLICT", "Refund cannot exceed the named original payment allocation", 409);
+    }
+
     const refunds: RefundOrchestrationRecord[] = [];
     const exchanges: ExchangeOrchestrationRecord[] = [];
     for (const resolution of input.resolutions) {
+      const line = authorization.lines.find((item) => item.id === resolution.returnLineId);
+      if (!line) throw new PlatformError("NOT_FOUND", "Return line not found", 404);
       if (resolution.type === "refund") {
-        const allocation = authorization.originalPaymentAllocations.find((item) => item.paymentIntentId === resolution.paymentIntentId && item.currency === resolution.currency.toUpperCase());
-        if (!allocation || resolution.amountMinor > allocation.amountMinor) throw new PlatformError("CONFLICT", "Refund cannot exceed the named original payment allocation", 409);
+        if (resolution.amountMinor <= 0n) throw new PlatformError("VALIDATION_FAILED", "Refund amount must be positive", 400);
+        const currency = resolution.currency.toUpperCase();
+        const allocation = authorization.originalPaymentAllocations.find((item) => item.paymentIntentId === resolution.paymentIntentId && item.currency === currency);
+        if (!allocation) throw new PlatformError("CONFLICT", "Refund must target an original payment allocation", 409);
         const refundId = this.id();
-        const result = await this.dependencies.refunds.requestRefund({ schemaVersion: "1.0", context: scope(context), refundId, paymentIntentId: resolution.paymentIntentId, amount: money(resolution.amountMinor, resolution.currency.toUpperCase()), reason: resolution.reason, idempotencyKey: `${input.idempotencyKey}:${resolution.paymentIntentId}`, audit: audit(context, resolution.reason) });
-        refunds.push({ refundId, paymentIntentId: resolution.paymentIntentId, amountMinor: resolution.amountMinor, currency: resolution.currency.toUpperCase(), status: result.status, reason: resolution.reason });
+        const result = await this.dependencies.refunds.requestRefund({ schemaVersion: "1.0", context: scope(context, line.warehouseId), refundId, paymentIntentId: resolution.paymentIntentId, amount: money(resolution.amountMinor, currency), reason: resolution.reason, idempotencyKey: `${input.idempotencyKey}:${line.id}:${resolution.paymentIntentId}`, audit: audit(context, resolution.reason) });
+        refunds.push({ refundId, returnLineId: line.id, paymentIntentId: resolution.paymentIntentId, amountMinor: resolution.amountMinor, currency, status: result.status, reason: resolution.reason });
       } else {
-        const line = authorization.lines.find((item) => item.id === resolution.returnLineId); if (!line) throw new PlatformError("NOT_FOUND", "Return line not found", 404);
-        if (quantityAmount(resolution.quantity) > quantityAmount(line.quantity)) throw new PlatformError("CONFLICT", "Exchange quantity cannot exceed returned quantity", 409);
         const exchangeRequestId = this.id();
         const result = await this.dependencies.exchange.createReplacement({ schemaVersion: "1.0", context: scope(context, line.warehouseId), exchangeRequestId, sourceReturnId: authorization.id, sourceReturnLineId: line.id, replacementVariantId: resolution.replacementVariantId, quantity: clone(resolution.quantity), idempotencyKey: `${input.idempotencyKey}:${line.id}` });
         exchanges.push({ exchangeRequestId, replacementOrderRequestId: result.replacementOrderRequestId, sourceReturnId: authorization.id, sourceReturnLineId: line.id, replacementVariantId: resolution.replacementVariantId, quantity: clone(resolution.quantity), status: "requested" });

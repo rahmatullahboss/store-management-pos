@@ -3,7 +3,7 @@ import { PlatformError } from "../../../packages/foundation/src/errors.js";
 import type { DomainEventEnvelopeV1 } from "../../../packages/contracts/src/v1/contracts.js";
 import type { CustomerService, CreateCustomerInput } from "../../customer/src/index.js";
 import type { FulfillmentService, FulfillmentPlan, ReturnAuthorization } from "../../fulfillment/src/index.js";
-import type { SalesLineInput, SalesOrder, SalesQuote, SalesService } from "./index.js";
+import type { OrderImportRow, SalesLineInput, SalesOrder, SalesQuote, SalesService } from "./index.js";
 
 export interface TelemetryLog {
   readonly timestamp: string;
@@ -140,6 +140,27 @@ function parseSalesLines(value: unknown): readonly SalesLineInput[] {
   });
 }
 
+function parseOrderImportRows(value: unknown): readonly OrderImportRow[] {
+  return asArray(value, "rows").map((raw, index) => {
+    const row = asObject(raw, `rows[${index}]`);
+    const customer = asObject(row.customer, `rows[${index}].customer`);
+    return {
+      externalSource: asString(row.externalSource, `rows[${index}].externalSource`),
+      externalOrderId: asString(row.externalOrderId, `rows[${index}].externalOrderId`),
+      customer: {
+        customerId: asString(customer.customerId, `rows[${index}].customer.customerId`),
+        ...(typeof customer.displayNameSnapshot === "string" ? { displayNameSnapshot: customer.displayNameSnapshot } : {}),
+      },
+      currency: asString(row.currency, `rows[${index}].currency`),
+      lines: parseSalesLines(row.lines),
+      fulfillmentMethod: asString(row.fulfillmentMethod, `rows[${index}].fulfillmentMethod`) as OrderImportRow["fulfillmentMethod"],
+      warehouseId: asString(row.warehouseId, `rows[${index}].warehouseId`),
+      paymentTerms: asString(row.paymentTerms, `rows[${index}].paymentTerms`) as OrderImportRow["paymentTerms"],
+      ...(typeof row.availabilityMode === "string" ? { availabilityMode: row.availabilityMode as "standard" | "preorder" | "backorder" } : {}),
+    };
+  });
+}
+
 function platformErrorResponse(error: unknown, context: RequestContext): Response {
   if (error instanceof PlatformError) {
     return jsonResponse({ error: { code: error.code, message: error.message, details: error.details }, meta: { requestId: context.requestId, traceId: context.traceId } }, error.status);
@@ -174,7 +195,12 @@ export function createModCRouter(services: ModCApplicationServices): (request: R
           headers = cached.headers;
           replayed = true;
         } else {
-          if (path === "/api/v1/customers") {
+          if (path === "/api/v1/customers/import") {
+            data = await services.customer.importCustomers(context, {
+              idempotencyKey: key,
+              rows: asArray(body.rows, "rows") as unknown as Parameters<CustomerService["importCustomers"]>[1]["rows"],
+            });
+          } else if (path === "/api/v1/customers") {
             data = await services.customer.create(context, { ...body, idempotencyKey: key } as unknown as CreateCustomerInput);
             headers = { location: `/api/v1/customers/${(data as { id: string }).id}` };
           } else if (path === "/api/v1/quotes") {
@@ -192,6 +218,11 @@ export function createModCRouter(services: ModCApplicationServices): (request: R
               ...(typeof body.salespersonId === "string" ? { salespersonId: body.salespersonId } : {}),
             });
             headers = { location: `/api/v1/quotes/${(data as SalesQuote).id}` };
+          } else if (path === "/api/v1/orders/import") {
+            data = await services.sales.importOrders(context, {
+              idempotencyKey: key,
+              rows: parseOrderImportRows(body.rows),
+            });
           } else if (path === "/api/v1/orders") {
             const customer = asObject(body.customer, "customer");
             data = await services.sales.createOrder(context, {
@@ -205,6 +236,9 @@ export function createModCRouter(services: ModCApplicationServices): (request: R
               fulfillmentMethod: asString(body.fulfillmentMethod, "fulfillmentMethod") as "pickup" | "local_delivery" | "ship_from_store" | "split",
               warehouseId: asString(body.warehouseId, "warehouseId"),
               paymentTerms: asString(body.paymentTerms, "paymentTerms") as "prepaid" | "deposit" | "layaway" | "on_account",
+              ...(typeof body.availabilityMode === "string" ? { availabilityMode: body.availabilityMode as "standard" | "preorder" | "backorder" } : {}),
+              ...(typeof body.externalSource === "string" ? { externalSource: body.externalSource } : {}),
+              ...(typeof body.externalOrderId === "string" ? { externalOrderId: body.externalOrderId } : {}),
               ...(typeof body.salespersonId === "string" ? { salespersonId: body.salespersonId } : {}),
             });
             headers = { location: `/api/v1/orders/${(data as SalesOrder).id}` };
@@ -238,7 +272,12 @@ export function createModCRouter(services: ModCApplicationServices): (request: R
         const customerMatch = /^\/api\/v1\/customers\/([^/]+)$/u.exec(path);
         const orderMatch = /^\/api\/v1\/orders\/([^/]+)$/u.exec(path);
         const planMatch = /^\/api\/v1\/fulfillment\/plans\/([^/]+)$/u.exec(path);
-        if (customerMatch) data = await services.customer.get(context, decodeURIComponent(customerMatch[1]!));
+        const limit = url.searchParams.get("limit");
+        const cursor = url.searchParams.get("cursor") ?? undefined;
+        if (path === "/api/v1/customers") data = await services.customer.list(context, { ...(cursor ? { cursor } : {}), ...(limit ? { limit: Number(limit) } : {}) });
+        else if (path === "/api/v1/customers/export") data = await services.customer.exportCustomers(context, { ...(cursor ? { cursor } : {}), ...(limit ? { limit: Number(limit) } : {}) });
+        else if (path === "/api/v1/orders/export") data = await services.sales.exportOrders(context, { ...(cursor ? { cursor } : {}), ...(limit ? { limit: Number(limit) } : {}) });
+        else if (customerMatch) data = await services.customer.get(context, decodeURIComponent(customerMatch[1]!));
         else if (orderMatch) data = await services.sales.getOrder(context, decodeURIComponent(orderMatch[1]!));
         else if (planMatch) data = await services.fulfillment.getPlan(context, decodeURIComponent(planMatch[1]!));
         else throw new PlatformError("NOT_FOUND", "API route not found", 404);

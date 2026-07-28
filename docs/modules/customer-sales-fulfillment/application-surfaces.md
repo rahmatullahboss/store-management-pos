@@ -9,13 +9,18 @@ Implemented routes:
 | Method | Path | Permission / behaviour |
 | --- | --- | --- |
 | POST | `/api/v1/customers` | `customer.profile.create`; requires `idempotency-key` |
+| GET | `/api/v1/customers` | `customer.profile.read`; bounded cursor pagination |
 | GET | `/api/v1/customers/:id` | `customer.profile.read` |
+| POST | `/api/v1/customers/import` | `customer.import`; bounded idempotent import |
+| GET | `/api/v1/customers/export` | `customer.export`; deterministic bounded export |
 | POST | `/api/v1/quotes` | `sales.quote.create`; exact line snapshots |
-| POST | `/api/v1/orders` | `sales.order.create`; reservation and credit orchestration |
+| POST | `/api/v1/orders` | `sales.order.create`; reservation, credit and availability-mode orchestration |
 | GET | `/api/v1/orders/:id` | `sales.order.read` |
+| POST | `/api/v1/orders/import` | `sales.order.import`; external identity deduplication and bounded batches |
+| GET | `/api/v1/orders/export` | `sales.order.export`; exact totals and independent lifecycle states |
 | POST | `/api/v1/fulfillment/plans` | `fulfillment.plan.create` |
 | GET | `/api/v1/fulfillment/plans/:id` | `fulfillment.read` |
-| POST | `/api/v1/returns` | `return.request`; preserves original payment allocation |
+| POST | `/api/v1/returns` | `return.request`; preserves original payment and return-line value allocations |
 
 All mutation routes require an idempotency key of at least eight characters. Replays return HTTP 200 with `meta.replayed=true`; first writes return HTTP 201 and a `Location` header. BigInt minor-unit values and versions are encoded as decimal strings. Responses are `application/json; charset=utf-8`, `cache-control: no-store`, and include request/trace identifiers. Unsupported routes fail closed.
 
