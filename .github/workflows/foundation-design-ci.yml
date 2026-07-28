@@ -65,6 +65,23 @@ jobs:
           "$browser" --headless=new --no-sandbox --disable-gpu --hide-scrollbars --run-all-compositor-stages-before-draw --window-size=390,844 --screenshot="$root/artifacts/foundation/pos-foundation-mobile.png" "file://$root/artifacts/foundation/pos-foundation.html"
           "$browser" --headless=new --no-sandbox --disable-gpu --hide-scrollbars --run-all-compositor-stages-before-draw --window-size=390,844 --screenshot="$root/artifacts/foundation/admin-foundation-rtl-mobile.png" "file://$root/artifacts/foundation/admin-foundation-rtl.html"
           "$browser" --headless=new --no-sandbox --disable-gpu --hide-scrollbars --run-all-compositor-stages-before-draw --window-size=1440,1100 --screenshot="$root/artifacts/foundation/pos-foundation-offline-desktop.png" "file://$root/artifacts/foundation/pos-foundation-offline.html"
+          "$browser" --headless=new --no-sandbox --disable-gpu --hide-scrollbars --window-size=390,844 --dump-dom "file://$root/artifacts/foundation/admin-foundation-rtl.html" > "$root/artifacts/foundation/admin-foundation-rtl-browser-dom.html"
+      - name: Verify browser layout containment
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFile, writeFile } from "node:fs/promises";
+          const html = await readFile("artifacts/foundation/admin-foundation-rtl-browser-dom.html", "utf8");
+          const attribute = (name) => html.match(new RegExp(`${name}="([^"]*)"`))?.[1] ?? null;
+          const clientWidth = Number(attribute("data-layout-client-width"));
+          const scrollWidth = Number(attribute("data-layout-scroll-width"));
+          const viewport = Number(attribute("data-layout-viewport"));
+          const encodedOffenders = attribute("data-layout-offenders") ?? "";
+          const offenders = encodedOffenders ? JSON.parse(decodeURIComponent(encodedOffenders.replaceAll("&amp;", "&"))) : [];
+          const report = { clientWidth, scrollWidth, viewport, offenders };
+          await writeFile("artifacts/foundation/admin-foundation-rtl-layout.json", `${JSON.stringify(report, null, 2)}\n`, "utf8");
+          console.log(JSON.stringify(report, null, 2));
+          if (!Number.isFinite(clientWidth) || !Number.isFinite(scrollWidth) || scrollWidth > clientWidth + 1) process.exit(1);
+          NODE
       - name: Run deterministic UI detector
         run: |
           set +e
