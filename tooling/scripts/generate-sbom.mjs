@@ -6,13 +6,19 @@ const root = fileURLToPath(new URL("../..", import.meta.url));
 const packageJson = JSON.parse(await readFile(path.join(root, "package.json"), "utf8"));
 const runtimeDependencies = Object.entries(packageJson.dependencies ?? {}).map(([name, version]) => ({ name, version, scope: "required" }));
 const developmentDependencies = Object.entries(packageJson.devDependencies ?? {}).map(([name, version]) => ({ name, version, scope: "excluded" }));
+const licenseByPackage = {
+  "@neondatabase/serverless": "MIT",
+  typescript: "Apache-2.0",
+  "puppeteer-core": "Apache-2.0",
+  "axe-core": "MPL-2.0",
+};
 const packageComponents = [...runtimeDependencies, ...developmentDependencies].map(({ name, version, scope }) => ({
   type: "library",
   name,
   version,
   scope,
   purl: `pkg:npm/${encodeURIComponent(name)}@${version}`,
-  licenses: [{ license: { id: name === "@neondatabase/serverless" ? "MIT" : name === "typescript" ? "Apache-2.0" : "NOASSERTION" } }]
+  licenses: [{ license: { id: licenseByPackage[name] ?? "NOASSERTION" } }]
 }));
 const components = [
   ...packageComponents,

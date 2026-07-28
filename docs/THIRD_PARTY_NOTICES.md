@@ -31,3 +31,23 @@ The dependency remains governed by its upstream licence and copyright notices.
 - Preserved notices: `third_party/impeccable/LICENSE` and `third_party/impeccable/NOTICE.md`.
 
 The vendored tooling remains governed by the upstream Apache-2.0 licence and notices.
+
+## Puppeteer Core 24.16.0
+
+- Project: Puppeteer Core
+- Source: https://github.com/puppeteer/puppeteer
+- Licence: Apache-2.0
+- Use: Development-only control of the existing system Chrome browser for Foundation screenshot, responsive, keyboard and layout evidence.
+- Modification: None. The package is consumed as an exact-pinned npm development dependency and excluded from runtime deployment.
+
+The dependency remains governed by its upstream Apache-2.0 licence and notices.
+
+## axe-core 4.10.3
+
+- Project: axe-core
+- Source: https://github.com/dequelabs/axe-core
+- Licence: MPL-2.0
+- Use: Development-only WCAG 2 A/AA and WCAG 2.1 AA checks against synthetic Foundation UI fixtures.
+- Modification: None. The exact-pinned package is injected unmodified into local browser pages and excluded from runtime deployment.
+
+The dependency remains governed by its upstream MPL-2.0 licence and notices.

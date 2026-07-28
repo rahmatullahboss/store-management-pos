@@ -1,5 +1,5 @@
 import { renderAppShell } from "../../../../packages/ui/src/app-shell.js";
-import { renderPosFoundationReference } from "../../../../packages/ui/src/foundation-reference.js";
+import { renderPosFoundationReference, type FoundationReferenceOptions } from "../../../../packages/ui/src/foundation-reference.js";
 import { posRoutes } from "./routes.js";
 
 export interface OfflineShellState {
@@ -43,6 +43,7 @@ export function renderPosShell(input: PosShellInput): string {
   });
 }
 
-export function renderPosFoundationPreview(input: Omit<PosShellInput, "content" | "currentPath">): string {
-  return renderPosShell({ ...input, currentPath: "/", content: renderPosFoundationReference() });
+export function renderPosFoundationPreview(input: Omit<PosShellInput, "content" | "currentPath">, reference: FoundationReferenceOptions = {}): string {
+  const offlineState = reference.state === "offline" ? { ...input.offlineState, online: false, pendingOperations: Math.max(1, input.offlineState.pendingOperations) } : input.offlineState;
+  return renderPosShell({ ...input, offlineState, currentPath: "/", content: renderPosFoundationReference(reference) });
 }

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { parseDomainEventEnvelopeV1 } from "../../build/packages/contracts/src/v1/validators.js";
 import { permittedRoutes, renderAppShell } from "../../build/packages/ui/src/app-shell.js";
+import { renderAdminFoundationReference, renderPosFoundationReference } from "../../build/packages/ui/src/foundation-reference.js";
 
 test("Contract parser rejects unknown schema versions", () => {
   assert.throws(() => parseDomainEventEnvelopeV1({ schemaVersion: "2.0" }));
@@ -25,4 +26,18 @@ test("Published event fixture remains compatible with contract pack v1", async (
   const event = parseDomainEventEnvelopeV1(fixture);
   assert.equal(event.eventType, "platform.reference.created.v1");
   assert.equal(event.schemaVersion, "1.0");
+});
+
+test("Foundation UI exposes localized resilient states", () => {
+  for (const state of ["loading", "empty", "error", "denied", "conflict", "offline"]) {
+    const admin = renderAdminFoundationReference({ locale: "ar", state });
+    const pos = renderPosFoundationReference({ locale: "bn", state });
+    assert.match(admin, new RegExp(`system-state--${state}`));
+    assert.match(pos, new RegExp(`system-state--${state}`));
+    assert.match(admin, /[\u0600-\u06ff]/u);
+    assert.match(pos, /[\u0980-\u09ff]/u);
+  }
+  assert.match(renderPosFoundationReference({ locale: "ja", state: "error" }), /[\u3040-\u30ff\u4e00-\u9faf]/u);
+  assert.match(renderAdminFoundationReference({ state: "loading" }), /aria-busy="true"/u);
+  assert.match(renderAdminFoundationReference({ state: "error" }), /role="alert"/u);
 });

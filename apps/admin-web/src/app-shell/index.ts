@@ -1,5 +1,5 @@
 import { renderAppShell } from "../../../../packages/ui/src/app-shell.js";
-import { renderAdminFoundationReference } from "../../../../packages/ui/src/foundation-reference.js";
+import { renderAdminFoundationReference, type FoundationReferenceOptions } from "../../../../packages/ui/src/foundation-reference.js";
 import { adminRoutes } from "./routes.js";
 
 export interface AdminShellInput {
@@ -12,6 +12,7 @@ export interface AdminShellInput {
   readonly location?: string;
   readonly businessDate?: string;
   readonly locale?: string;
+  readonly offline?: boolean;
 }
 
 export function renderAdminShell(input: AdminShellInput): string {
@@ -28,10 +29,11 @@ export function renderAdminShell(input: AdminShellInput): string {
       businessDate: input.businessDate ?? "Business date · 28 Jul 2026",
       locale: input.locale ?? "en",
     },
+    offline: input.offline ?? false,
     ...(input.direction ? { direction: input.direction } : {}),
   });
 }
 
-export function renderAdminFoundationPreview(input: Omit<AdminShellInput, "content" | "currentPath">): string {
-  return renderAdminShell({ ...input, currentPath: "/", content: renderAdminFoundationReference() });
+export function renderAdminFoundationPreview(input: Omit<AdminShellInput, "content" | "currentPath">, reference: FoundationReferenceOptions = {}): string {
+  return renderAdminShell({ ...input, currentPath: "/", content: renderAdminFoundationReference(reference), offline: reference.state === "offline" || input.offline === true });
 }

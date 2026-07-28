@@ -27,6 +27,34 @@
     },
     {
       "type": "library",
+      "name": "axe-core",
+      "version": "4.10.3",
+      "scope": "excluded",
+      "purl": "pkg:npm/axe-core@4.10.3",
+      "licenses": [
+        {
+          "license": {
+            "id": "MPL-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "puppeteer-core",
+      "version": "24.16.0",
+      "scope": "excluded",
+      "purl": "pkg:npm/puppeteer-core@24.16.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
       "name": "typescript",
       "version": "5.8.3",
       "scope": "excluded",

@@ -32,12 +32,17 @@
     "ci:cloudflare-preview": "node tooling/scripts/run-cloudflare-preview-deferred-ci.mjs",
     "metrics:cloudflare-runtime": "node tooling/scripts/cloudflare-runtime-metrics-ci.mjs",
     "cleanup:cloudflare-preview": "node tooling/scripts/cleanup-cloudflare-preview-ci.mjs",
-    "benchmark:neon": "node tooling/scripts/benchmark-neon.mjs"
+    "benchmark:neon": "node tooling/scripts/benchmark-neon.mjs",
+    "design:detect": "node .agents/skills/impeccable/scripts/detect.mjs --json apps/admin-web apps/pos-web packages/ui",
+    "design:evidence": "npm run build && node tooling/scripts/foundation-design-evidence.mjs",
+    "design:verify": "npm run design:detect && npm run design:evidence"
   },
   "dependencies": {
     "@neondatabase/serverless": "1.1.0"
   },
   "devDependencies": {
+    "axe-core": "4.10.3",
+    "puppeteer-core": "24.16.0",
     "typescript": "5.8.3"
   }
 }

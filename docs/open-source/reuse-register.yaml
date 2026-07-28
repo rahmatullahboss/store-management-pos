@@ -127,6 +127,70 @@ entries:
       - detect.mjs representative scan
     notes: Development tooling only. Do not grant production credentials or process production customer data through live-mode artefacts.
 
+  - id: OSS-0004
+    status: approved_dependency
+    purpose: Drive the locally installed system Chrome browser for deterministic Foundation UI screenshot, layout, keyboard and responsive verification.
+    reuse_mode: dependency
+    project: "puppeteer-core"
+    repository: "https://github.com/puppeteer/puppeteer"
+    exact_commit_or_tag: "24.16.0"
+    files_or_packages: ["puppeteer-core"]
+    declared_license: Apache-2.0
+    file_level_licenses_checked: true
+    notice_files: ["LICENSE"]
+    copyright_holders: ["Google LLC and Puppeteer contributors"]
+    modifications: "No upstream source copied or modified; consumed as an exact-pinned development dependency."
+    product_locations: ["package.json", "package-lock.json", "tooling/scripts/foundation-design-evidence.mjs"]
+    distributed_to_customers: false
+    network_service_use: false
+    compatible_with_product_model: approved
+    legal_review:
+      required: false
+      reviewer: foundation-agent
+      decision: approved_permissive_development_dependency
+      date: 2026-07-28
+    security_review:
+      owner: foundation-agent
+      result: local_browser_only_no_production_credentials
+    update_owner: foundation-platform
+    upstream_tracking: "npm exact version; updates require browser-evidence and licence review"
+    sbom_component: "pkg:npm/puppeteer-core@24.16.0"
+    third_party_notice_entry: "docs/THIRD_PARTY_NOTICES.md"
+    tests: ["npm run design:evidence", "npm run design:verify"]
+    notes: "Uses an existing system Chrome executable and does not download a browser binary."
+
+  - id: OSS-0005
+    status: approved_dependency
+    purpose: Run automated WCAG 2 A/AA and WCAG 2.1 AA checks against synthetic Foundation admin and POS browser fixtures.
+    reuse_mode: dependency
+    project: "axe-core"
+    repository: "https://github.com/dequelabs/axe-core"
+    exact_commit_or_tag: "4.10.3"
+    files_or_packages: ["axe-core"]
+    declared_license: MPL-2.0
+    file_level_licenses_checked: true
+    notice_files: ["LICENSE"]
+    copyright_holders: ["Deque Systems, Inc. and contributors"]
+    modifications: "No upstream source copied or modified; exact-pinned package is injected unmodified into synthetic browser fixtures for development verification."
+    product_locations: ["package.json", "package-lock.json", "tooling/scripts/foundation-design-evidence.mjs"]
+    distributed_to_customers: false
+    network_service_use: false
+    compatible_with_product_model: approved_development_tooling
+    legal_review:
+      required: true
+      reviewer: engineering_policy
+      decision: approved_unmodified_development_dependency
+      date: 2026-07-28
+    security_review:
+      owner: foundation-agent
+      result: synthetic_fixture_only_no_customer_data
+    update_owner: foundation-platform
+    upstream_tracking: "npm exact version; updates require accessibility-evidence and MPL notice review"
+    sbom_component: "pkg:npm/axe-core@4.10.3"
+    third_party_notice_entry: "docs/THIRD_PARTY_NOTICES.md"
+    tests: ["npm run design:evidence", "npm run design:verify"]
+    notes: "MPL-covered package remains unmodified and development-only; this engineering record is not a substitute for commercial legal advice."
+
 entry_template:
   id: OSS-0000
   status: proposed
