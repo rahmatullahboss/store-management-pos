@@ -109,6 +109,9 @@ jobs:
       - run: npm run build
       - run: npm run ci:cloudflare-preview
       - run: npm run metrics:cloudflare-runtime
+      - name: Cleanup Cloudflare preview Worker
+        if: always()
+        run: npm run cleanup:cloudflare-preview
       - name: Upload Cloudflare Foundation evidence
         if: always()
         uses: actions/upload-artifact@v4
