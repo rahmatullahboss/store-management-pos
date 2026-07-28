@@ -63,18 +63,29 @@ Last updated: 2026-07-28
 - Added module API/UI integration notes and an observability/alert/diagnosis runbook based on the current Cloudflare Workers structured logging model.
 - Verified red/green API, telemetry, event-dedupe, localization, accessibility and RTL coverage; 42 unit tests pass at this checkpoint.
 
-### 5 — Live database evidence
+### 5 — Completion-gate gap closure
 
-- Applied `CUS-0001`, `SAL-0001` and `FUL-0001` in order to the isolated Neon branch `dev/module-customer-sales-fulfillment` on PostgreSQL 17.10.
-- Verified 39 MOD-C base tables and forced tenant RLS on all 39 tables.
-- Verified 19 append-only or completed-document immutability triggers and 32 customer/sales/fulfillment permissions.
-- Verified `sales.next_document_number` uses a row lock and both critical operational queries resolve to index-only scans through `sales_order_query_idx` and `fulfillment_work_queue_idx`.
-- Live migration and verification workflow `30352241984` completed successfully; the disposable operations branch was deleted afterward.
+- Added bounded, idempotent customer and external-order import APIs plus deterministic customer/order export APIs with cursor limits and explicit permissions.
+- Added external order identities, import-batch persistence and explicit `standard`, `preorder` and `backorder` availability modes; inventory conflicts fail before order events or downstream effects are emitted.
+- Added audited order notes, attachments and customer communications through the sales domain service.
+- Bound every refund to a named return line, its immutable proportional net/tax/gross allocation and a named original payment allocation; mixed refund/exchange batches are fully validated before any external dependency side effect.
+- Added `SAL-0002` for external identities, availability queues, import batches and import/export permissions, plus `FUL-0002` for return-line allocation persistence and refund-to-return-line provenance.
+- Verified red/green gap coverage, including atomic resolution validation; the final repository suite contains 49 passing tests.
 
-### 6 — Final verification
+### 6 — Live database evidence
+
+- Applied `CUS-0001`, `SAL-0001`, `SAL-0002`, `FUL-0001` and `FUL-0002` in dependency order to the isolated Neon branch `dev/module-customer-sales-fulfillment` on PostgreSQL 17.10.
+- Verified 40 MOD-C base tables and forced tenant RLS on all 40 tables.
+- Verified 19 append-only or completed-document immutability triggers and 34 customer/sales/fulfillment permissions.
+- Verified `sales.next_document_number` uses a row lock.
+- Verified original operational queries use index-only scans through `sales_order_query_idx` and `fulfillment_work_queue_idx`.
+- Verified preorder/backorder and return-refund provenance queries use index-only scans through `sales_order_availability_queue_idx` and `fulfillment_refund_return_line_idx`.
+- Live workflows `30352241984` and `30354136029` completed successfully; both disposable operations branches were deleted afterward.
+
+### 7 — Final verification
 
 - Fresh full repository verification passed: format, lint, module boundaries, strict typecheck, architecture and unit tests, secret scan, licence register and SBOM generation.
-- Final test count before handoff: 43 passed, 0 failed.
+- Final test count before handoff: 49 passed, 0 failed.
 - Module branch contains coherent checkpoint commits and is pushed to origin.
 
 ## Checkpoint commits
@@ -84,6 +95,8 @@ Last updated: 2026-07-28
 - `71701d0` — quote/order/invoice lifecycles, frozen simulators and `SAL-0001`.
 - `26c432b` — fulfillment, delivery proofs, returns/refunds/exchanges and `FUL-0001`.
 - `a07f542` — APIs, admin UI, event projection and observability.
+- `ce78b83` — initial live evidence and integration handoff.
+- `eca698c` — customer/order import-export, preorder/backorder and return-line refund allocation gap closure.
 
 ## Dependency policy
 
@@ -95,6 +108,6 @@ MOD-C consumes only the frozen v1 public contracts and deterministic MOD-C-owned
 - Replace deterministic ports with approved MOD-A/MOD-B/MOD-E adapters without changing MOD-C domain contracts.
 - Connect the module outbox to the shared queue and `ModCEventProjector` consumer.
 - Register customer, sales and fulfillment workspaces in the shared permission-filtered navigation.
-- Apply the three module migrations only through the integration branch after dependency-order review; the isolated Neon branch remains the verified evidence environment.
+- Apply the five module migrations only through the integration branch after dependency-order review; the isolated Neon branch remains the verified evidence environment.
 
 These are integration-stream wiring steps rather than missing MOD-C implementation. The module workpack is complete and ready for integration review.
