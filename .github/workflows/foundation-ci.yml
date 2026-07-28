@@ -1,13 +1,12 @@
 name: Foundation CI
 
 on:
-  push:
-    branches: [program/foundation-v1]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 concurrency:
-  group: foundation-ci-${{ github.ref }}
+  group: foundation-ci-${{ github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: true
 
 permissions:

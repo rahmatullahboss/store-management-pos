@@ -40,6 +40,16 @@ async function sleep(milliseconds) {
   await new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
+async function cleanupStalePreviewBranches() {
+  const response = await api("/branches");
+  const branches = Array.isArray(response?.branches) ? response.branches : [];
+  const stale = branches.filter((branch) => typeof branch?.name === "string" && branch.name.startsWith("preview/pr-") && branch.id !== NEON_PARENT_BRANCH_ID);
+  for (const branch of stale) {
+    await api(`/branches/${encodeURIComponent(branch.id)}`, { method: "DELETE" });
+    console.log(`deleted stale Neon preview branch ${branch.name}`);
+  }
+}
+
 async function waitForEndpointIdle(endpointId) {
   const started = Date.now();
   const timeoutMs = 420_000;
@@ -64,6 +74,7 @@ let failure = null;
 let migrationIds = [];
 
 try {
+  await cleanupStalePreviewBranches();
   const created = await api("/branches", {
     method: "POST",
     body: JSON.stringify({
