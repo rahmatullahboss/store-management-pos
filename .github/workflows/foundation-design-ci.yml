@@ -7,6 +7,7 @@ on:
       - "apps/admin-web/**"
       - "apps/pos-web/**"
       - "packages/ui/**"
+      - "tests/unit/contracts-ui.test.mjs"
       - "PRODUCT.md"
       - "DESIGN.md"
       - ".impeccable/**"
@@ -19,6 +20,7 @@ on:
       - "apps/admin-web/**"
       - "apps/pos-web/**"
       - "packages/ui/**"
+      - "tests/unit/contracts-ui.test.mjs"
       - "PRODUCT.md"
       - "DESIGN.md"
       - ".impeccable/**"
@@ -26,29 +28,60 @@ on:
       - "tooling/scripts/foundation-design-evidence.mjs"
       - ".github/workflows/foundation-design-ci.yml"
 
+concurrency:
+  group: foundation-design-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
 jobs:
-  context:
+  foundation-design:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Install pinned dependencies
+        run: npm ci --ignore-scripts
+      - name: Build Foundation UI
+        run: npm run build
       - name: Load Foundation UI context
         run: |
           mkdir -p artifacts/foundation
           node .agents/skills/impeccable/scripts/context.mjs --target packages/ui/src/app-shell.ts | tee artifacts/foundation/impeccable-context.txt
+      - name: Generate deterministic design fixtures
+        run: node tooling/scripts/foundation-design-evidence.mjs
+      - name: Capture desktop and mobile evidence
+        run: |
+          browser="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$browser"
+          root="$(pwd)"
+          "$browser" --headless=new --no-sandbox --disable-gpu --hide-scrollbars --run-all-compositor-stages-before-draw --window-size=1440,1100 --screenshot="$root/artifacts/foundation/admin-foundation-desktop.png" "file://$root/artifacts/foundation/admin-foundation.html"
+          "$browser" --headless=new --no-sandbox --disable-gpu --hide-scrollbars --run-all-compositor-stages-before-draw --window-size=390,844 --screenshot="$root/artifacts/foundation/admin-foundation-mobile.png" "file://$root/artifacts/foundation/admin-foundation.html"
+          "$browser" --headless=new --no-sandbox --disable-gpu --hide-scrollbars --run-all-compositor-stages-before-draw --window-size=1440,1100 --screenshot="$root/artifacts/foundation/pos-foundation-desktop.png" "file://$root/artifacts/foundation/pos-foundation.html"
+          "$browser" --headless=new --no-sandbox --disable-gpu --hide-scrollbars --run-all-compositor-stages-before-draw --window-size=390,844 --screenshot="$root/artifacts/foundation/pos-foundation-mobile.png" "file://$root/artifacts/foundation/pos-foundation.html"
+          "$browser" --headless=new --no-sandbox --disable-gpu --hide-scrollbars --run-all-compositor-stages-before-draw --window-size=390,844 --screenshot="$root/artifacts/foundation/admin-foundation-rtl-mobile.png" "file://$root/artifacts/foundation/admin-foundation-rtl.html"
+          "$browser" --headless=new --no-sandbox --disable-gpu --hide-scrollbars --run-all-compositor-stages-before-draw --window-size=1440,1100 --screenshot="$root/artifacts/foundation/pos-foundation-offline-desktop.png" "file://$root/artifacts/foundation/pos-foundation-offline.html"
       - name: Run deterministic UI detector
-        run: node .agents/skills/impeccable/scripts/detect.mjs --json apps/admin-web apps/pos-web | tee artifacts/foundation/impeccable-detect.json
-      - name: Upload Impeccable evidence
+        run: |
+          set +e
+          node .agents/skills/impeccable/scripts/detect.mjs --json apps/admin-web apps/pos-web packages/ui > artifacts/foundation/impeccable-source-detect.json
+          source_status=$?
+          node .agents/skills/impeccable/scripts/detect.mjs --json artifacts/foundation/admin-foundation.html artifacts/foundation/admin-foundation-rtl.html artifacts/foundation/pos-foundation.html artifacts/foundation/pos-foundation-offline.html > artifacts/foundation/impeccable-rendered-detect.json
+          rendered_status=$?
+          printf '{"sourceExitCode":%s,"renderedExitCode":%s}\n' "$source_status" "$rendered_status" > artifacts/foundation/impeccable-detector-status.json
+          cat artifacts/foundation/impeccable-source-detect.json
+          cat artifacts/foundation/impeccable-rendered-detect.json
+          test "$source_status" -eq 0
+          test "$rendered_status" -eq 0
+      - name: Upload Foundation design evidence
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: foundation-impeccable-evidence-${{ github.run_id }}
-          path: |
-            artifacts/foundation/impeccable-context.txt
-            artifacts/foundation/impeccable-detect.json
+          name: foundation-design-evidence-${{ github.run_id }}
+          path: artifacts/foundation/**
+          if-no-files-found: error
           retention-days: 14
