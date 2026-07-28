@@ -52,6 +52,20 @@ Evidence:
 - runtime-role tenant isolation passed: Alpha saw one product/search result, Beta saw zero;
 - initial save and idempotent replay, audit and outbox effects passed on the isolated Neon branch.
 
+## Pricing checkpoint
+
+Pricing, promotions, coupons and controlled discounts are complete at module checkpoint level.
+
+Evidence:
+
+- `docs/architecture/mod-a/pricing-checkpoint.md`
+- `database/migrations/pricing/PRC-0001-core.sql`
+- migration SHA-256 `6de6d513d4af27fa81300baab2b5ea0f2ada31cf2191f78207c9038290906288`
+- 22/22 unit tests passed;
+- live quote snapshot and idempotent replay passed;
+- manual discount Foundation approval integration passed;
+- runtime-role pricing isolation passed for Alpha and Beta tenants.
+
 ## Current checkpoint
 
-Catalog is complete at module checkpoint level. Pricing, promotions, controlled discounts, tax, admin UI, scale evidence, runbooks and final integration handoff remain active.
+Catalog and pricing are complete at module checkpoint level. Tax, admin UI, 250,000-variant scale evidence, runbooks and final integration handoff remain active.

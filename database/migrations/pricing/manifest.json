@@ -1,0 +1,11 @@
+{
+  "module": "MOD-A-PRICING",
+  "version": 1,
+  "migrations": [
+    {
+      "id": "PRC-0001",
+      "file": "PRC-0001-core.sql",
+      "sha256": "6de6d513d4af27fa81300baab2b5ea0f2ada31cf2191f78207c9038290906288"
+    }
+  ]
+}
