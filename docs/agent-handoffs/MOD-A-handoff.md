@@ -110,6 +110,22 @@ Evidence:
 
 The isolated Neon `br-fancy-bird-axo3z9ek` performance rerun remains open because this continuation session exposed neither the Neon SQL connector nor a `DATABASE_URL`. The branch-locked harness is complete and no credential was invented or stored.
 
+## Contracts and publishing checkpoint
+
+Combined calculation, POS feed and immutable publishing are complete at module checkpoint level.
+
+Evidence:
+
+- `docs/architecture/mod-a/contracts-publishing-checkpoint.md`;
+- `PRC-0002` append-only combined `PriceTaxSnapshot` persistence;
+- `CAT-0003` snapshot/incremental POS catalog feed;
+- `PRC-0003` price-list and promotion publishing;
+- `TAX-0002` jurisdiction/code/rate publishing;
+- initial and idempotent replay validation for combined snapshots and all publish commands;
+- runtime tenant isolation for combined snapshot and feed;
+- stable module-owned event envelopes for catalog, pricing, promotion and tax changes;
+- full repository verification passed 45/45 tests.
+
 ## Current checkpoint
 
-Catalog, pricing, tax, module admin UI and local 250,000-variant PostgreSQL query-shape evidence are complete at checkpoint level. Combined `CalculatePriceAndTax`/`PriceTaxSnapshot`, POS feed contract fixtures, runbooks/observability, Neon scale rerun and final integration handoff remain active.
+Catalog, pricing, tax, combined price-tax snapshots, POS feed, event contracts, immutable publishing, module admin UI and local 250,000-variant PostgreSQL evidence are complete. Runbooks/observability, full fresh rebuild evidence, Neon scale rerun and final integration handoff remain active.

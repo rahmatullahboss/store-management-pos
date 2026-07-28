@@ -31,6 +31,37 @@ test("catalog migration manifest pins the CAT-0002 checksum", async () => {
   assert.equal(entry.sha256, createHash("sha256").update(sql).digest("hex"));
 });
 
+test("MOD-A publishing and feed migrations pin checksums and fail closed on overlap", async () => {
+  const migrations = [
+    ["database/migrations/catalog/CAT-0003-pos-feed.sql", "database/migrations/catalog/manifest.json", "CAT-0003"],
+    ["database/migrations/pricing/PRC-0002-price-tax-snapshot.sql", "database/migrations/pricing/manifest.json", "PRC-0002"],
+    ["database/migrations/pricing/PRC-0003-publishing.sql", "database/migrations/pricing/manifest.json", "PRC-0003"],
+    ["database/migrations/tax/TAX-0002-publishing.sql", "database/migrations/tax/manifest.json", "TAX-0002"],
+  ];
+  for (const [migrationPath, manifestPath, id] of migrations) {
+    const [sql, manifestText] = await Promise.all([readFile(migrationPath), readFile(manifestPath, "utf8")]);
+    const entry = JSON.parse(manifestText).migrations.find((migration) => migration.id === id);
+    assert.ok(entry, `${id} manifest entry is missing`);
+    assert.equal(entry.sha256, createHash("sha256").update(sql).digest("hex"));
+  }
+  const [pricePublish, taxPublish, feed, snapshot] = await Promise.all([
+    readFile("database/migrations/pricing/PRC-0003-publishing.sql", "utf8"),
+    readFile("database/migrations/tax/TAX-0002-publishing.sql", "utf8"),
+    readFile("database/migrations/catalog/CAT-0003-pos-feed.sql", "utf8"),
+    readFile("database/migrations/pricing/PRC-0002-price-tax-snapshot.sql", "utf8"),
+  ]);
+  assert.match(pricePublish, /tstzrange\(existing\.effective_from,existing\.effective_until/);
+  assert.match(pricePublish, /price list version conflict/);
+  assert.match(pricePublish, /promotion version conflict/);
+  assert.match(taxPublish, /tax code effective range overlaps/);
+  assert.match(taxPublish, /tax jurisdiction version conflict/);
+  assert.match(feed, /ORDER BY d\.updated_at,d\.variant_id/);
+  assert.match(feed, /p_after_updated_at IS NULL/);
+  assert.match(snapshot, /CREATE TRIGGER append_only/);
+  assert.match(snapshot, /subtotal_minor - discount_minor = promoted_amount_minor/);
+  assert.match(snapshot, /net_minor \+ tax_minor = gross_minor/);
+});
+
 test("MOD-A records the shared route deficiency instead of editing the Foundation registry", async () => {
   const [request, sharedRoutes, catalogRoutes, pricingRoutes] = await Promise.all([
     readFile("docs/contracts/change-requests/CCR-0001-MOD-A-ADMIN-ROUTE-PROVIDERS.md", "utf8"),

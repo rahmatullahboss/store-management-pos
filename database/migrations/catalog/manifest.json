@@ -11,6 +11,11 @@
       "id": "CAT-0002",
       "file": "CAT-0002-search-performance.sql",
       "sha256": "8007c0a15335c740e529646b7fd9fc9d26b97edf281310acf233325d79b68fa0"
+    },
+    {
+      "id": "CAT-0003",
+      "file": "CAT-0003-pos-feed.sql",
+      "sha256": "89057d0d71e1da508c0fdcf08ba76d396dc9f7ca04157b5b21eae908008a6924"
     }
   ]
 }

@@ -1,4 +1,5 @@
 import { requirePermission, type RequestContext, type TransactionClient } from "../../../packages/foundation/src/index.js";
+import { decodeCatalogFeedCursor, encodeCatalogFeedCursor, type CatalogFeedEntry, type CatalogFeedPage } from "./feed.js";
 import type { CatalogProduct } from "./model.js";
 
 export const CATALOG_PERMISSIONS = Object.freeze({
@@ -7,6 +8,7 @@ export const CATALOG_PERMISSIONS = Object.freeze({
   publish: "catalog.product.publish",
   import: "catalog.import.execute",
   export: "catalog.export.read",
+  feed: "catalog.feed.read",
   unitManage: "catalog.unit.manage",
 } as const);
 
@@ -135,6 +137,61 @@ export async function queryCatalogVariantFeed(
     barcodes: Object.freeze(row.barcodes),
     version: BigInt(row.version),
   })));
+}
+
+export async function queryCatalogSnapshotFeed(
+  client: TransactionClient,
+  context: RequestContext,
+  input: { readonly locale: string; readonly snapshotAt: string; readonly cursor?: string; readonly limit?: number },
+): Promise<CatalogFeedPage> {
+  requirePermission(context, CATALOG_PERMISSIONS.feed);
+  const snapshot = new Date(input.snapshotAt);
+  if (Number.isNaN(snapshot.valueOf())) throw new TypeError("Catalog feed snapshotAt is invalid");
+  const snapshotAt = snapshot.toISOString();
+  const limit = input.limit ?? 500;
+  if (!Number.isInteger(limit) || limit < 1 || limit > 500) throw new RangeError("Catalog feed limit must be between 1 and 500");
+  const cursor = input.cursor === undefined ? undefined : decodeCatalogFeedCursor(input.cursor);
+  const result = await client.query<{
+    product_id: string;
+    variant_id: string;
+    product_code: string;
+    sku: string;
+    display_name: string;
+    variant_title: string;
+    status: string;
+    unit_code: string;
+    tax_code: string | null;
+    barcodes: string[];
+    version: string;
+    updated_at: string;
+  }>(
+    "SELECT product_id::text, variant_id::text, product_code, sku, display_name, variant_title, status, unit_code, tax_code, barcodes, version::text, updated_at::text FROM catalog.catalog_snapshot_feed($1,$2::timestamptz,$3::timestamptz,$4::uuid,$5)",
+    [input.locale, snapshotAt, cursor?.updatedAt ?? null, cursor?.variantId ?? null, limit + 1],
+  );
+  const mapped: readonly CatalogFeedEntry[] = result.rows.map((row) => Object.freeze({
+    productId: row.product_id,
+    variantId: row.variant_id,
+    productCode: row.product_code,
+    sku: row.sku,
+    displayName: row.display_name,
+    variantTitle: row.variant_title,
+    status: row.status,
+    unitCode: row.unit_code,
+    ...(row.tax_code === null ? {} : { taxCode: row.tax_code }),
+    barcodes: Object.freeze(row.barcodes),
+    version: BigInt(row.version),
+    updatedAt: new Date(row.updated_at).toISOString(),
+  }));
+  const hasMore = mapped.length > limit;
+  const entries = Object.freeze(mapped.slice(0, limit));
+  const last = entries.at(-1);
+  return Object.freeze({
+    schemaVersion: "1.0",
+    snapshotAt,
+    entries,
+    ...(hasMore && last !== undefined ? { nextCursor: encodeCatalogFeedCursor({ updatedAt: last.updatedAt, variantId: last.variantId }) } : {}),
+    hasMore,
+  });
 }
 
 export async function recordCatalogImport(
