@@ -5,6 +5,7 @@ import { performance } from "node:perf_hooks";
 
 const WRANGLER_VERSION = "4.114.0";
 const PREVIEW_ALIAS = "gate";
+const REMOTE_DEV_PORT = 8787;
 const {
   CLOUDFLARE_API_TOKEN,
   CLOUDFLARE_ACCOUNT_ID,
@@ -26,6 +27,8 @@ const reportPath = path.join(artifactsDir, "cloudflare-preview-report.json");
 const apiBase = `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}`;
 let deployOutput = "";
 let previewOutput = "";
+let remoteDevOutput = "";
+let remoteDevProcess = null;
 
 function redact(value) {
   return String(value || "")
@@ -58,6 +61,51 @@ function run(command, args) {
       }
     });
   });
+}
+
+function startRemoteDev() {
+  const child = spawn("npx", [
+    "--yes",
+    `wrangler@${WRANGLER_VERSION}`,
+    "dev",
+    "--remote",
+    "--config",
+    configPath,
+    "--name",
+    workerName,
+    "--ip",
+    "127.0.0.1",
+    "--port",
+    String(REMOTE_DEV_PORT),
+    "--local-protocol",
+    "http",
+    "--log-level",
+    "info"
+  ], { cwd: root, env: process.env, stdio: ["ignore", "pipe", "pipe"] });
+  child.stdout.on("data", (chunk) => {
+    const text = chunk.toString();
+    remoteDevOutput += text;
+    process.stdout.write(text);
+  });
+  child.stderr.on("data", (chunk) => {
+    const text = chunk.toString();
+    remoteDevOutput += text;
+    process.stderr.write(text);
+  });
+  child.on("error", (error) => {
+    remoteDevOutput += `\nremote dev process error: ${error.message}`;
+  });
+  return child;
+}
+
+async function stopRemoteDev() {
+  if (!remoteDevProcess || remoteDevProcess.exitCode !== null) return;
+  remoteDevProcess.kill("SIGTERM");
+  await Promise.race([
+    new Promise((resolve) => remoteDevProcess.once("exit", resolve)),
+    new Promise((resolve) => setTimeout(resolve, 5000))
+  ]);
+  if (remoteDevProcess.exitCode === null) remoteDevProcess.kill("SIGKILL");
 }
 
 async function cloudflare(pathname, init = {}) {
@@ -121,6 +169,22 @@ async function requestHealth(url) {
   return { elapsedMs, body };
 }
 
+async function awaitHealth(url, attempts) {
+  let lastError;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await requestHealth(url);
+    } catch (error) {
+      lastError = error;
+      if (remoteDevProcess?.exitCode !== null && url.includes("127.0.0.1")) {
+        throw new Error(`Cloudflare remote preview exited before becoming ready: ${redact(remoteDevOutput).slice(-1000)}`);
+      }
+      await sleep(2500);
+    }
+  }
+  throw lastError || new Error(`Cloudflare health check did not become ready at ${url}`);
+}
+
 function percentile(values, percentage) {
   const sorted = [...values].sort((left, right) => left - right);
   const index = Math.max(0, Math.ceil(sorted.length * percentage) - 1);
@@ -166,7 +230,7 @@ async function writeFailureReport(error) {
     runId: GITHUB_RUN_ID || null,
     bundle,
     error: redact(error?.message || error),
-    commandOutput: error?.commandOutput || redact(`${deployOutput}\n${previewOutput}`) || null
+    commandOutput: error?.commandOutput || redact(`${deployOutput}\n${previewOutput}\n${remoteDevOutput}`) || null
   };
   await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
 }
@@ -229,23 +293,24 @@ try {
     `Foundation gate preview ${GITHUB_SHA || "manual"}`
   ]);
 
-  const healthUrl = await resolvePreviewUrl(previewOutput);
+  const publicPreviewUrl = await resolvePreviewUrl(previewOutput);
+  let benchmarkUrl = publicPreviewUrl;
+  let benchmarkMode = "public-version-preview";
+  let publicPreviewError = null;
   let firstRequest;
-  let lastError;
-  for (let attempt = 1; attempt <= 24; attempt += 1) {
-    try {
-      firstRequest = await requestHealth(healthUrl);
-      break;
-    } catch (error) {
-      lastError = error;
-      await sleep(2500);
-    }
+  try {
+    firstRequest = await awaitHealth(publicPreviewUrl, 4);
+  } catch (error) {
+    publicPreviewError = redact(error.message);
+    benchmarkMode = "remote-preview-proxy";
+    benchmarkUrl = `http://127.0.0.1:${REMOTE_DEV_PORT}/health`;
+    remoteDevProcess = startRemoteDev();
+    firstRequest = await awaitHealth(benchmarkUrl, 24);
   }
-  if (!firstRequest) throw lastError || new Error("Cloudflare preview health check did not become ready");
 
   const sequential = [];
-  for (let index = 0; index < 20; index += 1) sequential.push((await requestHealth(healthUrl)).elapsedMs);
-  const concurrent = await Promise.all(Array.from({ length: 20 }, () => requestHealth(healthUrl)));
+  for (let index = 0; index < 20; index += 1) sequential.push((await requestHealth(benchmarkUrl)).elapsedMs);
+  const concurrent = await Promise.all(Array.from({ length: 20 }, () => requestHealth(benchmarkUrl)));
   const concurrentLatencies = concurrent.map((result) => result.elapsedMs);
   const bundle = await readBundleMetrics();
   const report = {
@@ -253,7 +318,10 @@ try {
     status: "passed",
     workerName,
     previewAlias: PREVIEW_ALIAS,
-    healthUrl,
+    publicPreviewUrl,
+    publicPreviewError,
+    benchmarkMode,
+    benchmarkUrl,
     wranglerVersion: WRANGLER_VERSION,
     gitSha: GITHUB_SHA || null,
     runId: GITHUB_RUN_ID || null,
@@ -280,6 +348,7 @@ try {
   await writeFailureReport(error);
   throw error;
 } finally {
+  await stopRemoteDev();
   try {
     if (await deleteWorker()) console.log(`deleted Cloudflare preview worker ${workerName}`);
   } catch (error) {
