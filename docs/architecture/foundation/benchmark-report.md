@@ -1,6 +1,8 @@
 # Foundation Benchmark and Verification Report
 
 **Date:** 2026-07-28
+**Verified CI code checkpoint:** `bdcb2b649e63edd74d6db0233471e7b7a16ac6cd`
+**Successful Foundation CI run:** `30327509153`
 
 ## Completed evidence
 
@@ -21,25 +23,41 @@
 | Secret/licence checks and CycloneDX SBOM | Passed in connected CI; runtime and development dependencies are registered |
 | Dependency audit | Passed in connected CI at high severity threshold |
 | Dedicated non-production Neon project/branch | Created and migrated |
-| Fresh empty-parent rebuild and cleanup | Passed through `FND-0004` on a disposable branch and deleted |
+| Automated empty-parent Neon lifecycle | Passed `FND-0001` through `FND-0005`, fixtures, integration, benchmark and cleanup |
 | Parent/child schema diff | Reviewed; expected Foundation and reserved module namespace additions only |
+| Cloudflare Worker upload/deploy/version preview | Passed using Wrangler `4.114.0`; ephemeral Worker and preview alias created and cleaned up |
+| Cloudflare API health | Passed with `status=healthy`, `service=api`, `databaseMode=direct-neon`, `region=cloudflare-global` |
 
-## Live Neon evidence
+## Automated Neon lifecycle evidence
 
-The long-lived development branch `dev/foundation-v1` contains `FND-0001` through `FND-0005`. It has 23 forced-RLS platform tables and verified two-tenant isolation, idempotent reference effects, inbox duplicate handling and membership/session/device revocation behavior.
+Connected Foundation CI used repository secret `NEON_API_KEY` with project `twilight-boat-26805962` and empty parent `br-spring-grass-ax3ptydv`. The preview job created an isolated branch, validated migration checksums, applied `FND-0001` through `FND-0005`, loaded synthetic fixtures, ran integration and direct-driver benchmark commands, and deleted the branch in cleanup. The long-lived development branch and untouched parent were not reset or replaced.
 
-A lifecycle run used disposable branch `test/foundation-gate-manual-20260728` (`br-sweet-mode-axxx2970`) created from the untouched non-production `main` parent. `FND-0001` through `FND-0004` and synthetic fixtures were applied from empty state. The run reproduced Alpha/Beta isolation, one-record/one-audit/one-outbox reference replay effects, inbox first/duplicate claims and one-revocation/one-audit/one-outbox session effects. Verification writes were rolled back and the branch was deleted.
+The committed benchmark currently records p50, p95 and maximum latency for HTTP one-shot, HTTP transaction batch and request-scoped WebSocket transactions. A durable artifact containing the exact Neon values, plus explicit p99, concurrency and genuine cold-wake measurements, remains to be added before the benchmark gate is final.
 
-That manual lifecycle establishes rebuildability through `FND-0004` and cleanup. `FND-0005` was then applied and verified on the long-lived development branch: runtime direct insert privilege is false, function execution privilege is true, direct insert is rejected and duplicate-safe one/audit/outbox effects remain intact. Its published checksum matches the manifest.
+## Cloudflare runtime evidence
 
-## Connected CI evidence
+The successful rerun of Foundation CI run `30327509153` produced a retained Cloudflare evidence artifact and then deleted the ephemeral Worker.
 
-Commit `742afaa` passed exact dependency installation, format, lint, architecture boundaries, typecheck, build/tests, secret scan, licence register, SBOM generation and dependency audit. The Neon preview job also passed installation and build. It stopped before branch creation because connected CI supplied an empty `NEON_API_KEY`; project and parent branch IDs were present.
+| Measurement | Result |
+|---|---:|
+| Wrangler version | `4.114.0` |
+| Uploaded script | 164,831 bytes |
+| Reported gzip upload | 52.34 KiB |
+| Source map | 402,328 bytes |
+| Wrangler Worker startup time | 4 ms |
+| Public preview first probe | 823.15 ms |
+| Remote Cloudflare preview first request | 2,288.97 ms |
+| Sequential requests | 20 |
+| Sequential p50 / p95 / max | 58.56 / 85.14 / 92.76 ms |
+| Concurrent requests | 20 |
+| Concurrent p50 / p95 / max | 165.53 / 217.20 / 246.88 ms |
 
-## Deferred runtime benchmarks
+The benchmark used an authenticated `wrangler dev --remote` proxy so execution occurred on Cloudflare infrastructure even when public preview routing was intermittently unavailable during earlier attempts. In the successful run, the public version-preview alias was also reachable. CI now serializes Foundation runs, supervises Wrangler process groups and removes stale `store-pos-fnd-*` Workers.
 
-The local container has no usable outbound DNS path to the Neon endpoint/package registry, so it cannot truthfully produce direct-driver latency numbers. No p50/p95/p99, cold-wake or concurrency result is claimed from that runtime.
+Wrangler's 4 ms startup figure is build/runtime startup evidence, not per-invocation CPU time. Per-invocation CPU/wall-time telemetry and a defensible memory measurement or documented platform substitute remain pending. Preview URLs do not expose normal Worker logs, so CPU evidence should be captured from the deployed ephemeral Worker or Workers Observability before cleanup.
 
-`tooling/scripts/benchmark-neon.mjs` and `tooling/scripts/neon-preview-ci.mjs` are committed to run with the pinned `@neondatabase/serverless` dependency. The workflow creates a preview branch from non-production `main`, validates manifest checksums, applies migrations and fixtures, runs direct HTTP/WebSocket integration and latency benchmarks, and deletes the branch in a `finally` cleanup path. Only repository secret `NEON_API_KEY` remains required because project and parent IDs are pinned.
+## Remaining benchmark work
 
-Cloudflare Worker bundle, CPU and memory evidence remains pending because no authorised Cloudflare deployment target is connected. Hyperdrive has not been introduced; any comparison occurs only after the direct Neon baseline is recorded.
+1. Persist exact Neon benchmark output as a CI artifact and add p99, concurrent-load and genuine cold-wake measurements.
+2. Capture Cloudflare per-invocation CPU/wall time and memory evidence or document an approved measurable proxy.
+3. Keep Hyperdrive optional; compare it only after the direct Neon benchmark is complete.
