@@ -33,10 +33,21 @@ Last updated: 2026-07-28
 - Added `CUS-0001` migration with customer-owned tables, indexes, forced RLS, append-only consent/credit-approval/merge history, permissions and grants.
 - Verified red/green coverage for customer behavior and migration structure; 20 unit tests pass at this checkpoint.
 
+### 2 — Sales domain
+
+- Added quotation creation, revision snapshots, send/accept transitions and idempotent quote-to-order conversion with optimistic version enforcement.
+- Added immutable MOD-A-compatible price/tax snapshot consumption and MOD-C-owned deterministic simulators for pricing/tax, inventory reservation, customer credit, payment/refund, accounting and receipt/fiscal contracts.
+- Added authoritative sales orders with independent order, payment, fulfillment, invoice, return and backorder states; partial payment/fulfillment and prepaid/deposit/layaway/on-account metadata are represented independently.
+- Added inventory reservation and customer-credit checks before confirmation, duplicate-command replay protection and outbox/audit events.
+- Added operational invoice posting, accounting/receipt instructions, immutable posted documents and proportional credit-note allocation preserving original price/tax snapshots.
+- Added approval-gated cancellation after payment, fulfillment or invoicing effects and concurrency-safe document numbering.
+- Added `SAL-0001` migration with quote/order/invoice/credit-note documents, immutable revisions/observations, independent status columns, document metadata, indexes, forced RLS, permissions and row-locked numbering.
+- Verified red/green coverage; 28 unit tests pass at this checkpoint.
+
 ## Dependency policy
 
 MOD-C consumes only the frozen v1 public contracts and deterministic MOD-C-owned simulators for catalog/pricing/tax, inventory, payment/refund, accounting and receipt/fiscal dependencies. No unmerged MOD-A, MOD-B or MOD-E implementation code is imported.
 
 ## Open work
 
-Sales, fulfillment, application surfaces, live migrations/evidence and final integration handoff remain in progress.
+Fulfillment, returns/refunds orchestration, application surfaces, live migrations/evidence and final integration handoff remain in progress.
