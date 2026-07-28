@@ -1,0 +1,11 @@
+{
+  "module": "MOD-C-FULFILLMENT",
+  "version": 1,
+  "migrations": [
+    {
+      "id": "FUL-0001",
+      "file": "FUL-0001-fulfillment.sql",
+      "sha256": "853e7ab33f76f4ab8244df3cb94b7e8cef41a09b4ec6ea56426afafb98696bb8"
+    }
+  ]
+}

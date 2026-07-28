@@ -44,10 +44,20 @@ Last updated: 2026-07-28
 - Added `SAL-0001` migration with quote/order/invoice/credit-note documents, immutable revisions/observations, independent status columns, document metadata, indexes, forced RLS, permissions and row-locked numbering.
 - Verified red/green coverage; 28 unit tests pass at this checkpoint.
 
+### 3 — Fulfillment, returns and refund orchestration
+
+- Added reservation-backed split fulfillment plans with explicit allocations by method and warehouse, idempotent creation and over-allocation prevention.
+- Added enforced picking, packing, ship-from-store, local delivery and pickup transitions with exact quantity checks, stock issue postings, shipment metadata and immutable delivery/collection proof.
+- Added return authorization, privileged approval, receipt condition/disposition, customer-return stock posting and cumulative over-return protection with explicit policy override permission.
+- Preserved original order quantity and price/tax snapshots on every return line and original payment allocation provenance on every authorization.
+- Added original-payment-targeted refund orchestration and exchange replacement requests through deterministic frozen-contract simulators; completed returns become immutable.
+- Added `FUL-0001` migration with fulfillment queues, allocations, packages, shipments, proofs, workflow events, return approvals/receipts/refunds/exchanges, forced RLS, append-only evidence, completed-return immutability and permissions.
+- Verified red/green coverage; 36 unit tests pass at this checkpoint.
+
 ## Dependency policy
 
 MOD-C consumes only the frozen v1 public contracts and deterministic MOD-C-owned simulators for catalog/pricing/tax, inventory, payment/refund, accounting and receipt/fiscal dependencies. No unmerged MOD-A, MOD-B or MOD-E implementation code is imported.
 
 ## Open work
 
-Fulfillment, returns/refunds orchestration, application surfaces, live migrations/evidence and final integration handoff remain in progress.
+Application APIs/UI, observability/jobs, live migrations/evidence and final integration handoff remain in progress.
