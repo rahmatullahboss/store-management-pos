@@ -2,7 +2,7 @@
 
 ## Status
 
-Implementation is active on `module/inventory-procurement-v1`. CP0 through CP4 are complete; CP5 and CP6 remain in progress.
+Implementation is active on `module/inventory-procurement-v1`. CP0 through CP5 are complete; CP6 remains in progress.
 
 ## Foundation and isolation
 
@@ -37,12 +37,10 @@ Implementation is active on `module/inventory-procurement-v1`. CP0 through CP4 a
 
 - TypeScript strict typecheck: pass
 - Module migration validator: pass
-- Unit and architecture tests: 19/19 pass
+- Unit, API, UI and architecture tests: 24/24 pass
+- Lint, formatting, boundary and diff checks: pass
 
 ## Pending before final handoff
 
-- Complete HTTP API and procurement SQL write adapter.
-- Complete admin UI routes and design verification.
-- Add safe CSV import/export, jobs, metrics, health, and alert surfaces.
-- Create/verify `dev/module-inventory-procurement` through repository secrets and execute Neon migration/recovery checks.
-- Run full `npm run verify`, commit/push final checkpoint, open draft PR, and attach final evidence.
+- Inspect the repository-secret-backed Neon rehearsal for `dev/module-inventory-procurement` and resolve any environment-specific failure.
+- Close CP6, open the draft PR, and attach final evidence.

@@ -58,12 +58,22 @@
 - Quantity/value/manual landed-cost allocation and inventory revaluation.
 - Replenishment proposal generation from available plus incoming stock.
 
-### CP5 — API, admin UI, security, imports/exports, and observability — in progress
+### CP5 — API, admin UI, security, imports/exports, and observability — complete
 
-- Production SQL stock-posting adapter is implemented.
-- Remaining: HTTP routes, procurement write adapter, admin operations ledger, import/export, background jobs, and metrics/alerts.
+- Permissioned inventory and procurement HTTP routes with strict validation, tenant-scoped transactions, optimistic versioning and idempotency keys.
+- Production SQL adapters for stock posting, reservations, transfers, counts, requisitions, purchase orders, receiving, supplier returns, three-way matching and landed cost.
+- Admin Inventory Operations Ledger and Procurement Operations surfaces built on the existing shell and design tokens.
+- Formula-safe CSV import/export for movement, balances, reorder policies, suppliers, orders and receipts.
+- Operational health, reconciliation, reservation-expiry and replenishment surfaces.
+- Audit and outbox evidence emitted in the same transaction as business writes.
+- API route and error contract documentation in `docs/modules/inventory-procurement/api-contracts.md`.
 
-### CP6 — Migration rehearsal, full verification, documentation, and final handoff — pending
+### CP6 — Migration rehearsal, full verification, documentation, and final handoff — in progress
+
+- Repository-secret-backed workflow `.github/workflows/mod-b-neon-rehearsal.yml` creates or verifies the persistent Neon branch `dev/module-inventory-procurement` without deleting it.
+- The workflow applies Foundation → Inventory → Procurement migrations, repeats the run to prove replay safety, and asserts RLS, append-only triggers, permission seeds and the frozen MOD-A boundary.
+- Local full `npm run verify` passes before the rehearsal workflow is pushed.
+- Remaining: inspect GitHub Actions evidence, resolve any environment-specific SQL issue, then close CP6 and open the draft PR.
 
 ## Verification evidence
 
@@ -71,8 +81,8 @@ Current local verification:
 
 - `npm run typecheck` — pass
 - `npm run db:validate` — pass, 3 MOD-B migrations checksum-verified
-- `npm test` — pass, 19/19 tests
-- New deterministic MOD-B tests — 4/4 pass
+- `npm test` — pass, 24/24 tests
+- New deterministic MOD-B domain/API/UI tests — 9/9 pass
 
 ## Environment note
 

@@ -36,7 +36,9 @@
     "design:detect": "node .agents/skills/impeccable/scripts/detect.mjs --json apps/admin-web apps/pos-web packages/ui",
     "design:evidence": "npm run build && node tooling/scripts/foundation-design-evidence.mjs",
     "design:verify": "npm run design:detect && npm run design:evidence",
-    "db:validate": "node tooling/scripts/validate-module-migrations.mjs"
+    "db:validate": "node tooling/scripts/validate-module-migrations.mjs",
+    "neon:mod-b:ensure": "node tooling/scripts/neon-mod-b-branch.mjs",
+    "db:verify:mod-b": "node tooling/scripts/verify-mod-b-schema.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "1.1.0"

@@ -151,12 +151,17 @@ export class InventorySqlRepository {
     const postedAt = new Date().toISOString();
     const entries: StockLedgerEntry[] = [];
     const costConsumptions: CostConsumption[] = [];
+    const pairedUnitCosts = new Map<string, { readonly unitCostMinor: bigint; readonly currency: string }>();
 
     for (const [lineIndex, line] of command.lines.entries()) {
       const quantity = parseQuantity(line);
       if (quantity === 0n && command.movementType !== "landed_cost_revaluation") throw new PlatformError("VALIDATION_FAILED", "Stock quantity cannot be zero", 400);
       const stockStatus = line.stockStatus ?? "sellable";
       let unitCostMinor = parseMinor(line.unitCostMinor);
+      const pairKey = `${line.sourceDocumentLineId ?? line.sourceDocumentId}::${line.item.variantId}::${line.quantityDelta.unit}::${line.quantityDelta.scale}`;
+      const paired = pairedUnitCosts.get(pairKey);
+      let currency = line.currency ?? paired?.currency;
+      if (unitCostMinor === undefined && paired !== undefined) unitCostMinor = paired.unitCostMinor;
       let valueDeltaMinor: bigint | undefined;
       const entryId = uuidV7();
       const pendingConsumptions: CostConsumption[] = [];
@@ -208,9 +213,24 @@ export class InventorySqlRepository {
         }
         valueDeltaMinor = -consumedValue;
         if (unitCostMinor === undefined && -quantity - remaining > 0n) unitCostMinor = consumedValue * factor(line.quantityDelta.scale) / (-quantity - remaining);
+      } else if (quantity < 0n && stockStatus === "in_transit") {
+        const balance = await client.query<{ quantity_amount: string; value_minor: string; currency: string | null } & Record<string, unknown>>(
+          `SELECT SUM(quantity_amount)::text AS quantity_amount, SUM(value_minor)::text AS value_minor, MAX(currency) AS currency
+             FROM inventory.stock_balances
+            WHERE tenant_id = $1::uuid AND warehouse_id = $2::uuid AND variant_id = $3::uuid
+              AND stock_status = 'in_transit' AND unit_code = $4 AND quantity_scale = $5`,
+          [context.tenantId, line.warehouseId, line.item.variantId, line.quantityDelta.unit, line.quantityDelta.scale],
+        );
+        const onHand = BigInt(balance.rows[0]?.quantity_amount ?? "0");
+        const value = BigInt(balance.rows[0]?.value_minor ?? "0");
+        if (onHand <= 0n || -quantity > onHand) throw new PlatformError("CONFLICT", "In-transit issue exceeds available quantity", 409);
+        unitCostMinor = value * factor(line.quantityDelta.scale) / onHand;
+        currency = balance.rows[0]?.currency ?? currency;
+        valueDeltaMinor = quantity * unitCostMinor / factor(line.quantityDelta.scale);
       } else if (unitCostMinor !== undefined) {
         valueDeltaMinor = quantity * unitCostMinor / factor(line.quantityDelta.scale);
       }
+      if (quantity < 0n && unitCostMinor !== undefined && currency !== undefined) pairedUnitCosts.set(pairKey, { unitCostMinor, currency });
 
       const inserted = await client.query<LedgerRow>(
         `INSERT INTO inventory.stock_ledger_entries(
@@ -232,7 +252,7 @@ export class InventorySqlRepository {
           entryId, context.tenantId, legalEntityId, command.operationId, lineIndex, command.postingGroupId,
           line.item.variantId, line.warehouseId, line.binId ?? null, stockStatus, line.batchId ?? null, line.serialId ?? null, line.expiryDate ?? null,
           quantity.toString(), line.quantityDelta.scale, line.quantityDelta.unit, unitCostMinor?.toString() ?? null,
-          line.currency ?? null, valueDeltaMinor?.toString() ?? null, command.movementType, command.sourceDocumentType,
+          currency ?? null, valueDeltaMinor?.toString() ?? null, command.movementType, command.sourceDocumentType,
           line.sourceDocumentId, line.sourceDocumentLineId ?? null, command.context.businessDate, postedAt,
           command.audit.actorId, command.audit.requestId, command.audit.traceId, command.approvalId ?? null, line.reversalOfEntryId ?? null,
         ],
@@ -250,13 +270,13 @@ export class InventorySqlRepository {
         costConsumptions.push(consumption);
       }
 
-      if (quantity > 0n && unitCostMinor !== undefined && line.currency !== undefined && stockStatus !== "in_transit") {
+      if (quantity > 0n && unitCostMinor !== undefined && currency !== undefined && stockStatus !== "in_transit") {
         await client.query(
           `INSERT INTO inventory.cost_layers(
              id, tenant_id, warehouse_id, variant_id, batch_id, serial_id, receipt_ledger_entry_id,
              received_at, original_quantity, remaining_quantity, quantity_scale, unit_code, unit_cost_minor, currency
            ) VALUES ($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::uuid,$6::uuid,$7::uuid,$8::timestamptz,$9::numeric,$9::numeric,$10,$11,$12::numeric,$13)`,
-          [uuidV7(), context.tenantId, line.warehouseId, line.item.variantId, line.batchId ?? null, line.serialId ?? null, entry.id, postedAt, quantity.toString(), line.quantityDelta.scale, line.quantityDelta.unit, unitCostMinor.toString(), line.currency],
+          [uuidV7(), context.tenantId, line.warehouseId, line.item.variantId, line.batchId ?? null, line.serialId ?? null, entry.id, postedAt, quantity.toString(), line.quantityDelta.scale, line.quantityDelta.unit, unitCostMinor.toString(), currency],
         );
       }
     }
