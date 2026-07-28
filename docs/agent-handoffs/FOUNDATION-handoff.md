@@ -54,6 +54,7 @@ All three migrations and synthetic development fixtures were applied only to `de
 - Runtime role cannot delete reference records, update audit records or update migration metadata.
 - Audit mutation and outbox-content mutation were rejected by database protections.
 - Parent/child schema diff contains only expected Foundation and module-namespace additions; no parent migration was applied.
+- Fresh recovery rebuild project `broad-cloud-22671424` applied `FND-0001`–`FND-0003` and synthetic fixtures from an empty database, reproduced 22 forced-RLS tables and one-record/one-audit/one-outbox idempotent effects, then was deleted.
 
 ## Verification commands and results
 
@@ -85,7 +86,7 @@ Foundation is **not complete** and the PR must remain draft. MOD-A through MOD-G
 1. The PR preview Neon branch lifecycle workflow cannot execute until repository secrets `NEON_API_KEY`, `NEON_PROJECT_ID` and `NEON_PARENT_BRANCH_ID` are configured. Core CI, lockfile generation and dependency audit pass.
 2. Direct HTTP/HTTP-batch/WebSocket p50/p95/p99, cold compute wake-up and concurrency measurements are not yet captured.
 3. Cloudflare non-production deployment, bundle size, CPU and memory evidence are not yet captured.
-4. Neon backup/history restore and reconciliation drill is not yet run.
+4. Fresh empty-database rebuild and cleanup passed; Neon PITR/history restore and reconciliation drill is not yet run.
 5. The production identity-provider/MFA/session adapter is intentionally not selected; only a development verifier is enabled outside production.
 6. Ignored local `.ai-bridge` instructions could not be read because the real checkout/worktree was not mounted in this execution environment.
 
