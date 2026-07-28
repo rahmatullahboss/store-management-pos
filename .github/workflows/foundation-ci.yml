@@ -18,9 +18,26 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm ci --ignore-scripts
-      - run: npm run verify
-      - run: npm audit --audit-level=high
+      - name: Install pinned dependencies
+        run: npm ci --ignore-scripts
+      - name: Format
+        run: npm run format:check
+      - name: Lint
+        run: npm run lint
+      - name: Architecture boundaries
+        run: npm run check:boundaries
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Build and tests
+        run: npm test
+      - name: Secret scan
+        run: npm run check:secrets
+      - name: Licence register
+        run: npm run check:licenses
+      - name: Generate SBOM
+        run: npm run sbom
+      - name: Dependency audit
+        run: npm audit --audit-level=high
 
   neon-preview:
     runs-on: ubuntu-latest
