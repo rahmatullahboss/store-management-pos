@@ -8,6 +8,11 @@ const root = fileURLToPath(new URL("../..", import.meta.url));
 const outputDir = path.join(root, "artifacts", "foundation");
 await mkdir(outputDir, { recursive: true });
 
+const layoutDiagnostics = `<script>(()=>{const root=document.documentElement;const viewport=window.innerWidth;const offenders=[...document.querySelectorAll("body *")].map((element)=>{const rect=element.getBoundingClientRect();return{tag:element.tagName.toLowerCase(),id:element.id||null,className:typeof element.className==="string"?element.className:null,left:Number(rect.left.toFixed(2)),right:Number(rect.right.toFixed(2)),width:Number(rect.width.toFixed(2))}}).filter((item)=>item.left<-1||item.right>viewport+1||item.width>viewport+1).slice(0,30);root.dataset.layoutClientWidth=String(root.clientWidth);root.dataset.layoutScrollWidth=String(root.scrollWidth);root.dataset.layoutViewport=String(viewport);root.dataset.layoutOffenders=encodeURIComponent(JSON.stringify(offenders));})();</script>`;
+function withLayoutDiagnostics(html) {
+  return html.replace("</body>", `${layoutDiagnostics}</body>`);
+}
+
 const adminPermissions = new Set(["platform.reference.read", "platform.audit.read", "platform.access.manage"]);
 const posPermissions = new Set(["platform.register.use", "platform.device.read"]);
 const pages = {
@@ -56,7 +61,8 @@ const requiredSignals = [
   "<main class=\"shell-main\" id=\"main\" tabindex=\"-1\">",
 ];
 const manifest = [];
-for (const [fileName, html] of Object.entries(pages)) {
+for (const [fileName, rawHtml] of Object.entries(pages)) {
+  const html = withLayoutDiagnostics(rawHtml);
   for (const signal of requiredSignals) {
     if (!html.includes(signal)) throw new Error(`${fileName} is missing required design signal: ${signal}`);
   }
