@@ -1,0 +1,230 @@
+{
+  "generatedAt": "2026-07-28T18:11:25.949Z",
+  "chromePath": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  "commands": [
+    "npm run build",
+    "node tooling/scripts/mod-a-design-evidence.mjs",
+    "npm run design:detect"
+  ],
+  "detectorFindings": [],
+  "scenarios": [
+    {
+      "id": "catalog-en-ready-desktop",
+      "surface": "catalog",
+      "locale": "en",
+      "direction": "ltr",
+      "state": "ready",
+      "width": 1440,
+      "height": 1000,
+      "screenshot": "docs/architecture/mod-a/design-evidence/catalog-en-ready-desktop.jpg",
+      "violations": [],
+      "layout": {
+        "viewportOverflow": false,
+        "rootScrollX": 0,
+        "intrinsicScrollWidth": 1440,
+        "viewportWidth": 1440,
+        "clipped": [],
+        "overflowers": [],
+        "landmarks": {
+          "main": 1,
+          "nav": 1,
+          "header": 6
+        },
+        "language": "en",
+        "direction": "ltr",
+        "scaledTextViewportOverflow": false
+      },
+      "keyboard": {
+        "firstFocus": {
+          "tag": "A",
+          "className": "skip-link",
+          "outline": "solid"
+        },
+        "skipTarget": "main"
+      },
+      "passed": true
+    },
+    {
+      "id": "catalog-ar-conflict-tablet",
+      "surface": "catalog",
+      "locale": "ar",
+      "direction": "rtl",
+      "state": "conflict",
+      "width": 1024,
+      "height": 900,
+      "screenshot": "docs/architecture/mod-a/design-evidence/catalog-ar-conflict-tablet.jpg",
+      "violations": [],
+      "layout": {
+        "viewportOverflow": false,
+        "rootScrollX": 0,
+        "intrinsicScrollWidth": 1024,
+        "viewportWidth": 1024,
+        "clipped": [],
+        "overflowers": [],
+        "landmarks": {
+          "main": 1,
+          "nav": 1,
+          "header": 6
+        },
+        "language": "ar",
+        "direction": "rtl"
+      },
+      "keyboard": {
+        "firstFocus": {
+          "tag": "A",
+          "className": "skip-link",
+          "outline": "solid"
+        },
+        "skipTarget": "main"
+      },
+      "passed": true
+    },
+    {
+      "id": "catalog-bn-offline-mobile",
+      "surface": "catalog",
+      "locale": "bn",
+      "direction": "ltr",
+      "state": "offline",
+      "width": 390,
+      "height": 844,
+      "screenshot": "docs/architecture/mod-a/design-evidence/catalog-bn-offline-mobile.jpg",
+      "violations": [],
+      "layout": {
+        "viewportOverflow": false,
+        "rootScrollX": 0,
+        "intrinsicScrollWidth": 390,
+        "viewportWidth": 390,
+        "clipped": [],
+        "overflowers": [],
+        "landmarks": {
+          "main": 1,
+          "nav": 1,
+          "header": 6
+        },
+        "language": "bn",
+        "direction": "ltr"
+      },
+      "keyboard": {
+        "firstFocus": {
+          "tag": "A",
+          "className": "skip-link",
+          "outline": "solid"
+        },
+        "skipTarget": "main"
+      },
+      "passed": true
+    },
+    {
+      "id": "pricing-en-ready-desktop",
+      "surface": "pricing",
+      "locale": "en",
+      "direction": "ltr",
+      "state": "ready",
+      "width": 1440,
+      "height": 1000,
+      "screenshot": "docs/architecture/mod-a/design-evidence/pricing-en-ready-desktop.jpg",
+      "violations": [],
+      "layout": {
+        "viewportOverflow": false,
+        "rootScrollX": 0,
+        "intrinsicScrollWidth": 1440,
+        "viewportWidth": 1440,
+        "clipped": [],
+        "overflowers": [],
+        "landmarks": {
+          "main": 1,
+          "nav": 1,
+          "header": 8
+        },
+        "language": "en",
+        "direction": "ltr",
+        "scaledTextViewportOverflow": false
+      },
+      "keyboard": {
+        "firstFocus": {
+          "tag": "A",
+          "className": "skip-link",
+          "outline": "solid"
+        },
+        "skipTarget": "main"
+      },
+      "passed": true
+    },
+    {
+      "id": "pricing-ar-empty-tablet",
+      "surface": "pricing",
+      "locale": "ar",
+      "direction": "rtl",
+      "state": "empty",
+      "width": 1024,
+      "height": 900,
+      "screenshot": "docs/architecture/mod-a/design-evidence/pricing-ar-empty-tablet.jpg",
+      "violations": [],
+      "layout": {
+        "viewportOverflow": false,
+        "rootScrollX": 0,
+        "intrinsicScrollWidth": 1024,
+        "viewportWidth": 1024,
+        "clipped": [],
+        "overflowers": [],
+        "landmarks": {
+          "main": 1,
+          "nav": 1,
+          "header": 8
+        },
+        "language": "ar",
+        "direction": "rtl"
+      },
+      "keyboard": {
+        "firstFocus": {
+          "tag": "A",
+          "className": "skip-link",
+          "outline": "solid"
+        },
+        "skipTarget": "main"
+      },
+      "passed": true
+    },
+    {
+      "id": "pricing-ja-denied-mobile",
+      "surface": "pricing",
+      "locale": "ja",
+      "direction": "ltr",
+      "state": "denied",
+      "width": 390,
+      "height": 844,
+      "screenshot": "docs/architecture/mod-a/design-evidence/pricing-ja-denied-mobile.jpg",
+      "violations": [],
+      "layout": {
+        "viewportOverflow": false,
+        "rootScrollX": 0,
+        "intrinsicScrollWidth": 390,
+        "viewportWidth": 390,
+        "clipped": [],
+        "overflowers": [],
+        "landmarks": {
+          "main": 1,
+          "nav": 1,
+          "header": 8
+        },
+        "language": "ja",
+        "direction": "ltr"
+      },
+      "keyboard": {
+        "firstFocus": {
+          "tag": "A",
+          "className": "skip-link",
+          "outline": "solid"
+        },
+        "skipTarget": "main"
+      },
+      "passed": true
+    }
+  ],
+  "summary": {
+    "passed": 6,
+    "total": 6,
+    "axeViolations": 0,
+    "detectorFindings": 0
+  }
+}

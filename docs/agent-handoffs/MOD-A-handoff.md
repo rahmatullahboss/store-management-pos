@@ -80,6 +80,36 @@ Evidence:
 - component, audit and outbox atomic persistence passed;
 - runtime-role tax isolation passed for Alpha and Beta tenants.
 
+## Admin UI checkpoint
+
+Catalog and pricing/tax admin workspaces are complete at module checkpoint level.
+
+Evidence:
+
+- `docs/architecture/mod-a/admin-ui-checkpoint.md`;
+- `docs/architecture/mod-a/design-evidence/README.md` and machine-readable report;
+- 31/31 unit tests passed at the checkpoint;
+- browser scenarios passed 6/6;
+- Axe violations 0 and Impeccable deterministic findings 0;
+- desktop/tablet/mobile, Bengali, Arabic RTL, Japanese, reduced motion and 200% text passed;
+- shared shell was not edited; additive route-provider request `CCR-0001` is pending serial integration.
+
+## Catalog search performance checkpoint
+
+The original 250,000-variant OR/trigram resolver defect was reproduced, corrected and regression-tested.
+
+Evidence:
+
+- `database/migrations/catalog/CAT-0002-search-performance.sql`;
+- migration SHA-256 `8007c0a15335c740e529646b7fd9fc9d26b97edf281310acf233325d79b68fa0`;
+- `docs/architecture/mod-a/catalog-search-performance-checkpoint.md`;
+- local PostgreSQL 18.3 imported 250,000 variants plus 250,000 unique barcode rows in 8.43 seconds;
+- corrected p95: SKU 0.014 ms, barcode 0.036 ms, full-text 1.770 ms, staged search 0.052 ms;
+- fresh Foundation→catalog→pricing→tax migration chain passed;
+- runtime-role exact SKU, exact barcode and natural-language searches each returned one correct result.
+
+The isolated Neon `br-fancy-bird-axo3z9ek` performance rerun remains open because this continuation session exposed neither the Neon SQL connector nor a `DATABASE_URL`. The branch-locked harness is complete and no credential was invented or stored.
+
 ## Current checkpoint
 
-Catalog, pricing and tax are complete at module checkpoint level. Admin UI, 250,000-variant scale evidence, runbooks and final integration handoff remain active.
+Catalog, pricing, tax, module admin UI and local 250,000-variant PostgreSQL query-shape evidence are complete at checkpoint level. Combined `CalculatePriceAndTax`/`PriceTaxSnapshot`, POS feed contract fixtures, runbooks/observability, Neon scale rerun and final integration handoff remain active.

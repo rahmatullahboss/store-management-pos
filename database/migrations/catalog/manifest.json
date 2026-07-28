@@ -6,6 +6,11 @@
       "id": "CAT-0001",
       "file": "CAT-0001-core.sql",
       "sha256": "d9ab2ffcc9c4cc16d873608a297b508f24bed31e796470bbd684bcd7570232d0"
+    },
+    {
+      "id": "CAT-0002",
+      "file": "CAT-0002-search-performance.sql",
+      "sha256": "8007c0a15335c740e529646b7fd9fc9d26b97edf281310acf233325d79b68fa0"
     }
   ]
 }
