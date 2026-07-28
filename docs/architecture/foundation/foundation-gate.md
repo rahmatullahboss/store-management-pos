@@ -20,7 +20,7 @@ Foundation remains **active**. MOD-A through MOD-G remain blocked.
 | Audit/outbox/inbox/idempotency | Pass locally and on Neon | One reference record/audit/outbox under replay; inbox duplicate claim rejected |
 | Architecture boundaries | Pass locally | No cycles or private persistence imports |
 | UI shells and route permissions | Pass locally | Admin/POS shells and permission test |
-| Security/license/SBOM | Partial | Secret/license checks and CycloneDX SBOM pass; connected dependency audit pending |
+| Security/license/SBOM | Pass | Secret/license checks, pinned lockfile, CycloneDX SBOM and connected `npm audit` pass |
 | Cloudflare preview/canary | Skeleton only | No authorized Cloudflare deployment/bundle/CPU/memory run in this runtime |
 | Benchmarks | Partial | Functional DB evidence complete; HTTP/WS p50/p95/p99, cold wake and Worker limits pending |
 | Backup/restore | Documented only | Restore drill remains pending |
@@ -28,9 +28,8 @@ Foundation remains **active**. MOD-A through MOD-G remain blocked.
 
 ## Gate blockers
 
-1. Install dependencies in connected CI, generate and commit a lockfile, and run `npm audit --audit-level=high`.
-2. Configure `NEON_API_KEY`, `NEON_PROJECT_ID=twilight-boat-26805962`, and `NEON_PARENT_BRANCH_ID=br-autumn-pine-axuo502u`; execute preview create → migrate → seed → integration → benchmark → delete.
-3. Run direct Neon HTTP, HTTP batch and request-scoped WebSocket latency/concurrency/cold-wake benchmarks.
-4. Deploy non-production Cloudflare API/jobs shells and capture bundle, CPU and memory evidence.
-5. Perform a Neon restore/history drill and reconcile migrations, reference records, audit and outbox.
-6. Replace the development token verifier with the approved production identity-provider adapter and test MFA/session/device revocation before production readiness.
+1. Configure `NEON_API_KEY`, `NEON_PROJECT_ID=twilight-boat-26805962`, and `NEON_PARENT_BRANCH_ID=br-autumn-pine-axuo502u`; execute preview create → migrate → seed → integration → benchmark → delete.
+2. Run direct Neon HTTP, HTTP batch and request-scoped WebSocket latency/concurrency/cold-wake benchmarks.
+3. Deploy non-production Cloudflare API/jobs shells and capture bundle, CPU and memory evidence.
+4. Perform a Neon restore/history drill and reconcile migrations, reference records, audit and outbox.
+5. Replace the development token verifier with the approved production identity-provider adapter and test MFA/session/device revocation before production readiness.

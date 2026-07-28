@@ -15,7 +15,7 @@
 | Audit/outbox immutability | Passed on Neon |
 | Route permission filtering | Passed |
 | Module ownership/cycle enforcement | Passed for 7 workpacks and 16 schemas |
-| Secret/license checks and CycloneDX SBOM | Passed locally |
+| Secret/license checks and CycloneDX SBOM | Passed locally and in CI |
 | Dedicated non-production Neon project/branch | Created and migrated |
 
 ## Live Neon evidence
@@ -26,7 +26,7 @@ The parent Neon branch was not migrated. Schema comparison shows expected Founda
 
 ## Deferred runtime benchmarks
 
-The current execution runtime could not install the pinned driver package because npm registry access timed out and cannot deploy a Cloudflare Worker. Therefore p50/p95/p99 direct-driver latency, cold compute wake-up, Worker CPU/memory and bundle limits are not claimed as passed.
+Connected GitHub Actions installed the pinned dependency from the committed lockfile, passed the complete verification suite and passed `npm audit --audit-level=high`. The current execution runtime still cannot deploy a Cloudflare Worker. Therefore p50/p95/p99 direct-driver latency, cold compute wake-up, Worker CPU/memory and bundle limits are not claimed as passed.
 
 `tooling/scripts/benchmark-neon.mjs` and the isolated preview branch CI workflow are committed. CI must install dependencies, create a preview branch from `dev/foundation-v1`, run migrations, fixtures, HTTP/WebSocket integration and latency benchmarks, then delete the branch. Missing CI secrets now fail rather than silently skip the database gate.
 

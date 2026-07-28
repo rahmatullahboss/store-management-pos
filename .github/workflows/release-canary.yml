@@ -19,5 +19,5 @@ jobs:
       - run: |
           test "${{ inputs.environment }}" != "production"
           echo "Canary release remains non-production until Foundation Gate evidence is complete."
-      - run: npm install --ignore-scripts
+      - run: npm ci --ignore-scripts
       - run: npm run verify
