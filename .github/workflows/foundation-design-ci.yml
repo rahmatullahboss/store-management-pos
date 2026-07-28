@@ -1,0 +1,54 @@
+name: Foundation Design CI
+
+on:
+  push:
+    branches: [program/foundation-v1]
+    paths:
+      - "apps/admin-web/**"
+      - "apps/pos-web/**"
+      - "packages/ui/**"
+      - "PRODUCT.md"
+      - "DESIGN.md"
+      - ".impeccable/**"
+      - ".agents/skills/impeccable/**"
+      - "tooling/scripts/foundation-design-evidence.mjs"
+      - ".github/workflows/foundation-design-ci.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/admin-web/**"
+      - "apps/pos-web/**"
+      - "packages/ui/**"
+      - "PRODUCT.md"
+      - "DESIGN.md"
+      - ".impeccable/**"
+      - ".agents/skills/impeccable/**"
+      - "tooling/scripts/foundation-design-evidence.mjs"
+      - ".github/workflows/foundation-design-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  context:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Load Foundation UI context
+        run: |
+          mkdir -p artifacts/foundation
+          node .agents/skills/impeccable/scripts/context.mjs --target packages/ui/src/app-shell.ts | tee artifacts/foundation/impeccable-context.txt
+      - name: Run deterministic UI detector
+        run: node .agents/skills/impeccable/scripts/detect.mjs --json apps/admin-web apps/pos-web | tee artifacts/foundation/impeccable-detect.json
+      - name: Upload Impeccable evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: foundation-impeccable-evidence-${{ github.run_id }}
+          path: |
+            artifacts/foundation/impeccable-context.txt
+            artifacts/foundation/impeccable-detect.json
+          retention-days: 14
