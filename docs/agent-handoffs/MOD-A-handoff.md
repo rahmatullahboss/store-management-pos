@@ -66,6 +66,20 @@ Evidence:
 - manual discount Foundation approval integration passed;
 - runtime-role pricing isolation passed for Alpha and Beta tenants.
 
+## Tax checkpoint
+
+Tax configuration, exact calculation and immutable snapshots are complete at module checkpoint level.
+
+Evidence:
+
+- `docs/architecture/mod-a/tax-checkpoint.md`
+- `database/migrations/tax/TAX-0001-core.sql`
+- migration SHA-256 `67995519209b2698efa9787d78041a0c7a54139cfd1b9e2920798be3c5128ae2`
+- 26/26 unit tests passed;
+- live snapshot and idempotent replay passed;
+- component, audit and outbox atomic persistence passed;
+- runtime-role tax isolation passed for Alpha and Beta tenants.
+
 ## Current checkpoint
 
-Catalog and pricing are complete at module checkpoint level. Tax, admin UI, 250,000-variant scale evidence, runbooks and final integration handoff remain active.
+Catalog, pricing and tax are complete at module checkpoint level. Admin UI, 250,000-variant scale evidence, runbooks and final integration handoff remain active.
