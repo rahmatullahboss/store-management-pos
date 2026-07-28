@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 2,
+  "northStar": "The Operations Ledger",
+  "componentReuse": "Module agents inherit the Foundation shell, semantic tokens, resilient states, status patterns, controls, tables and responsive rules. Parallel component libraries or module-specific visual languages are prohibited; durable shared primitives require a reviewed design change.",
+  "signalToNoise": "Prioritize operational context, exceptions, safety and provenance. Avoid equal-weight metric-card grids, decoration without task value and unexplained totals.",
+  "constraints": [
+    "Use the implemented Operations Ledger tokens and logical CSS properties.",
+    "Preserve permission, tenant, location, register, business-date and offline context.",
+    "Implement loading, empty, error, denied, stale, approval, offline and conflict states when applicable.",
+    "Pass keyboard, visible-focus, semantic-label, contrast, reduced-motion and 200-percent text checks.",
+    "Verify English and Bengali, Arabic RTL, CJK, mixed-script, long labels and large numeric values.",
+    "Use synthetic or approved test data for visual evidence; never use production customer data.",
+    "Do not claim full translation completeness from representative layout fixtures."
+  ],
+  "extensions": [
+    {
+      "component": "App shell and navigation",
+      "description": "Dark operational rail, tenant/location/workspace context, permission-aware routes, offline banner, skip link and responsive horizontal navigation."
+    },
+    {
+      "component": "Operational signal band",
+      "description": "A strong status surface for safety, synchronisation and the few facts that change the user's next action."
+    },
+    {
+      "component": "Work queue and data table",
+      "description": "Risk-ordered operational work with bounded internal scrolling, explicit states and labelled row actions."
+    },
+    {
+      "component": "Trace panel",
+      "description": "Provenance chain from source through decision to ledger or posting effects; important numbers must remain explainable."
+    },
+    {
+      "component": "POS product workspace and cart",
+      "description": "Barcode/search-first product area, keyboard-oriented filtering, persistent current sale, totals and dominant payment action."
+    },
+    {
+      "component": "Resilient system states",
+      "description": "Shared loading, empty, error, denied, conflict and offline states with semantic live regions, recovery copy and explicit next actions."
+    }
+  ]
+}

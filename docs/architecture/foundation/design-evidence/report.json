@@ -1,0 +1,264 @@
+{
+  "generatedAt": "2026-07-28T09:17:20.431Z",
+  "chromePath": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  "commands": [
+    "npm run build",
+    "node tooling/scripts/foundation-design-evidence.mjs",
+    "node .agents/skills/impeccable/scripts/detect.mjs --json apps/admin-web apps/pos-web packages/ui"
+  ],
+  "detectorFindings": [],
+  "scenarios": [
+    {
+      "id": "admin-en-ready-desktop",
+      "app": "admin",
+      "locale": "en",
+      "direction": "ltr",
+      "state": "ready",
+      "width": 1440,
+      "height": 1000,
+      "screenshot": "docs/architecture/foundation/design-evidence/admin-en-ready-desktop.jpg",
+      "violations": [],
+      "layout": {
+        "viewportOverflow": false,
+        "rootScrollX": 0,
+        "intrinsicScrollWidth": 1440,
+        "viewportWidth": 1440,
+        "clipped": [],
+        "overflowers": [],
+        "landmarks": {
+          "main": 1,
+          "nav": 1,
+          "header": 1
+        },
+        "language": "en",
+        "direction": "ltr",
+        "scaledTextViewportOverflow": false
+      },
+      "keyboard": {
+        "firstFocus": {
+          "tag": "A",
+          "className": "skip-link",
+          "outline": "solid"
+        },
+        "skipTarget": "main"
+      },
+      "passed": true
+    },
+    {
+      "id": "admin-ar-conflict-tablet",
+      "app": "admin",
+      "locale": "ar",
+      "direction": "rtl",
+      "state": "conflict",
+      "width": 1024,
+      "height": 900,
+      "screenshot": "docs/architecture/foundation/design-evidence/admin-ar-conflict-tablet.jpg",
+      "violations": [],
+      "layout": {
+        "viewportOverflow": false,
+        "rootScrollX": 0,
+        "intrinsicScrollWidth": 1024,
+        "viewportWidth": 1024,
+        "clipped": [],
+        "overflowers": [],
+        "landmarks": {
+          "main": 1,
+          "nav": 1,
+          "header": 1
+        },
+        "language": "ar",
+        "direction": "rtl"
+      },
+      "keyboard": {
+        "firstFocus": {
+          "tag": "A",
+          "className": "skip-link",
+          "outline": "solid"
+        },
+        "skipTarget": "main"
+      },
+      "passed": true
+    },
+    {
+      "id": "admin-ja-denied-mobile",
+      "app": "admin",
+      "locale": "ja",
+      "direction": "ltr",
+      "state": "denied",
+      "width": 390,
+      "height": 844,
+      "screenshot": "docs/architecture/foundation/design-evidence/admin-ja-denied-mobile.jpg",
+      "violations": [],
+      "layout": {
+        "viewportOverflow": false,
+        "rootScrollX": 0,
+        "intrinsicScrollWidth": 390,
+        "viewportWidth": 390,
+        "clipped": [],
+        "overflowers": [],
+        "landmarks": {
+          "main": 1,
+          "nav": 1,
+          "header": 1
+        },
+        "language": "ja",
+        "direction": "ltr"
+      },
+      "keyboard": {
+        "firstFocus": {
+          "tag": "A",
+          "className": "skip-link",
+          "outline": "solid"
+        },
+        "skipTarget": "main"
+      },
+      "passed": true
+    },
+    {
+      "id": "admin-en-loading-mobile",
+      "app": "admin",
+      "locale": "en",
+      "direction": "ltr",
+      "state": "loading",
+      "width": 390,
+      "height": 844,
+      "screenshot": null,
+      "violations": [],
+      "layout": {
+        "viewportOverflow": false,
+        "rootScrollX": 0,
+        "intrinsicScrollWidth": 390,
+        "viewportWidth": 390,
+        "clipped": [],
+        "overflowers": [],
+        "landmarks": {
+          "main": 1,
+          "nav": 1,
+          "header": 1
+        },
+        "language": "en",
+        "direction": "ltr"
+      },
+      "keyboard": {
+        "firstFocus": {
+          "tag": "A",
+          "className": "skip-link",
+          "outline": "solid"
+        },
+        "skipTarget": "main"
+      },
+      "passed": true
+    },
+    {
+      "id": "pos-bn-offline-desktop",
+      "app": "pos",
+      "locale": "bn",
+      "direction": "ltr",
+      "state": "offline",
+      "width": 1280,
+      "height": 900,
+      "screenshot": "docs/architecture/foundation/design-evidence/pos-bn-offline-desktop.jpg",
+      "violations": [],
+      "layout": {
+        "viewportOverflow": false,
+        "rootScrollX": 0,
+        "intrinsicScrollWidth": 1280,
+        "viewportWidth": 1280,
+        "clipped": [],
+        "overflowers": [],
+        "landmarks": {
+          "main": 1,
+          "nav": 1,
+          "header": 1
+        },
+        "language": "bn",
+        "direction": "ltr"
+      },
+      "keyboard": {
+        "firstFocus": {
+          "tag": "A",
+          "className": "skip-link",
+          "outline": "solid"
+        },
+        "skipTarget": "main"
+      },
+      "passed": true
+    },
+    {
+      "id": "pos-ja-error-mobile",
+      "app": "pos",
+      "locale": "ja",
+      "direction": "ltr",
+      "state": "error",
+      "width": 390,
+      "height": 844,
+      "screenshot": "docs/architecture/foundation/design-evidence/pos-ja-error-mobile.jpg",
+      "violations": [],
+      "layout": {
+        "viewportOverflow": false,
+        "rootScrollX": 0,
+        "intrinsicScrollWidth": 390,
+        "viewportWidth": 390,
+        "clipped": [],
+        "overflowers": [],
+        "landmarks": {
+          "main": 1,
+          "nav": 1,
+          "header": 1
+        },
+        "language": "ja",
+        "direction": "ltr"
+      },
+      "keyboard": {
+        "firstFocus": {
+          "tag": "A",
+          "className": "skip-link",
+          "outline": "solid"
+        },
+        "skipTarget": "main"
+      },
+      "passed": true
+    },
+    {
+      "id": "pos-ar-empty-tablet",
+      "app": "pos",
+      "locale": "ar",
+      "direction": "rtl",
+      "state": "empty",
+      "width": 820,
+      "height": 1000,
+      "screenshot": null,
+      "violations": [],
+      "layout": {
+        "viewportOverflow": false,
+        "rootScrollX": 0,
+        "intrinsicScrollWidth": 820,
+        "viewportWidth": 820,
+        "clipped": [],
+        "overflowers": [],
+        "landmarks": {
+          "main": 1,
+          "nav": 1,
+          "header": 1
+        },
+        "language": "ar",
+        "direction": "rtl"
+      },
+      "keyboard": {
+        "firstFocus": {
+          "tag": "A",
+          "className": "skip-link",
+          "outline": "solid"
+        },
+        "skipTarget": "main"
+      },
+      "passed": true
+    }
+  ],
+  "summary": {
+    "passed": 7,
+    "total": 7,
+    "axeViolations": 0,
+    "detectorFindings": 0
+  }
+}

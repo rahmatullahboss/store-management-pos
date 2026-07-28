@@ -1,0 +1,55 @@
+name: Foundation Design CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/admin-web/**"
+      - "apps/pos-web/**"
+      - "packages/ui/**"
+      - "tests/unit/contracts-ui.test.mjs"
+      - "PRODUCT.md"
+      - "DESIGN.md"
+      - ".impeccable/**"
+      - ".agents/skills/impeccable/**"
+      - "tooling/scripts/foundation-design-evidence.mjs"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/foundation-design-ci.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: foundation-design-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CHROME_PATH: /usr/bin/google-chrome
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install exact dependencies
+        run: npm ci
+      - name: Load Foundation UI context
+        run: |
+          mkdir -p artifacts/foundation
+          node .agents/skills/impeccable/scripts/context.mjs --target packages/ui/src/app-shell.ts | tee artifacts/foundation/impeccable-context.txt
+      - name: Run browser, accessibility and deterministic design evidence
+        run: npm run design:verify
+      - name: Upload Impeccable evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: foundation-impeccable-evidence-${{ github.run_id }}
+          path: |
+            artifacts/foundation/impeccable-context.txt
+            docs/architecture/foundation/design-evidence/
+          retention-days: 14

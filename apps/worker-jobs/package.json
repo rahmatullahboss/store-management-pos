@@ -1,0 +1,6 @@
+{
+  "name": "@ozzyl/worker-jobs",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module"
+}
