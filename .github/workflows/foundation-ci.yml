@@ -19,6 +19,11 @@ jobs:
         with:
           node-version: 22
       - run: npm install --ignore-scripts
+      - uses: actions/upload-artifact@v4
+        with:
+          name: foundation-package-lock
+          path: package-lock.json
+          if-no-files-found: error
       - run: npm run verify
       - run: npm audit --audit-level=high
 
