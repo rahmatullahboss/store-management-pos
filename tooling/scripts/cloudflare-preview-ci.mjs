@@ -4,10 +4,10 @@ import path from "node:path";
 import { performance } from "node:perf_hooks";
 
 const WRANGLER_VERSION = "4.114.0";
+const PREVIEW_ALIAS = "gate";
 const {
   CLOUDFLARE_API_TOKEN,
   CLOUDFLARE_ACCOUNT_ID,
-  GITHUB_HEAD_REF,
   GITHUB_RUN_ID,
   GITHUB_SHA
 } = process.env;
@@ -18,14 +18,14 @@ if (!CLOUDFLARE_API_TOKEN || !CLOUDFLARE_ACCOUNT_ID) {
 
 const root = path.resolve(new URL("../..", import.meta.url).pathname);
 const artifactsDir = path.join(root, "artifacts", "foundation");
-const safeRef = (GITHUB_HEAD_REF || "manual").toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 20);
 const safeRun = (GITHUB_RUN_ID || Date.now().toString()).replace(/[^0-9]/g, "").slice(-14);
-const workerName = `store-pos-fnd-${safeRef || "manual"}-${safeRun}`.slice(0, 63).replace(/-+$/g, "");
+const workerName = `store-pos-fnd-${safeRun}`;
 const configPath = path.join(root, `.wrangler-${workerName}.json`);
 const metafilePath = path.join(artifactsDir, "cloudflare-bundle-meta.json");
 const reportPath = path.join(artifactsDir, "cloudflare-preview-report.json");
 const apiBase = `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}`;
 let deployOutput = "";
+let previewOutput = "";
 
 function redact(value) {
   return String(value || "")
@@ -77,12 +77,12 @@ async function cloudflare(pathname, init = {}) {
   return payload?.result;
 }
 
-async function ensureWorkerSubdomain() {
+async function ensurePreviewUrls() {
   const result = await cloudflare(`/workers/scripts/${encodeURIComponent(workerName)}/subdomain`, {
     method: "POST",
     body: JSON.stringify({ enabled: true, previews_enabled: true })
   });
-  if (!result?.enabled) throw new Error("Cloudflare workers.dev route could not be enabled");
+  if (!result?.previews_enabled) throw new Error("Cloudflare Worker preview URLs could not be enabled");
   return result;
 }
 
@@ -127,12 +127,14 @@ function percentile(values, percentage) {
   return sorted[index];
 }
 
-async function resolveWorkerUrl(output) {
+async function resolvePreviewUrl(output) {
+  const urls = [...output.matchAll(/https:\/\/[a-z0-9.-]+\.workers\.dev/giu)].map((match) => match[0]);
+  const aliasPrefix = `https://${PREVIEW_ALIAS}-${workerName}.`;
+  const aliasUrl = urls.find((url) => url.startsWith(aliasPrefix));
+  if (aliasUrl) return `${aliasUrl}/health`;
   const accountSubdomain = await cloudflare("/workers/subdomain");
-  if (accountSubdomain?.subdomain) return `https://${workerName}.${accountSubdomain.subdomain}.workers.dev/health`;
-  const matches = [...output.matchAll(/https:\/\/[a-z0-9.-]+\.workers\.dev/giu)].map((match) => match[0]);
-  if (!matches.length) throw new Error("Cloudflare deployment URL is unavailable");
-  return `${matches.at(-1)}/health`;
+  if (!accountSubdomain?.subdomain) throw new Error("Cloudflare account Workers subdomain is unavailable");
+  return `${aliasPrefix}${accountSubdomain.subdomain}.workers.dev/health`;
 }
 
 async function readBundleMetrics() {
@@ -158,12 +160,13 @@ async function writeFailureReport(error) {
     schemaVersion: 1,
     status: "failed",
     workerName,
+    previewAlias: PREVIEW_ALIAS,
     wranglerVersion: WRANGLER_VERSION,
     gitSha: GITHUB_SHA || null,
     runId: GITHUB_RUN_ID || null,
     bundle,
     error: redact(error?.message || error),
-    commandOutput: error?.commandOutput || (deployOutput ? redact(deployOutput) : null)
+    commandOutput: error?.commandOutput || redact(`${deployOutput}\n${previewOutput}`) || null
   };
   await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
 }
@@ -206,12 +209,27 @@ try {
     "--metafile",
     metafilePath,
     "--message",
-    `Foundation gate ${GITHUB_SHA || "manual"}`
+    `Foundation gate bootstrap ${GITHUB_SHA || "manual"}`
   ]);
 
-  const subdomainState = await ensureWorkerSubdomain();
-  console.log(`workers.dev enabled=${subdomainState.enabled} previews_enabled=${subdomainState.previews_enabled}`);
-  const healthUrl = await resolveWorkerUrl(deployOutput);
+  const subdomainState = await ensurePreviewUrls();
+  previewOutput = await run("npx", [
+    "--yes",
+    `wrangler@${WRANGLER_VERSION}`,
+    "versions",
+    "upload",
+    "--config",
+    configPath,
+    "--name",
+    workerName,
+    "--minify",
+    "--preview-alias",
+    PREVIEW_ALIAS,
+    "--message",
+    `Foundation gate preview ${GITHUB_SHA || "manual"}`
+  ]);
+
+  const healthUrl = await resolvePreviewUrl(previewOutput);
   let firstRequest;
   let lastError;
   for (let attempt = 1; attempt <= 24; attempt += 1) {
@@ -223,7 +241,7 @@ try {
       await sleep(2500);
     }
   }
-  if (!firstRequest) throw lastError || new Error("Cloudflare health check did not become ready");
+  if (!firstRequest) throw lastError || new Error("Cloudflare preview health check did not become ready");
 
   const sequential = [];
   for (let index = 0; index < 20; index += 1) sequential.push((await requestHealth(healthUrl)).elapsedMs);
@@ -234,6 +252,7 @@ try {
     schemaVersion: 1,
     status: "passed",
     workerName,
+    previewAlias: PREVIEW_ALIAS,
     healthUrl,
     wranglerVersion: WRANGLER_VERSION,
     gitSha: GITHUB_SHA || null,
