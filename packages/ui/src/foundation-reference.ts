@@ -6,8 +6,15 @@ function statusChip(label: string, tone: "success" | "warning" | "danger" | "neu
   return `<span class="status-chip status-chip--${tone}"><span aria-hidden="true" class="status-chip__dot"></span>${escapeHtml(label)}</span>`;
 }
 
+const foundationReferenceStyles = `<style>
+html,body{max-inline-size:100%;overflow-x:hidden}.app-shell,.shell-topbar,.shell-rail,.shell-main,.workspace,.page-heading>div,.pos-heading>div,.operations-layout,.checkout-layout,.work-queue,.trace-panel,.product-workspace,.cart-panel{min-inline-size:0}.fixture-notice span{min-inline-size:0;overflow-wrap:anywhere}.scan-input input{inline-size:100%;min-inline-size:0}
+@media (max-width:820px){.primary-nav{inline-size:100%;max-inline-size:100%;overflow-x:auto;overscroll-behavior-inline:contain}.primary-nav ul{max-inline-size:none}.page-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));inline-size:100%}.page-actions .button{min-inline-size:0;padding-inline:.65rem}.fixture-notice{display:grid;grid-template-columns:max-content minmax(0,1fr);inline-size:100%;max-inline-size:none}.signal-band,.operations-layout,.checkout-layout,.table-wrap{inline-size:100%;max-inline-size:100%}.scan-input{grid-template-columns:auto minmax(0,1fr) auto}}
+@media (max-width:520px){.page-actions{grid-template-columns:1fr}.fixture-notice{grid-template-columns:1fr}.fixture-notice span{display:block}.signal-band__facts{grid-template-columns:repeat(2,minmax(0,1fr))}.pos-heading__state{inline-size:100%}.scan-input{padding-inline:.5rem}.scan-input kbd{display:none}}
+[dir="rtl"] .input-action input{border-radius:0 9px 9px 0}[dir="rtl"] .input-action button{border-radius:9px 0 0 9px}
+</style>`;
+
 export function renderAdminFoundationReference(): string {
-  return `<div class="fixture-notice" role="note"><strong>Foundation preview</strong><span>Synthetic operational data for UI validation only.</span></div>
+  return `${foundationReferenceStyles}<div class="fixture-notice" role="note"><strong>Foundation preview</strong><span>Synthetic operational data for UI validation only.</span></div>
 <section class="page-heading" aria-labelledby="admin-overview-title">
   <div>
     <h1 id="admin-overview-title">Today’s operating picture</h1>
@@ -72,7 +79,7 @@ export function renderAdminFoundationReference(): string {
 }
 
 export function renderPosFoundationReference(): string {
-  return `<div class="fixture-notice" role="note"><strong>Illustrative Dhaka fixture</strong><span>Products, prices and people are synthetic.</span></div>
+  return `${foundationReferenceStyles}<div class="fixture-notice" role="note"><strong>Illustrative Dhaka fixture</strong><span>Products, prices and people are synthetic.</span></div>
 <section class="pos-heading" aria-labelledby="checkout-title">
   <div><h1 id="checkout-title">New sale</h1><p>Register 02 · Business date 28 Jul 2026</p></div>
   <div class="pos-heading__state">${statusChip("Online · synced", "success")}<kbd>F2</kbd><span>Customer</span><kbd>F8</kbd><span>Pay</span></div>
