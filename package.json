@@ -28,7 +28,7 @@
     "verify": "npm run format:check && npm run lint && npm run check:boundaries && npm run typecheck && npm test && npm run check:secrets && npm run check:licenses && npm run sbom",
     "db:migrate": "node tooling/scripts/apply-migrations.mjs",
     "ci:neon-preview": "node tooling/scripts/neon-preview-ci.mjs",
-    "ci:cloudflare-preview": "node tooling/scripts/cloudflare-preview-ci.mjs",
+    "ci:cloudflare-preview": "node tooling/scripts/run-cloudflare-preview-ci.mjs",
     "benchmark:neon": "node tooling/scripts/benchmark-neon.mjs"
   },
   "dependencies": {
