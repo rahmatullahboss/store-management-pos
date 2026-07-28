@@ -54,10 +54,19 @@ Last updated: 2026-07-28
 - Added `FUL-0001` migration with fulfillment queues, allocations, packages, shipments, proofs, workflow events, return approvals/receipts/refunds/exchanges, forced RLS, append-only evidence, completed-return immutability and permissions.
 - Verified red/green coverage; 36 unit tests pass at this checkpoint.
 
+### 4 — Application surfaces and operations
+
+- Added a Fetch-standard module API router for customer, quote, order, fulfillment-plan and return endpoints with required idempotency, exact BigInt serialization, permission enforcement, fail-closed errors, trace metadata and replay-aware responses.
+- Added structured JSON-compatible telemetry and counters for HTTP completion/failure, event processing and duplicate delivery without logging customer/payment/proof content.
+- Added an idempotent v1 event projector for order, fulfillment and return operational read models and exported it through the worker-jobs module seam.
+- Added responsive customer, sales and fulfillment admin workspaces inheriting the Operations Ledger shell/tokens, with semantic structure, keyboard focus, 44px controls, Bengali localization, Arabic RTL and loading/empty/error/denied/stale/conflict states.
+- Added module API/UI integration notes and an observability/alert/diagnosis runbook based on the current Cloudflare Workers structured logging model.
+- Verified red/green API, telemetry, event-dedupe, localization, accessibility and RTL coverage; 42 unit tests pass at this checkpoint.
+
 ## Dependency policy
 
 MOD-C consumes only the frozen v1 public contracts and deterministic MOD-C-owned simulators for catalog/pricing/tax, inventory, payment/refund, accounting and receipt/fiscal dependencies. No unmerged MOD-A, MOD-B or MOD-E implementation code is imported.
 
 ## Open work
 
-Application APIs/UI, observability/jobs, live migrations/evidence and final integration handoff remain in progress.
+Live migrations/evidence, final verification and integration handoff remain in progress.

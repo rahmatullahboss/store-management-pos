@@ -14,6 +14,7 @@ import type {
 import type { SalesDependencyPorts } from "./simulators.js";
 
 export * from "./simulators.js";
+export * from "./platform.js";
 
 export type QuoteStatus = "draft" | "sent" | "accepted" | "expired" | "cancelled";
 export type OrderStatus = "draft" | "confirmed" | "on_hold" | "cancelled" | "completed";
