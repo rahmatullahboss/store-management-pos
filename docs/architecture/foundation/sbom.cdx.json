@@ -1,0 +1,67 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "serialNumber": "urn:uuid:00000000-0000-7000-8000-000000000001",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "application",
+      "name": "@ozzyl/store-management-pos",
+      "version": "0.1.0"
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "@neondatabase/serverless",
+      "version": "1.1.0",
+      "scope": "required",
+      "purl": "pkg:npm/%40neondatabase%2Fserverless@1.1.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "typescript",
+      "version": "5.8.3",
+      "scope": "excluded",
+      "purl": "pkg:npm/typescript@5.8.3",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "type": "application",
+      "name": "Impeccable",
+      "version": "4.0.3",
+      "scope": "excluded",
+      "purl": "pkg:github/pbakaus/impeccable@1cf7d7ab0f1ac0bb3319fd20be389a3009f4037d",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "properties": [
+        {
+          "name": "ozzyl:usage",
+          "value": "development-tooling"
+        },
+        {
+          "name": "ozzyl:vendored-paths",
+          "value": ".agents/skills/impeccable,.github/skills/impeccable"
+        }
+      ]
+    }
+  ]
+}

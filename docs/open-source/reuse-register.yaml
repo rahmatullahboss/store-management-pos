@@ -1,15 +1,7 @@
 policy:
   product_model: proprietary_saas_with_distributed_pos_clients
   default_action: deny_unless_reviewed
-  legal_review_required_for:
-    - LGPL
-    - MPL
-    - EPL
-    - GPL
-    - AGPL
-    - custom
-    - source_available
-    - unknown
+  legal_review_required_for: [LGPL, MPL, EPL, GPL, AGPL, custom, source_available, unknown]
   prohibited_without_explicit_approval:
     - copy_from_repository_without_license
     - copy_gpl_or_agpl_into_proprietary_core
@@ -17,18 +9,76 @@ policy:
     - copy_branding_images_or_proprietary_text
     - copy_open_source_pos_without_required_footer
 
-status_values:
-  - proposed
-  - research_only
-  - approved_dependency
-  - approved_adaptation
-  - rejected
-  - removed
+status_values: [proposed, research_only, approved_dependency, approved_adaptation, rejected, removed]
 
 entries:
   - id: OSS-0001
+    status: approved_dependency
+    purpose: Direct HTTP and request-scoped WebSocket access from Cloudflare Workers to Neon PostgreSQL.
+    reuse_mode: dependency
+    project: "@neondatabase/serverless"
+    repository: "https://github.com/neondatabase/serverless"
+    exact_commit_or_tag: "1.1.0"
+    files_or_packages: ["@neondatabase/serverless"]
+    declared_license: MIT
+    file_level_licenses_checked: true
+    notice_files: ["LICENSE"]
+    copyright_holders: ["Neon, Inc. and contributors"]
+    modifications: "No upstream source copied or modified; consumed as an npm dependency."
+    product_locations: ["packages/foundation/src/db.ts", "tests/integration/neon.test.mjs"]
+    distributed_to_customers: true
+    network_service_use: true
+    compatible_with_product_model: approved
+    legal_review:
+      required: false
+      reviewer: foundation-agent
+      decision: approved
+      date: 2026-07-28
+    security_review:
+      owner: foundation-agent
+      result: baseline_review_complete
+    update_owner: foundation-platform
+    upstream_tracking: "npm exact version; updates require tests and register review"
+    sbom_component: "pkg:npm/%40neondatabase%2Fserverless@1.1.0"
+    third_party_notice_entry: "docs/THIRD_PARTY_NOTICES.md"
+    tests: ["tests/unit/database.test.mjs", "tests/integration/neon.test.mjs"]
+    notes: "Hyperdrive is not part of the baseline connection path."
+
+  - id: OSS-0002
+    status: approved_dependency
+    purpose: Reproducible repository-owned TypeScript compilation in local and CI verification.
+    reuse_mode: dependency
+    project: "typescript"
+    repository: "https://github.com/microsoft/TypeScript"
+    exact_commit_or_tag: "5.8.3"
+    files_or_packages: ["typescript"]
+    declared_license: Apache-2.0
+    file_level_licenses_checked: true
+    notice_files: ["LICENSE.txt"]
+    copyright_holders: ["Microsoft Corporation"]
+    modifications: "No upstream source copied or modified; consumed as a development-only npm dependency."
+    product_locations: ["package.json", "package-lock.json", "tooling/scripts/check-licenses.mjs"]
+    distributed_to_customers: false
+    network_service_use: false
+    compatible_with_product_model: approved
+    legal_review:
+      required: false
+      reviewer: foundation-agent
+      decision: approved
+      date: 2026-07-28
+    security_review:
+      owner: foundation-agent
+      result: build_tool_pin_review_complete
+    update_owner: foundation-platform
+    upstream_tracking: "npm exact version; updates require clean CI, compiler compatibility and register review"
+    sbom_component: "pkg:npm/typescript@5.8.3"
+    third_party_notice_entry: "docs/THIRD_PARTY_NOTICES.md"
+    tests: ["npm run typecheck", "npm run build"]
+    notes: "Development-only compiler pin; excluded from the runtime deployment bundle."
+
+  - id: OSS-0003
     status: approved_adaptation
-    purpose: AI-assisted frontend design guidance and deterministic UI quality detection for Codex and GitHub Copilot
+    purpose: AI-assisted frontend design guidance and deterministic UI quality detection for Codex and GitHub Copilot.
     reuse_mode: adapted_component
     project: Impeccable
     repository: https://github.com/pbakaus/impeccable
@@ -48,7 +98,7 @@ entries:
     copyright_holders:
       - Impeccable contributors
       - Paul Bakaus
-    modifications: Skill payload mirrored for two provider locations; Codex hook command changed from an absolute/global source path to the repository-local .agents path; project workflow and product context authored independently.
+    modifications: Skill payload mirrored for two provider locations; Codex hook command changed from an absolute/global source path to the repository-local .agents path; vendored text received final-newline and trailing-whitespace normalization for the repository format gate; project workflow and product context authored independently.
     product_locations:
       - .agents/skills/impeccable
       - .github/skills/impeccable
@@ -56,16 +106,16 @@ entries:
       - .github/hooks/impeccable.json
     distributed_to_customers: false
     network_service_use: false
-    compatible_with_product_model: true
+    compatible_with_product_model: approved
     legal_review:
       required: false
       reviewer: engineering_policy
       decision: approved_permissive_license
       date: 2026-07-28
     security_review:
-      owner: foundation_agent
-      result: initial_source_and_executable_tooling_review_required_before_release
-    update_owner: foundation_agent
+      owner: foundation-agent
+      result: initial_tooling_smoke_and_source_provenance_review_complete
+    update_owner: foundation-platform
     upstream_tracking: Pin exact upstream commit; update only through a dedicated reviewed tooling branch.
     sbom_component: pkg:github/pbakaus/impeccable@1cf7d7ab0f1ac0bb3319fd20be389a3009f4037d
     third_party_notice_entry: third_party/impeccable/NOTICE.md
@@ -73,8 +123,9 @@ entries:
       - JSON parse for Codex and GitHub hook manifests
       - project skill discovery
       - context.mjs execution
-      - detect.mjs help and representative scan
-    notes: Development tooling only. Do not grant production credentials or process production customer data through live-mode artifacts.
+      - hook.mjs smoke
+      - detect.mjs representative scan
+    notes: Development tooling only. Do not grant production credentials or process production customer data through live-mode artefacts.
 
 entry_template:
   id: OSS-0000
@@ -94,14 +145,8 @@ entry_template:
   distributed_to_customers: false
   network_service_use: true
   compatible_with_product_model: unknown
-  legal_review:
-    required: true
-    reviewer: ""
-    decision: pending
-    date: null
-  security_review:
-    owner: ""
-    result: pending
+  legal_review: { required: true, reviewer: "", decision: pending, date: null }
+  security_review: { owner: "", result: pending }
   update_owner: ""
   upstream_tracking: ""
   sbom_component: ""

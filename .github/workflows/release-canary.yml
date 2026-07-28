@@ -1,0 +1,23 @@
+name: Release Canary Skeleton
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Non-production target until Foundation Gate passes
+        required: true
+        default: staging
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          test "${{ inputs.environment }}" != "production"
+          echo "Canary release remains non-production until Foundation Gate evidence is complete."
+      - run: npm ci --ignore-scripts
+      - run: npm run verify
