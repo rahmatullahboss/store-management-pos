@@ -50,10 +50,12 @@ Read these completely before implementation and treat them as authoritative:
 16. `docs/agent-workpacks/FOUNDATION-PLATFORM.md`
 17. `docs/agent-workpacks/program-board.yaml`
 18. `docs/open-source/reuse-register.yaml`
-19. `docs/adr/ADR-002-MODULAR-MONOLITH.md`
-20. `docs/adr/ADR-003-IMMUTABLE-LEDGERS.md`
-21. `docs/adr/ADR-004-OFFLINE-POS-SYNC.md`
-22. `docs/adr/ADR-005-NEON-DIRECT-DRIVER.md`
+19. `PRODUCT.md`
+20. `docs/18-IMPECCABLE-DESIGN-WORKFLOW.md`
+21. `docs/adr/ADR-002-MODULAR-MONOLITH.md`
+22. `docs/adr/ADR-003-IMMUTABLE-LEDGERS.md`
+23. `docs/adr/ADR-004-OFFLINE-POS-SYNC.md`
+24. `docs/adr/ADR-005-NEON-DIRECT-DRIVER.md`
 
 ADR-005 supersedes ADR-001 only for database connectivity. PostgreSQL remains canonical; direct Neon Serverless driver is the baseline. Hyperdrive is optional benchmark-only and must not be introduced as a required dependency.
 
@@ -73,6 +75,9 @@ Implement every requirement in `docs/agent-workpacks/FOUNDATION-PLATFORM.md`, in
 - establish R2, Queues, Workflows, Durable Objects and safe configuration adapters;
 - publish contract pack v1 and dependency simulators/fixtures for MOD-A through MOD-G;
 - create shared accessible UI, permissions, localization and error foundations;
+- use the vendored Impeccable skill to shape, build, harden, audit and finish the first real admin/POS visual system;
+- create `DESIGN.md` and `.impeccable/design.json` only after that implemented system passes finish review;
+- integrate the deterministic Impeccable detector into UI CI and handoff evidence;
 - implement testing, CI/CD, preview environments, Neon branch automation, observability, security scans, license checks and SBOM generation;
 - implement and verify the narrow Foundation reference vertical slice;
 - produce benchmark, architecture, security and operational evidence;
@@ -142,6 +147,8 @@ Run and document the smallest reliable checks continuously, then the complete Fo
 - architecture-boundary tests;
 - contract-schema compatibility tests;
 - UI shell accessibility and permission tests;
+- Impeccable context, detector, responsive/localization, bounded visual inspection and finish-review evidence;
+- generated `DESIGN.md`/`.impeccable/design.json` matching the implemented UI system;
 - dependency, vulnerability, secret and license scans;
 - SBOM and notice generation;
 - preview/Neon branch create-migrate-test-cleanup verification;

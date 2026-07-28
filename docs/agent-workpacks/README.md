@@ -40,7 +40,9 @@ Every workpack agent must:
 - add module-level metrics, logs and runbooks;
 - record every copied/adapted open-source file in the reuse register;
 - create coherent checkpoint commits and a final handoff report;
-- stop only at a clean module checkpoint or completed handoff.
+- stop only at a clean module checkpoint or completed handoff;
+- use the vendored Impeccable skill for every substantial UI surface and satisfy `docs/18-IMPECCABLE-DESIGN-WORKFLOW.md`;
+- include design context, detector, accessibility, responsive and visual-review evidence in UI-bearing handoffs.
 
 ## Universal prohibitions
 
@@ -51,7 +53,8 @@ Every workpack agent must:
 - no production credentials or personal data in agent/preview branches;
 - no unapproved breaking contract change;
 - no GPL/AGPL/custom-license code copied into the proprietary core;
-- no completion claim without migrations, UI, tests and documentation.
+- no completion claim without migrations, UI, tests and documentation;
+- no UI completion claim without the Impeccable UI completion gate.
 
 ## Required final handoff
 

@@ -283,6 +283,7 @@ Every module agent delivers one complete workpack containing:
 - domain events and outbox integration;
 - authorization, approval and audit rules;
 - module UI and required POS/admin flows;
+- Impeccable design context, shaping, hardening, detector, accessibility/responsive and finish-review evidence for UI-bearing work;
 - imports/exports where in scope;
 - exact money, quantity, timezone and localization behavior;
 - idempotency, concurrency and failure recovery;
@@ -308,10 +309,11 @@ A module PR is eligible for integration only when:
 6. Upgrade and rollback/forward-fix behavior is tested.
 7. Tenant isolation, idempotency and audit tests pass.
 8. Module events pass schema and consumer-fixture tests.
-9. Required UI workflows are usable and accessible.
-10. Performance and failure tests meet budgets.
-11. Source provenance and license checks pass.
-12. Documentation and handoff report are complete.
+9. Required UI workflows are usable, accessible and compliant with `docs/18-IMPECCABLE-DESIGN-WORKFLOW.md`.
+10. Impeccable detector/visual evidence and any justified ignores are included in the handoff.
+11. Performance and failure tests meet budgets.
+12. Source provenance and license checks pass.
+13. Documentation and handoff report are complete.
 
 ## 15. Program integrator responsibilities
 

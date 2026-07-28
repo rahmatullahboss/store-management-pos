@@ -117,13 +117,17 @@ Publish typed schemas and fixtures for:
 
 ### Shared UI foundation
 
+- project-local Impeccable skill/hook integration for Codex and GitHub Copilot;
+- durable `PRODUCT.md` context and the design workflow/quality gate;
 - accessible design-system primitives;
 - app shell, navigation, route permissions and error states;
 - form, table, filter, pagination and audit-history components;
 - locale/RTL/theme foundations;
 - shared Money, date/time, quantity and status rendering;
 - API client and query/mutation conventions;
-- offline-aware POS shell without implementing checkout business logic.
+- offline-aware POS shell without implementing checkout business logic;
+- first implemented admin/POS visual system, finish review, and generated `DESIGN.md`/`.impeccable/design.json`;
+- deterministic Impeccable detector command integrated into CI for UI paths.
 
 ### Quality, security and operations
 
@@ -188,7 +192,8 @@ The workpack is complete only when:
 7. PR CI creates and deletes isolated Neon branches.
 8. Audit, outbox, inbox and idempotency primitives pass duplicate/retry tests.
 9. Shared UI shells build and enforce route permissions.
-10. Security, dependency, license and SBOM checks pass.
-11. Foundation benchmark and architecture reports are committed.
-12. `program-board.yaml` marks FOUNDATION complete and MOD-A through MOD-G ready.
-13. Final handoff is written to `docs/agent-handoffs/FOUNDATION-handoff.md`.
+10. The implemented UI foundation passes the Impeccable workflow, detector, accessibility, responsive and finish-review gates; `DESIGN.md` records the finished system.
+11. Security, dependency, license and SBOM checks pass.
+12. Foundation benchmark and architecture reports are committed.
+13. `program-board.yaml` marks FOUNDATION complete and MOD-A through MOD-G ready.
+14. Final handoff is written to `docs/agent-handoffs/FOUNDATION-handoff.md`.
