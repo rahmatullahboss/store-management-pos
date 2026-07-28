@@ -1,4 +1,5 @@
 import { renderAppShell } from "../../../../packages/ui/src/app-shell.js";
+import { directionSupportStyles } from "../../../../packages/ui/src/direction-support.js";
 import { renderAdminFoundationReference, type FoundationReferenceOptions } from "../../../../packages/ui/src/foundation-reference.js";
 import { adminRoutes } from "./routes.js";
 
@@ -21,7 +22,7 @@ export function renderAdminShell(input: AdminShellInput): string {
     identity: { displayName: input.displayName, tenantName: input.tenantName, permissions: input.permissions },
     routes: adminRoutes,
     currentPath: input.currentPath,
-    content: input.content,
+    content: `${directionSupportStyles}${input.content}`,
     variant: "admin",
     context: {
       workspace: "Operations admin",

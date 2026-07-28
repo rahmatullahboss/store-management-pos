@@ -1,4 +1,5 @@
 import { renderAppShell } from "../../../../packages/ui/src/app-shell.js";
+import { directionSupportStyles } from "../../../../packages/ui/src/direction-support.js";
 import { renderPosFoundationReference, type FoundationReferenceOptions } from "../../../../packages/ui/src/foundation-reference.js";
 import { posRoutes } from "./routes.js";
 
@@ -30,7 +31,7 @@ export function renderPosShell(input: PosShellInput): string {
     identity: { displayName: input.displayName, tenantName: input.tenantName, permissions: input.permissions },
     routes: posRoutes,
     currentPath: input.currentPath,
-    content: `${syncSummary}${input.content}`,
+    content: `${directionSupportStyles}${syncSummary}${input.content}`,
     variant: "pos",
     context: {
       workspace: "Register 02",
