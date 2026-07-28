@@ -20,7 +20,7 @@ Foundation owns `platform`. Each future module owns only its registered schema a
 
 ## Security baseline
 
-Tenant tables use forced RLS. The runtime role cannot mutate audit records or delete audit/outbox/inbox/idempotency history. Audit records are append-only; outbox event content is immutable after insertion. Secrets are environment-only. Production authentication uses the OIDC/JWKS v1 contract, explicit MFA assurance and Neon-backed membership/session/device revocation.
+Tenant tables use forced RLS. The runtime role cannot mutate audit records or delete audit/outbox/inbox/idempotency history. Audit records are append-only; outbox event content is immutable after insertion. Session revocations are append-only and runtime writes are restricted to the audited function path. Secrets are environment-only.
 
 ## Reference slice
 

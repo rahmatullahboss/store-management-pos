@@ -13,7 +13,7 @@
 | Idempotency duplicate replay | Passed locally and on Neon |
 | Inbox duplicate delivery | Passed locally and on Neon |
 | Tenant/store/user RLS isolation | Passed on Neon for two synthetic tenants |
-| Session/device/membership revocation | Passed on Neon |
+| Session/device/membership revocation | Passed on Neon; direct runtime table DML denied and function path preserved |
 | Audit/outbox immutability and duplicate effects | Passed on Neon |
 | Route permission filtering | Passed |
 | Module ownership/cycle enforcement | Passed for 7 workpacks and 16 schemas |
@@ -23,11 +23,11 @@
 
 ## Live Neon evidence
 
-The long-lived development branch `dev/foundation-v1` contains `FND-0001` through `FND-0004`. It has 23 forced-RLS platform tables and verified two-tenant isolation, idempotent reference effects, inbox duplicate handling and membership/session/device revocation behavior.
+The long-lived development branch `dev/foundation-v1` contains `FND-0001` through `FND-0005`. It has 23 forced-RLS platform tables and verified two-tenant isolation, idempotent reference effects, inbox duplicate handling and membership/session/device revocation behavior.
 
 A second lifecycle run used disposable branch `test/foundation-gate-manual-20260728` (`br-sweet-mode-axxx2970`) created from the untouched non-production `main` parent. `FND-0001` through `FND-0004` and synthetic fixtures were applied from empty state. The run reproduced Alpha/Beta isolation, one-record/one-audit/one-outbox reference replay effects, inbox first/duplicate claims and one-revocation/one-audit/one-outbox session effects. Verification writes were rolled back and the branch was deleted.
 
-This manual lifecycle establishes that the current migration set is rebuildable and cleanup works. It does not replace the required automated PR workflow.
+That manual lifecycle establishes rebuildability through `FND-0004` and cleanup. `FND-0005` was then applied and verified on the long-lived development branch: runtime direct insert privilege is false, function execution privilege is true, direct insert is rejected and duplicate-safe one/audit/outbox effects remain intact. It does not replace the required automated PR workflow.
 
 ## Deferred runtime benchmarks
 

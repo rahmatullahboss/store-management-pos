@@ -3,10 +3,10 @@
 ## Migration order
 
 1. Create an isolated Neon branch from the approved parent.
-2. Apply `FND-0001`, `FND-0002`, `FND-0003`, then `FND-0004` from `database/foundation/manifest.json`.
+2. Apply `FND-0001`, `FND-0002`, `FND-0003`, `FND-0004`, then `FND-0005` from `database/foundation/manifest.json`.
 3. Optionally load `database/foundation/seeds/dev.sql` only in non-production.
 4. Verify migration registry, schemas, roles and RLS policies.
-5. Run tenant-isolation, idempotency, outbox/inbox, identity-revocation and reference-slice checks.
+5. Run tenant-isolation, idempotency, outbox/inbox, identity-revocation privilege, duplicate-effect and reference-slice checks.
 6. Compare schema against the approved parent before integration.
 
 ## Failure handling

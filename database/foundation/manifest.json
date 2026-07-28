@@ -21,6 +21,11 @@
       "id": "FND-0004",
       "file": "FND-0004-identity-revocation.sql",
       "sha256": "485e579520910e16df9f6a076e579246da5d372ded3dc966a0c701571289d6a3"
+    },
+    {
+      "id": "FND-0005",
+      "file": "FND-0005-session-revocation-privilege-hardening.sql",
+      "sha256": "ff50c6d4f607002540d9e3399ff7523de840ada8c6d0580ecf7f47a7b403ef00"
     }
   ]
 }

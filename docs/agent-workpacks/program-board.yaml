@@ -57,7 +57,7 @@ workpacks:
     depends_on: []
     document: docs/agent-workpacks/FOUNDATION-PLATFORM.md
     integration_order: 0
-    evidence: [monorepo_and_boundary_baseline, contract_pack_v1, foundation_migrations_fnd_0001_to_fnd_0004, oidc_jwks_mfa_identity_baseline, identity_session_device_revocation, dedicated_nonproduction_neon_branch, live_tenant_rls_isolation_23_tables, reference_vertical_slice, live_idempotency_audit_outbox_inbox, local_verification_suite_14_tests, foundation_checkpoint_handoff, fresh_neon_rebuild_and_cleanup, manual_neon_preview_lifecycle_and_cleanup]
+    evidence: [monorepo_and_boundary_baseline, contract_pack_v1, foundation_migrations_fnd_0001_to_fnd_0005, oidc_jwks_mfa_identity_baseline, identity_session_device_revocation, session_revocation_function_only_write_path, dedicated_nonproduction_neon_branch, live_tenant_rls_isolation_23_tables, reference_vertical_slice, live_idempotency_audit_outbox_inbox, local_verification_suite_14_tests, foundation_checkpoint_handoff, fresh_neon_rebuild_and_cleanup, manual_neon_preview_lifecycle_and_cleanup]
     remaining_gate_blockers: [live_cloudflare_worker_deployment_and_cpu_memory_bundle_benchmark, live_direct_neon_http_websocket_latency_and_concurrency_benchmark, pr_preview_neon_branch_lifecycle_ci_execution, pitr_restore_and_reconciliation_drill, ignored_ai_bridge_instruction_review]
 
   - { id: MOD-A, title: Catalog Pricing and Tax, status: blocked, wave: 1, agent_assignment: whole_workpack_only, exclusive: false, git_branch: module/catalog-pricing-tax-v1, worktree: .worktrees/catalog-pricing-tax, neon_branch: dev/module-catalog-pricing-tax, depends_on: [FOUNDATION], document: docs/agent-workpacks/MOD-A-CATALOG-PRICING-TAX.md, integration_order: 1, evidence: [] }

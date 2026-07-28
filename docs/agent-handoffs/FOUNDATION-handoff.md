@@ -48,12 +48,13 @@
 | `FND-0002-rls.sql` | `b2789ce56ff1e31f731765b6d18bc7acd92d587ae178a4831cd7a42f927698dd` | Transaction context, forced RLS, append-only protections and privilege hardening |
 | `FND-0003-reference-slice.sql` | `3e51f91fe005b5cf6d976bcd473ac902bd03e4423a9f764c8eafbec9719f1a34` | Reference record, idempotent posting kernel and inbox claim/complete functions |
 | `FND-0004-identity-revocation.sql` | `485e579520910e16df9f6a076e579246da5d372ded3dc966a0c701571289d6a3` | Session revocation table, RLS, revocation checks and audit/outbox effects |
+| `FND-0005-session-revocation-privilege-hardening.sql` | `ff50c6d4f607002540d9e3399ff7523de840ada8c6d0580ecf7f47a7b403ef00` | Function-only runtime write path, membership validation and direct DML revocation |
 
-All four migrations and synthetic development fixtures are applied to `dev/foundation-v1`. The parent branch remains unmigrated.
+All five migrations and synthetic development fixtures are applied to `dev/foundation-v1`. The parent branch remains unmigrated.
 
 ## Live Neon evidence
 
-- Migration registry: `FND-0001`, `FND-0002`, `FND-0003`, `FND-0004`.
+- Migration registry: `FND-0001`, `FND-0002`, `FND-0003`, `FND-0004`, `FND-0005`.
 - Registered module/schema ownership entries: 17.
 - Forced-RLS platform tables: 23.
 - Tenant Alpha runtime context sees store `LON-01` and user `Alpha Owner` only.
@@ -63,6 +64,7 @@ All four migrations and synthetic development fixtures are applied to `dev/found
 - Inbox first claim returned true and duplicate claim returned false.
 - Active membership/session returned not revoked; first session revocation returned true; duplicate revocation returned false; the session then returned revoked.
 - Session revocation effects: exactly 1 revocation row, 1 audit event and 1 outbox event.
+- `store_app_runtime` direct insert privilege on session revocations is false; direct insert was rejected while audited function execution remained allowed.
 - Runtime role cannot delete reference records, mutate audit records or change migration metadata; audit and outbox protections reject content mutation.
 - Parent/child schema changes contain only expected Foundation and module-namespace additions; no parent migration was applied.
 
@@ -82,8 +84,8 @@ All four migrations and synthetic development fixtures are applied to `dev/found
   - CycloneDX SBOM generation passed.
 - Connected CI on the prior checkpoint passed `npm ci --ignore-scripts`, full verification and `npm audit --audit-level=high`.
 - `node --check` for tooling/test `.mjs` files passed.
-- Migration manifest SHA-256 values match all four SQL files.
-- The manual fresh-branch lifecycle and deletion passed; the automated PR workflow remains blocked by the missing repository API-key secret.
+- Migration manifest SHA-256 values match all five SQL files.
+- The manual fresh-branch lifecycle through `FND-0004` and deletion passed; `FND-0005` live privilege hardening passed; the automated PR workflow remains blocked by the missing repository API-key secret.
 
 ## Open-source provenance
 
@@ -102,4 +104,4 @@ Foundation is **not complete** and the PR must remain draft. MOD-A through MOD-G
 
 ## Exact continuation action
 
-Continue Foundation under the single assigned owner. Publish this identity/revocation checkpoint, verify connected CI, configure the missing Neon API-key secret, execute the automated preview benchmark lifecycle, then complete Cloudflare and PITR evidence. Do not activate a module agent until `program-board.yaml` marks FOUNDATION `complete` and selected module workpacks `ready`.
+Continue Foundation under the single assigned owner. Publish this identity/revocation privilege-hardening checkpoint, verify connected CI, configure the missing Neon API-key secret, execute the automated preview benchmark lifecycle, then complete Cloudflare and PITR evidence. Do not activate a module agent until `program-board.yaml` marks FOUNDATION `complete` and selected module workpacks `ready`.

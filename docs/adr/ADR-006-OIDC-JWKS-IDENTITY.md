@@ -25,7 +25,7 @@ Use a provider-neutral OIDC/JWKS access-token verifier in the Cloudflare Worker 
 
 ## Database baseline
 
-`FND-0004` adds append-only session revocations, duplicate-safe revocation, audit/outbox effects and an identity-state check covering active membership, session revocation and device status.
+`FND-0004` adds append-only session revocations, duplicate-safe revocation, audit/outbox effects and an identity-state check covering active membership, session revocation and device status. `FND-0005` removes direct runtime DML, requires active actor and tenant target membership, and makes the audited revocation function the only runtime write path.
 
 ## Consequences
 
@@ -50,7 +50,8 @@ Use a provider-neutral OIDC/JWKS access-token verifier in the Cloudflare Worker 
 - wrong algorithm, audience, token age and missing MFA rejection;
 - revoked session/device rejection;
 - inactive/unknown membership rejection;
-- duplicate revocation creates one revocation, one audit and one outbox event;
+- direct runtime table insert is denied;
+- duplicate function revocation creates one revocation, one audit and one outbox event;
 - JWKS outage and missing production configuration fail closed.
 
 ## References

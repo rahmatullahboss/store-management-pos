@@ -31,6 +31,7 @@ The Foundation API accepts provider-issued asymmetric JWT access tokens through 
 - Signature, issuer, audience, token type, algorithm, time, MFA, membership, session and device state are verified before a request context is created.
 - JWKS fetches require HTTPS, reject redirects and use a bounded cache.
 - Unknown keys, malformed claims, revoked sessions/devices and inactive memberships fail closed.
+- Session revocations are written only through `platform.revoke_identity_session`; the runtime role has no direct table DML privilege, preserving one revocation/audit/outbox effect.
 - Production does not fall back to the development token format when OIDC configuration is missing.
 
 Breaking changes require a new contract version and ADR review.

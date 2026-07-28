@@ -12,12 +12,12 @@ Foundation remains **active**. MOD-A through MOD-G remain blocked.
 | Repository layout and module ownership | Pass | Monorepo shells, `tooling/module-boundaries.json`, 7-workpack/16-schema boundary check |
 | Direct Neon HTTP and request-scoped WebSocket adapters | Code/build/unit pass; credentialed benchmark pending | Pinned `@neondatabase/serverless` adapters include HTTP one-shot, HTTP batch and request-scoped Client/Pool cleanup/failure handling; p50/p95/p99 and concurrency evidence still require the automated credentialed run |
 | Tenant/RLS isolation | Pass on dedicated and disposable Neon branches | Alpha/Beta contexts each saw only their own store and user; 23 platform tables use forced RLS |
-| Deterministic Foundation migrations | Pass through `FND-0004` | Checksummed manifest and migration registry; fresh empty-parent branch applied `FND-0001`–`FND-0004` plus synthetic fixtures |
+| Deterministic Foundation migrations | Pass on development through `FND-0005`; automated fresh run pending | Checksummed manifest and migration registry; fresh empty-parent branch passed through `FND-0004`; `FND-0005` privilege hardening passed on `dev/foundation-v1` |
 | Isolated Neon PR branch lifecycle | Manual pass; automated CI pending | Disposable branch `test/foundation-gate-manual-20260728` (`br-sweet-mode-axxx2970`) was created from empty non-production `main`, migrated, verified and deleted; repository secret `NEON_API_KEY` is still required for the PR workflow |
 | Shared exact primitives v1 | Pass | UUIDv7, Money, Quantity, Currency, Locale, Timezone and BusinessDate tests |
 | Contract pack v1 | Pass | Typed contracts, JSON schema, fixtures and compatibility tests |
-| Identity/RBAC/approval/device/audit baseline | Pass in code/unit/Neon | OIDC/JWKS contract, RS256 verification, issuer/audience/time validation, MFA assurance, separate provider/internal identity and database-backed membership/session/device revocation |
-| Audit/outbox/inbox/idempotency | Pass locally and on Neon | Reference replay produced one record/audit/outbox; inbox duplicate claim was rejected; session revocation replay produced one revocation/audit/outbox |
+| Identity/RBAC/approval/device/audit baseline | Pass in code/unit/Neon | OIDC/JWKS contract, RS256 verification, issuer/audience/time validation, MFA assurance, separate provider/internal identity and database-backed membership/session/device revocation and function-only revocation writes |
+| Audit/outbox/inbox/idempotency | Pass locally and on Neon | Reference replay produced one record/audit/outbox; inbox duplicate claim was rejected; session revocation replay produced one revocation/audit/outbox; direct runtime table insert is denied |
 | Architecture boundaries | Pass | No cycles or private persistence imports |
 | UI shells and route permissions | Pass | Admin/POS shells and permission filtering tests |
 | Security/license/SBOM | Pass | Secret/license checks, pinned lockfile, CycloneDX SBOM and connected dependency audit |
@@ -28,7 +28,7 @@ Foundation remains **active**. MOD-A through MOD-G remain blocked.
 
 ## Manual preview lifecycle evidence
 
-The disposable Neon branch `test/foundation-gate-manual-20260728` (`br-sweet-mode-axxx2970`) was created from the untouched non-production parent `main` (`br-spring-grass-ax3ptydv`). It applied `FND-0001` through `FND-0004` and synthetic development fixtures, then verified:
+Before `FND-0005`, the disposable Neon branch `test/foundation-gate-manual-20260728` (`br-sweet-mode-axxx2970`) was created from the untouched non-production parent `main` (`br-spring-grass-ax3ptydv`). It applied `FND-0001` through `FND-0004` and synthetic development fixtures, then verified:
 
 - migration registry exactly `FND-0001`, `FND-0002`, `FND-0003`, `FND-0004`;
 - 23 forced-RLS platform tables;
@@ -41,6 +41,10 @@ The disposable Neon branch `test/foundation-gate-manual-20260728` (`br-sweet-mod
 - exactly one session revocation, audit event and outbox event.
 
 All verification effects were rolled back and the disposable branch was deleted. The parent branch was not migrated.
+
+## `FND-0005` live hardening evidence
+
+On `dev/foundation-v1`, the migration registry contains `FND-0001` through `FND-0005`. `store_app_runtime` has `INSERT=false` on `platform.session_revocations` and `EXECUTE=true` on `platform.revoke_identity_session`. A direct insert was rejected, while the function returned first=true, duplicate=false, revoked=true and exactly one revocation/audit/outbox effect. Test writes were rolled back.
 
 ## Remaining gate blockers
 

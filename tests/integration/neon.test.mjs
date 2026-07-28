@@ -9,7 +9,7 @@ test("Foundation direct Neon HTTP and WebSocket integration", { skip: !enabled, 
 
   const sql = neon(connectionString);
   const migrations = await sql`SELECT migration_id FROM platform.schema_migrations ORDER BY migration_id`;
-  assert.deepEqual(migrations.map((row) => row.migration_id), ["FND-0001", "FND-0002", "FND-0003", "FND-0004"]);
+  assert.deepEqual(migrations.map((row) => row.migration_id), ["FND-0001", "FND-0002", "FND-0003", "FND-0004", "FND-0005"]);
   const policies = await sql`SELECT count(*)::int AS count FROM pg_policies WHERE schemaname = 'platform'`;
   assert.ok(policies[0].count >= 23);
 
@@ -52,6 +52,19 @@ test("Foundation direct Neon HTTP and WebSocket integration", { skip: !enabled, 
       "ci-active-session",
     ]);
     assert.equal(activeSession.rows[0].revoked, false);
+
+    const directInsertPrivilege = await client.query("SELECT has_table_privilege('store_app_runtime','platform.session_revocations','INSERT') AS allowed");
+    assert.equal(directInsertPrivilege.rows[0].allowed, false);
+    await client.query("SAVEPOINT direct_session_revocation_insert");
+    await assert.rejects(
+      client.query(
+        "INSERT INTO platform.session_revocations(id,tenant_id,session_id,user_id,revoked_by,reason,request_id,trace_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)",
+        [crypto.randomUUID(), "018f0000-0000-7000-8000-000000000001", `ci-direct-${crypto.randomUUID()}`, "018f0000-0000-7000-8000-000000000101", "018f0000-0000-7000-8000-000000000101", "must fail", "ci-direct", "ci-direct"],
+      ),
+      /permission denied/i,
+    );
+    await client.query("ROLLBACK TO SAVEPOINT direct_session_revocation_insert");
+
     const sessionId = `ci-session-${crypto.randomUUID()}`;
     const firstRevocation = await client.query("SELECT platform.revoke_identity_session($1,$2,$3) AS revoked", [sessionId, "018f0000-0000-7000-8000-000000000101", "CI revocation verification"]);
     const duplicateRevocation = await client.query("SELECT platform.revoke_identity_session($1,$2,$3) AS revoked", [sessionId, "018f0000-0000-7000-8000-000000000101", "CI revocation verification"]);
