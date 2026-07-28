@@ -67,7 +67,7 @@ Design agents must resolve authority in this order:
 
 `PRODUCT.md` must not contain palettes, typography recipes or invented visual directions. It records users, purpose, positioning, operating context, constraints, evidence, product principles and accessibility requirements.
 
-`DESIGN.md` is intentionally absent at the planning-only stage. The Foundation Agent creates it only after the first real admin/POS application shell has been built, visually inspected and passed the Impeccable finish review. It must document the implemented visual system rather than a speculative pre-code mood board.
+`DESIGN.md` now records the implemented Operations Ledger system after the admin/POS shell passed browser, accessibility, responsive/RTL and finish-review evidence. It is implementation-derived authority, not a speculative mood board.
 
 ## 5. Mandatory per-session setup
 
@@ -298,5 +298,7 @@ Update procedure:
 - Impeccable 4.0.3 is vendored for Codex and GitHub Copilot.
 - Codex and GitHub hook manifests are present.
 - `PRODUCT.md` captures durable product truth.
-- `DESIGN.md` is deliberately deferred until the Foundation Agent builds and finishes the first real UI system.
-- No production frontend currently exists, so no claim is made that the visual system or detector CI gate has already passed.
+- `DESIGN.md` and `.impeccable/design.json` capture the implemented Operations Ledger authority.
+- `npm run design:verify` passes 7/7 browser scenarios with zero Axe violations and zero blocking detector findings.
+- Desktop, tablet, mobile, Bengali, Arabic RTL, Japanese/CJK, resilient states, keyboard, reduced-motion and 200% text evidence is retained under `docs/architecture/foundation/design-evidence/`.
+- The Foundation visual gate is complete; ready module agents inherit this system and must pass the same workpack-level UI completion gate.

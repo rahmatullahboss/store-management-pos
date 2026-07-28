@@ -4,15 +4,15 @@ Documentation-first product and architecture programme for a multi-tenant, inter
 
 **Research baseline:** 2026-07-27
 **Implementation checkpoint:** 2026-07-28
-**Status:** Foundation technical gate and actual-worktree instruction review passed; final Foundation completion remains blocked only by the newly integrated Impeccable UI finish/audit evidence. Business modules remain blocked.
+**Status:** Foundation platform, instruction and Impeccable visual gates passed. FOUNDATION is complete; MOD-A, MOD-B, MOD-C and MOD-E are ready for controlled whole-module agent development.
 
 ## Current implementation phase
 
 The `program/foundation-v1` branch contains the shared production baseline: Cloudflare application shells, direct Neon adapters, tenant/RLS enforcement, shared exact primitives, versioned contracts, identity/RBAC, audit, idempotency, outbox/inbox, preview automation and the reference vertical slice.
 
-Foundation is `handoff_ready` and remains owned by one exclusive agent. Exact Neon p99/concurrency/cold-wake evidence, Cloudflare CPU/wall/memory evidence and a disposable Neon PITR/reconciliation drill have passed. The actual worktree's tracked `AGENTS.md` was reviewed and no `.ai-bridge` context files exist. Before FOUNDATION can be marked `complete`, the implemented admin/POS UI foundation must pass the repository's Impeccable detector, accessibility, responsive/localisation and finish-review gates, with `DESIGN.md` generated from the implemented system. Small-task agents are prohibited. After that final gate passes, separate agents may own complete MOD-A through MOD-G workpacks in isolated Git worktrees, Git branches and Neon branches; integration remains serial.
+Foundation is `complete`. Exact Neon p99/concurrency/cold-wake evidence, Cloudflare CPU/wall/memory evidence, a disposable Neon PITR/reconciliation drill and the Impeccable browser/accessibility/RTL finish gate have passed. The actual worktree's tracked `AGENTS.md` was reviewed and no `.ai-bridge` context files exist. `DESIGN.md` and `.impeccable/design.json` record the implemented Operations Ledger system. Small-task agents remain prohibited. Separate agents may now own the ready whole-module workpacks in isolated Git worktrees, Git branches and Neon branches; integration remains serial.
 
-Current machine-readable status and evidence are maintained in `docs/agent-workpacks/program-board.yaml`. Gate evidence and remaining blockers are maintained in `docs/architecture/foundation/foundation-gate.md` and `docs/agent-handoffs/FOUNDATION-handoff.md`.
+Current machine-readable status and evidence are maintained in `docs/agent-workpacks/program-board.yaml`. Completed gate evidence and the final handoff are maintained in `docs/architecture/foundation/foundation-gate.md` and `docs/agent-handoffs/FOUNDATION-handoff.md`.
 
 ## Primary decision
 
@@ -67,10 +67,12 @@ The recommended product is a **multi-tenant modular monolith with event-driven i
 29. [Open-Source Reuse Register](docs/open-source/reuse-register.yaml)
 30. [Foundation Agent One-Shot Prompt](docs/agent-prompts/FOUNDATION-ONE-SHOT-PROMPT.md)
 31. [Impeccable Design Skill Workflow](docs/18-IMPECCABLE-DESIGN-WORKFLOW.md)
+32. [Operations Ledger Design System](DESIGN.md)
+33. [Foundation Design Evidence](docs/architecture/foundation/design-evidence/README.md)
 
 ## Design tooling
 
-Impeccable 4.0.3 is vendored for project-local Codex and GitHub Copilot use. UI agents must read `PRODUCT.md`, follow `docs/18-IMPECCABLE-DESIGN-WORKFLOW.md`, and pass its UI completion gate. `DESIGN.md` must be generated from the implemented admin/POS visual system only after that system passes the Impeccable finish review; it must not be a speculative planning artefact.
+Impeccable 4.0.3 is vendored for project-local Codex and GitHub Copilot use. UI agents must read `PRODUCT.md`, `DESIGN.md`, follow `docs/18-IMPECCABLE-DESIGN-WORKFLOW.md`, and pass its UI completion gate. The implemented Operations Ledger authority is recorded in `DESIGN.md`, `.impeccable/design.json` and the Foundation design-evidence bundle.
 
 ## Non-negotiable product principles
 

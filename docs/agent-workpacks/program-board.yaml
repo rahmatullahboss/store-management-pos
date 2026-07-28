@@ -1,8 +1,8 @@
 program:
   name: international-store-management-pos
-  status: foundation_handoff_ready
-  execution_mode: single_foundation_agent
-  current_agent_scope: FOUNDATION
+  status: foundation_complete
+  execution_mode: controlled_parallel_module_agents
+  current_agent_scope: PROGRAM_INTEGRATION
   delegation_unit: whole_module_workpack
   prohibit_subtask_agents: true
   module_agent_launch_condition: foundation_gate_passed
@@ -20,11 +20,11 @@ status_values: [blocked, ready, active, handoff_ready, integration_review, integ
 
 activation_policy:
   current_phase:
-    owner_count: 1
-    owner_workpack: FOUNDATION
-    module_agents_allowed: false
-    reason: impeccable_visual_foundation_pending
-    continuation: foundation_owner_holds_handoff_until_impeccable_finish_gate_is_complete
+    owner_count: 0
+    owner_workpack: PROGRAM_INTEGRATION
+    module_agents_allowed: true
+    reason: foundation_gate_passed
+    continuation: activate_wave_1_whole_module_agents_from_the_approved_foundation_baseline
   after_foundation_gate:
     module_agents_allowed: true
     assignment_rule: one_agent_one_complete_workpack
@@ -47,7 +47,7 @@ activation_policy:
 workpacks:
   - id: FOUNDATION
     title: Foundation Platform
-    status: handoff_ready
+    status: complete
     wave: 0
     exclusive: true
     agent_assignment: single_complete_workpack_owner
@@ -57,14 +57,14 @@ workpacks:
     depends_on: []
     document: docs/agent-workpacks/FOUNDATION-PLATFORM.md
     integration_order: 0
-    evidence: [monorepo_and_boundary_baseline, contract_pack_v1, foundation_migrations_fnd_0001_to_fnd_0005, oidc_jwks_mfa_identity_baseline, identity_session_device_revocation, session_revocation_function_only_write_path, repository_owned_typescript_5_8_3, connected_core_ci_all_steps_pass, dependency_audit_pass, parent_child_schema_diff_reviewed, dedicated_nonproduction_neon_branch, live_tenant_rls_isolation_23_tables, reference_vertical_slice, live_idempotency_audit_outbox_inbox, local_verification_suite_14_tests, foundation_checkpoint_handoff, fresh_neon_rebuild_and_cleanup, manual_neon_preview_lifecycle_and_cleanup, automated_fnd_0001_to_fnd_0005_preview_lifecycle_and_cleanup, direct_neon_http_batch_websocket_p50_p95_p99_and_concurrency_artifact, genuine_neon_scale_to_zero_cold_wake, neon_transaction_rollback_recovery, disposable_neon_pitr_restore_and_reconciliation, cloudflare_worker_deploy_version_preview_health_bundle_latency_and_cleanup, cloudflare_graphql_cpu_wall_time_and_memory_evidence, canceled_ci_preview_branch_cleanup, actual_worktree_agents_review_no_ai_bridge_context, impeccable_4_0_3_vendored_for_codex_and_github, impeccable_context_and_detector_tooling_smoke]
-    remaining_gate_blockers: [impeccable_visual_foundation_finish_review]
+    evidence: [monorepo_and_boundary_baseline, contract_pack_v1, foundation_migrations_fnd_0001_to_fnd_0005, oidc_jwks_mfa_identity_baseline, identity_session_device_revocation, session_revocation_function_only_write_path, repository_owned_typescript_5_8_3, connected_core_ci_all_steps_pass, dependency_audit_pass, parent_child_schema_diff_reviewed, dedicated_nonproduction_neon_branch, live_tenant_rls_isolation_23_tables, reference_vertical_slice, live_idempotency_audit_outbox_inbox, local_verification_suite_14_tests, foundation_checkpoint_handoff, fresh_neon_rebuild_and_cleanup, manual_neon_preview_lifecycle_and_cleanup, automated_fnd_0001_to_fnd_0005_preview_lifecycle_and_cleanup, direct_neon_http_batch_websocket_p50_p95_p99_and_concurrency_artifact, genuine_neon_scale_to_zero_cold_wake, neon_transaction_rollback_recovery, disposable_neon_pitr_restore_and_reconciliation, cloudflare_worker_deploy_version_preview_health_bundle_latency_and_cleanup, cloudflare_graphql_cpu_wall_time_and_memory_evidence, canceled_ci_preview_branch_cleanup, actual_worktree_agents_review_no_ai_bridge_context, impeccable_4_0_3_vendored_for_codex_and_github, impeccable_context_and_detector_tooling_smoke, impeccable_visual_foundation_complete, browser_design_evidence_7_of_7, axe_wcag_zero_violations, responsive_rtl_bn_ja_evidence, design_md_and_sidecar, degraded_finish_review_pass, local_verification_suite_15_tests]
+    remaining_gate_blockers: []
 
-  - { id: MOD-A, title: Catalog Pricing and Tax, status: blocked, wave: 1, agent_assignment: whole_workpack_only, exclusive: false, git_branch: module/catalog-pricing-tax-v1, worktree: .worktrees/catalog-pricing-tax, neon_branch: dev/module-catalog-pricing-tax, depends_on: [FOUNDATION], document: docs/agent-workpacks/MOD-A-CATALOG-PRICING-TAX.md, integration_order: 1, evidence: [] }
-  - { id: MOD-B, title: Inventory and Procurement, status: blocked, wave: 1, agent_assignment: whole_workpack_only, exclusive: false, git_branch: module/inventory-procurement-v1, worktree: .worktrees/inventory-procurement, neon_branch: dev/module-inventory-procurement, depends_on: [FOUNDATION], contract_dependencies: [MOD-A], document: docs/agent-workpacks/MOD-B-INVENTORY-PROCUREMENT.md, integration_order: 2, evidence: [] }
-  - { id: MOD-C, title: Customer Sales and Fulfillment, status: blocked, wave: 1, agent_assignment: whole_workpack_only, exclusive: false, git_branch: module/customer-sales-fulfillment-v1, worktree: .worktrees/customer-sales-fulfillment, neon_branch: dev/module-customer-sales-fulfillment, depends_on: [FOUNDATION], contract_dependencies: [MOD-A, MOD-B], document: docs/agent-workpacks/MOD-C-CUSTOMER-SALES-FULFILLMENT.md, integration_order: 3, evidence: [] }
+  - { id: MOD-A, title: Catalog Pricing and Tax, status: ready, wave: 1, agent_assignment: whole_workpack_only, exclusive: false, git_branch: module/catalog-pricing-tax-v1, worktree: .worktrees/catalog-pricing-tax, neon_branch: dev/module-catalog-pricing-tax, depends_on: [FOUNDATION], document: docs/agent-workpacks/MOD-A-CATALOG-PRICING-TAX.md, integration_order: 1, evidence: [] }
+  - { id: MOD-B, title: Inventory and Procurement, status: ready, wave: 1, agent_assignment: whole_workpack_only, exclusive: false, git_branch: module/inventory-procurement-v1, worktree: .worktrees/inventory-procurement, neon_branch: dev/module-inventory-procurement, depends_on: [FOUNDATION], contract_dependencies: [MOD-A], document: docs/agent-workpacks/MOD-B-INVENTORY-PROCUREMENT.md, integration_order: 2, evidence: [] }
+  - { id: MOD-C, title: Customer Sales and Fulfillment, status: ready, wave: 1, agent_assignment: whole_workpack_only, exclusive: false, git_branch: module/customer-sales-fulfillment-v1, worktree: .worktrees/customer-sales-fulfillment, neon_branch: dev/module-customer-sales-fulfillment, depends_on: [FOUNDATION], contract_dependencies: [MOD-A, MOD-B], document: docs/agent-workpacks/MOD-C-CUSTOMER-SALES-FULFILLMENT.md, integration_order: 3, evidence: [] }
   - { id: MOD-D, title: POS Cash Offline and Hardware, status: blocked, wave: 2, agent_assignment: whole_workpack_only, exclusive: false, git_branch: module/pos-cash-offline-v1, worktree: .worktrees/pos-cash-offline, neon_branch: dev/module-pos-cash-offline, depends_on: [FOUNDATION], contract_dependencies: [MOD-A, MOD-B, MOD-C, MOD-E], document: docs/agent-workpacks/MOD-D-POS-CASH-OFFLINE.md, integration_order: 5, evidence: [] }
-  - { id: MOD-E, title: Payments Accounting and Banking, status: blocked, wave: 1, agent_assignment: whole_workpack_only, exclusive: false, git_branch: module/payments-accounting-banking-v1, worktree: .worktrees/payments-accounting-banking, neon_branch: dev/module-payments-accounting-banking, depends_on: [FOUNDATION], contract_dependencies: [MOD-B, MOD-C], document: docs/agent-workpacks/MOD-E-PAYMENTS-ACCOUNTING-BANKING.md, integration_order: 4, evidence: [] }
+  - { id: MOD-E, title: Payments Accounting and Banking, status: ready, wave: 1, agent_assignment: whole_workpack_only, exclusive: false, git_branch: module/payments-accounting-banking-v1, worktree: .worktrees/payments-accounting-banking, neon_branch: dev/module-payments-accounting-banking, depends_on: [FOUNDATION], contract_dependencies: [MOD-B, MOD-C], document: docs/agent-workpacks/MOD-E-PAYMENTS-ACCOUNTING-BANKING.md, integration_order: 4, evidence: [] }
   - { id: MOD-F, title: Localization Country Packs and Compliance, status: blocked, wave: 2, agent_assignment: whole_workpack_only, exclusive: false, git_branch: module/localization-compliance-v1, worktree: .worktrees/localization-compliance, neon_branch: dev/module-localization-compliance, depends_on: [FOUNDATION], contract_dependencies: [MOD-A, MOD-C, MOD-D, MOD-E], document: docs/agent-workpacks/MOD-F-LOCALIZATION-COMPLIANCE.md, integration_order: 6, evidence: [] }
   - { id: MOD-G, title: Reporting Integrations and SaaS Administration, status: blocked, wave: 3, agent_assignment: whole_workpack_only, exclusive: false, git_branch: module/reporting-integrations-saas-v1, worktree: .worktrees/reporting-integrations-saas, neon_branch: dev/module-reporting-integrations, depends_on: [FOUNDATION], contract_dependencies: [MOD-A, MOD-B, MOD-C, MOD-D, MOD-E, MOD-F], document: docs/agent-workpacks/MOD-G-REPORTING-INTEGRATIONS-SAAS.md, integration_order: 7, evidence: [] }
 
