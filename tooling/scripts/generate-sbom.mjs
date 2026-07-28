@@ -3,12 +3,15 @@ import path from "node:path";
 
 const root = path.resolve(new URL("../..", import.meta.url).pathname);
 const packageJson = JSON.parse(await readFile(path.join(root, "package.json"), "utf8"));
-const components = Object.entries(packageJson.dependencies ?? {}).map(([name, version]) => ({
+const runtimeDependencies = Object.entries(packageJson.dependencies ?? {}).map(([name, version]) => ({ name, version, scope: "required" }));
+const developmentDependencies = Object.entries(packageJson.devDependencies ?? {}).map(([name, version]) => ({ name, version, scope: "excluded" }));
+const components = [...runtimeDependencies, ...developmentDependencies].map(({ name, version, scope }) => ({
   type: "library",
   name,
   version,
+  scope,
   purl: `pkg:npm/${encodeURIComponent(name)}@${version}`,
-  licenses: [{ license: { id: name === "@neondatabase/serverless" ? "MIT" : "NOASSERTION" } }]
+  licenses: [{ license: { id: name === "@neondatabase/serverless" ? "MIT" : name === "typescript" ? "Apache-2.0" : "NOASSERTION" } }]
 }));
 const sbom = {
   bomFormat: "CycloneDX",

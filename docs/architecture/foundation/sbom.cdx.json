@@ -15,11 +15,26 @@
       "type": "library",
       "name": "@neondatabase/serverless",
       "version": "1.1.0",
+      "scope": "required",
       "purl": "pkg:npm/%40neondatabase%2Fserverless@1.1.0",
       "licenses": [
         {
           "license": {
             "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "typescript",
+      "version": "5.8.3",
+      "scope": "excluded",
+      "purl": "pkg:npm/typescript@5.8.3",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
           }
         }
       ]

@@ -44,6 +44,38 @@ entries:
     tests: ["tests/unit/database.test.mjs", "tests/integration/neon.test.mjs"]
     notes: "Hyperdrive is not part of the baseline connection path."
 
+  - id: OSS-0002
+    status: approved_dependency
+    purpose: Reproducible repository-owned TypeScript compilation in local and CI verification.
+    reuse_mode: dependency
+    project: "typescript"
+    repository: "https://github.com/microsoft/TypeScript"
+    exact_commit_or_tag: "5.8.3"
+    files_or_packages: ["typescript"]
+    declared_license: Apache-2.0
+    file_level_licenses_checked: true
+    notice_files: ["LICENSE.txt"]
+    copyright_holders: ["Microsoft Corporation"]
+    modifications: "No upstream source copied or modified; consumed as a development-only npm dependency."
+    product_locations: ["package.json", "package-lock.json", "tooling/scripts/check-licenses.mjs"]
+    distributed_to_customers: false
+    network_service_use: false
+    compatible_with_product_model: approved
+    legal_review:
+      required: false
+      reviewer: foundation-agent
+      decision: approved
+      date: 2026-07-28
+    security_review:
+      owner: foundation-agent
+      result: build_tool_pin_review_complete
+    update_owner: foundation-platform
+    upstream_tracking: "npm exact version; updates require clean CI, compiler compatibility and register review"
+    sbom_component: "pkg:npm/typescript@5.8.3"
+    third_party_notice_entry: "docs/THIRD_PARTY_NOTICES.md"
+    tests: ["npm run typecheck", "npm run build"]
+    notes: "Development-only compiler pin; excluded from the runtime deployment bundle."
+
 entry_template:
   id: OSS-0000
   status: proposed
