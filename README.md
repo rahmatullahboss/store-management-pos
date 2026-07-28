@@ -4,15 +4,15 @@ Documentation-first product and architecture program for a multi-tenant, interna
 
 **Research baseline:** 2026-07-27  
 **Implementation checkpoint:** 2026-07-28  
-**Status:** Foundation technical gate passed; handoff is blocked only by actual-worktree `.ai-bridge` review. Business modules remain blocked.
+**Status:** Foundation runtime and data gates passed; the required Impeccable visual-foundation checkpoint and actual-worktree `.ai-bridge` review remain. Business modules are blocked.
 
 ## Current implementation phase
 
 The `program/foundation-v1` branch contains the shared production baseline: Cloudflare application shells, direct Neon adapters, tenant/RLS enforcement, shared exact primitives, versioned contracts, identity/RBAC, audit, idempotency, outbox/inbox, preview automation and the reference vertical slice.
 
-Foundation is `handoff_ready` and remains owned by one exclusive agent. Exact Neon p99/concurrency/cold-wake evidence, Cloudflare CPU/wall/memory evidence and a disposable Neon PITR/reconciliation drill have passed. Small-task agents are prohibited. After the actual worktree's ignored `.ai-bridge` instructions are reviewed and FOUNDATION is marked `complete`, separate agents may own complete MOD-A through MOD-G workpacks in isolated Git worktrees, Git branches and Neon branches; integration remains serial.
+Neon p99/concurrency/cold-wake evidence, Cloudflare CPU/wall/memory evidence and a disposable Neon PITR/reconciliation drill have passed. Foundation remains owned by one exclusive agent. Before FOUNDATION can become `complete`, the first real admin/POS visual system must pass the repository's Impeccable workflow and the actual worktree's ignored `.ai-bridge` instructions must be reviewed. Small-task agents remain prohibited.
 
-Current machine-readable status and evidence are maintained in `docs/agent-workpacks/program-board.yaml`. Gate evidence and the single remaining blocker are maintained in `docs/architecture/foundation/foundation-gate.md` and `docs/agent-handoffs/FOUNDATION-handoff.md`.
+Current machine-readable status and evidence are maintained in `docs/agent-workpacks/program-board.yaml`. Gate evidence and remaining blockers are maintained in `docs/architecture/foundation/foundation-gate.md` and `docs/agent-handoffs/FOUNDATION-handoff.md`.
 
 ## Primary decision
 
@@ -66,6 +66,11 @@ The recommended product is a **multi-tenant modular monolith with event-driven i
 28. [Foundation Checkpoint Handoff](docs/agent-handoffs/FOUNDATION-handoff.md)
 29. [Open-Source Reuse Register](docs/open-source/reuse-register.yaml)
 30. [Foundation Agent One-Shot Prompt](docs/agent-prompts/FOUNDATION-ONE-SHOT-PROMPT.md)
+31. [Impeccable Design Skill Workflow](docs/18-IMPECCABLE-DESIGN-WORKFLOW.md)
+
+## Design tooling
+
+Impeccable 4.0.3 is vendored for project-local Codex and GitHub Copilot use. UI agents must read `PRODUCT.md`, follow `docs/18-IMPECCABLE-DESIGN-WORKFLOW.md`, and pass its UI completion gate. `DESIGN.md` is created by the Foundation Agent only after the first implemented admin/POS visual system passes finish review.
 
 ## Non-negotiable product principles
 
