@@ -5,7 +5,9 @@
 
 ## Current decision
 
-Foundation continues under one exclusive owner until the Foundation Gate passes. MOD-A through MOD-G remain blocked during this phase.
+FOUNDATION is technically complete and `handoff_ready`, but module agents are not yet allowed. The only remaining Foundation Gate blocker is review of ignored `.ai-bridge` instructions from the actual mounted Git worktree.
+
+The available mounted directory is a generated source tree without `.git` or `.ai-bridge`. Technical evidence does not override unknown repository-local instructions. MOD-A through MOD-G remain blocked until the review is completed and the board records the transition.
 
 Small-task agents are prohibited. No separate agent is created for an endpoint, table, migration, UI screen, test suite, bug, documentation fragment or other internal checklist item.
 
@@ -25,12 +27,14 @@ Each module agent owns its workpack from branch creation through handoff. It com
 
 A module agent may start only when all of the following are true:
 
-1. `FOUNDATION` is marked `complete` in `program-board.yaml`.
-2. Its own workpack is marked `ready`.
-3. Contract pack v1 and required dependency fixtures are frozen.
-4. Its Git branch, worktree and Neon branch are created from the approved Foundation baseline.
-5. Its owned paths and PostgreSQL schemas are machine-enforced.
-6. The program integrator records the owner and activation checkpoint.
+1. The real `.worktrees/foundation-v1` worktree is mounted or its `.ai-bridge` contents are supplied.
+2. Ignored instructions are reviewed and reconciled without resetting or discarding existing work.
+3. `FOUNDATION` is marked `complete` in `program-board.yaml`.
+4. Its own workpack is marked `ready`.
+5. Contract pack v1 and required dependency fixtures are frozen.
+6. Its Git branch, worktree and Neon branch are created from the approved Foundation baseline.
+7. Its owned paths and PostgreSQL schemas are machine-enforced.
+8. The program integrator records the owner and activation checkpoint.
 
 ## Controlled launch waves
 
@@ -56,6 +60,15 @@ Module integration remains serial:
 
 Each module reaches `integration_review` independently. Cross-module conflicts return to the owning module branch or are recorded as explicit integrator patches.
 
+## Completed Foundation evidence
+
+- exact install, format, lint, boundaries, typecheck, 14 tests, secret/licence/SBOM and dependency audit;
+- fresh `FND-0001`–`FND-0005` migration lifecycle and cleanup;
+- direct Neon HTTP/batch/WebSocket p50/p95/p99, concurrency, rollback and genuine cold-wake evidence;
+- disposable Neon PITR restore and reconciliation;
+- Cloudflare deploy, preview, bundle, health, latency, CPU, wall-time, memory and cleanup evidence;
+- stale disposable branch cleanup and confirmation that only `main` and `dev/foundation-v1` remain.
+
 ## Prohibited delegation patterns
 
 - one agent per small TODO;
@@ -77,4 +90,4 @@ Each module reaches `integration_review` independently. Cross-module conflicts r
 - before handoff or integration review;
 - after CI, migration, benchmark or recovery evidence changes.
 
-Human-readable handoffs and architecture reports must match the board before any status transition is accepted.
+Human-readable handoffs and architecture reports must match the board before any status transition is accepted. When the final `.ai-bridge` review passes, mark FOUNDATION `complete`, set MOD-A/MOD-B/MOD-C/MOD-E to `ready`, then activate one whole-module agent per workpack.
