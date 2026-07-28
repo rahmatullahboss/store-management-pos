@@ -77,6 +77,15 @@ async function cloudflare(pathname, init = {}) {
   return payload?.result;
 }
 
+async function ensureWorkerSubdomain() {
+  const result = await cloudflare(`/workers/scripts/${encodeURIComponent(workerName)}/subdomain`, {
+    method: "POST",
+    body: JSON.stringify({ enabled: true, previews_enabled: true })
+  });
+  if (!result?.enabled) throw new Error("Cloudflare workers.dev route could not be enabled");
+  return result;
+}
+
 async function deleteWorker() {
   const response = await fetch(`${apiBase}/workers/scripts/${encodeURIComponent(workerName)}`, {
     method: "DELETE",
@@ -119,12 +128,8 @@ function percentile(values, percentage) {
 }
 
 async function resolveWorkerUrl(output) {
-  try {
-    const subdomain = await cloudflare("/workers/subdomain");
-    if (subdomain?.subdomain) return `https://${workerName}.${subdomain.subdomain}.workers.dev/health`;
-  } catch (error) {
-    console.warn(`could not resolve canonical Workers subdomain: ${error.message}`);
-  }
+  const accountSubdomain = await cloudflare("/workers/subdomain");
+  if (accountSubdomain?.subdomain) return `https://${workerName}.${accountSubdomain.subdomain}.workers.dev/health`;
   const matches = [...output.matchAll(/https:\/\/[a-z0-9.-]+\.workers\.dev/giu)].map((match) => match[0]);
   if (!matches.length) throw new Error("Cloudflare deployment URL is unavailable");
   return `${matches.at(-1)}/health`;
@@ -170,7 +175,7 @@ await writeFile(configPath, `${JSON.stringify({
   compatibility_date: "2026-07-27",
   compatibility_flags: ["nodejs_compat"],
   workers_dev: true,
-  preview_urls: false,
+  preview_urls: true,
   observability: {
     enabled: true,
     logs: {
@@ -204,10 +209,12 @@ try {
     `Foundation gate ${GITHUB_SHA || "manual"}`
   ]);
 
+  const subdomainState = await ensureWorkerSubdomain();
+  console.log(`workers.dev enabled=${subdomainState.enabled} previews_enabled=${subdomainState.previews_enabled}`);
   const healthUrl = await resolveWorkerUrl(deployOutput);
   let firstRequest;
   let lastError;
-  for (let attempt = 1; attempt <= 12; attempt += 1) {
+  for (let attempt = 1; attempt <= 24; attempt += 1) {
     try {
       firstRequest = await requestHealth(healthUrl);
       break;
@@ -232,6 +239,7 @@ try {
     gitSha: GITHUB_SHA || null,
     runId: GITHUB_RUN_ID || null,
     bundle,
+    subdomain: subdomainState,
     firstRequestMs: Number(firstRequest.elapsedMs.toFixed(2)),
     sequential: {
       count: sequential.length,
