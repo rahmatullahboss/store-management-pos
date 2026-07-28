@@ -58,6 +58,26 @@ export function clampMoney(value: Money, minimum: Money, maximum: Money): Money 
   return value.amountMinor < minimum.amountMinor ? minimum : value.amountMinor > maximum.amountMinor ? maximum : value;
 }
 
+export interface CashRoundingResult {
+  readonly original: Money;
+  readonly rounded: Money;
+  readonly adjustment: Money;
+  readonly incrementMinor: bigint;
+  readonly mode: RoundingMode;
+}
+
+export function roundMoneyToIncrement(value: Money, incrementMinor: bigint, mode: RoundingMode): CashRoundingResult {
+  if (incrementMinor <= 0n) throw new RangeError("Cash rounding increment must be positive");
+  const roundedAmount = divideRounded(value.amountMinor, incrementMinor, mode) * incrementMinor;
+  return Object.freeze({
+    original: value,
+    rounded: money(roundedAmount, value.currency, value.scale),
+    adjustment: money(roundedAmount - value.amountMinor, value.currency, value.scale),
+    incrementMinor,
+    mode,
+  });
+}
+
 export function allocateMoneyExact(total: Money, weights: readonly bigint[]): readonly Money[] {
   if (weights.length === 0) throw new TypeError("At least one allocation weight is required");
   if (weights.some((weight) => weight < 0n)) throw new RangeError("Allocation weights cannot be negative");

@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { checkoutLineFromPriceTaxSnapshot } from "../../build/modules/pricing/src/checkout.js";
 import { calculatePriceAndTax } from "../../build/modules/pricing/src/price-tax.js";
 import { persistPriceTaxSnapshot } from "../../build/modules/pricing/src/price-tax-repository.js";
 import { definePriceList, definePriceRule } from "../../build/modules/pricing/src/model.js";
@@ -129,6 +130,48 @@ test("CalculatePriceAndTax applies promotions before exclusive tax and captures 
   assert.deepEqual(snapshot.taxComponents.map((entry) => [entry.rateId, entry.rateBasisPoints, entry.taxMinor]), [[RATE_ID, 2_000n, 360n]]);
   assert.match(snapshot.calculationHash, /^[a-f0-9]{64}$/);
   assert.ok(Object.isFrozen(snapshot));
+});
+
+test("checkout fixture consumes the immutable snapshot without recalculating its basis", async () => {
+  const snapshot = await calculatePriceAndTax(baseInput());
+  const line = checkoutLineFromPriceTaxSnapshot(snapshot);
+  assert.equal(line.snapshotId, snapshot.snapshotId);
+  assert.equal(line.calculationHash, snapshot.calculationHash);
+  assert.equal(line.subtotal.amountMinor, 2_000n);
+  assert.equal(line.discount.amountMinor, 200n);
+  assert.equal(line.net.amountMinor, 1_800n);
+  assert.equal(line.tax.amountMinor, 360n);
+  assert.equal(line.gross.amountMinor, 2_160n);
+  assert.equal(line.priceListVersion, 7n);
+  assert.equal(line.priceRuleVersion, 3n);
+  assert.ok(Object.isFrozen(line));
+});
+
+test("historical snapshot remains stable after later rule changes", async () => {
+  const original = await calculatePriceAndTax(baseInput());
+  const replacement = await calculatePriceAndTax(baseInput({
+    snapshotId: "018f5000-0000-7000-8000-000000000099",
+    priceRules: [definePriceRule({
+      id: "018f5000-0000-7000-8000-000000000098",
+      priceListId: PRICE_LIST_ID,
+      variantId: VARIANT_ID,
+      unitCode: "EA",
+      minimumQuantityMinor: 1n,
+      quantityScale: 0,
+      unitPriceMinor: 1_100n,
+      currency: "GBP",
+      moneyScale: 2,
+      priority: 10,
+      version: 4n,
+    })],
+  }));
+  assert.equal(original.unitPriceMinor, 1_000n);
+  assert.equal(original.priceRuleVersion, 3n);
+  assert.equal(original.grossMinor, 2_160n);
+  assert.notEqual(original.calculationHash, replacement.calculationHash);
+  assert.equal(replacement.unitPriceMinor, 1_100n);
+  assert.equal(replacement.priceRuleVersion, 4n);
+  assert.equal(original.unitPriceMinor, 1_000n);
 });
 
 test("CalculatePriceAndTax is deterministic and reconciles inclusive prices", async () => {

@@ -1,4 +1,4 @@
-import { requirePermission, type RequestContext, type TransactionClient } from "../../../packages/foundation/src/index.js";
+import { JsonLogger, NoopMetricSink, requirePermission, type MetricSink, type NeonDatabase, type RequestContext, type TransactionClient } from "../../../packages/foundation/src/index.js";
 import { PRICING_PERMISSIONS } from "./repository.js";
 
 export interface PublishCommandResult {
@@ -127,4 +127,46 @@ export async function publishPromotionVersion(
   const row = result.rows[0];
   if (!row) throw new Error("Promotion publish returned no row");
   return Object.freeze({ aggregateId: row.promotion_id, version: BigInt(row.version), status: row.status, replayed: row.replayed, effectiveFrom: row.effective_from });
+}
+
+export class PricingPublishingApi {
+  private readonly metrics: MetricSink;
+
+  constructor(private readonly options: { readonly database: NeonDatabase; readonly metrics?: MetricSink }) {
+    this.metrics = options.metrics ?? new NoopMetricSink();
+  }
+
+  async publishPriceList(
+    context: RequestContext,
+    input: Parameters<typeof publishPriceListVersion>[2],
+  ): Promise<PublishCommandResult> {
+    const startedAt = performance.now();
+    const logger = new JsonLogger({ requestId: context.requestId, traceId: context.traceId, tenantId: context.tenantId, actorId: context.actorId, module: "pricing" });
+    try {
+      const result = await this.options.database.withClientTransaction(context, async (client) => await publishPriceListVersion(client, context, input));
+      this.metrics.increment("pricing.price_list.publish.success", 1, { status: result.status, replayed: String(result.replayed) });
+      this.metrics.observe("pricing.price_list.publish.duration_ms", performance.now() - startedAt, { status: result.status });
+      logger.info("price list version published", { priceListId: result.aggregateId, version: result.version.toString(), status: result.status, replayed: result.replayed });
+      return result;
+    } catch (error) {
+      this.metrics.increment("pricing.price_list.publish.failure", 1, { error: error instanceof Error ? error.name : "UnknownError" });
+      throw error;
+    }
+  }
+
+  async publishPromotion(
+    context: RequestContext,
+    input: Parameters<typeof publishPromotionVersion>[2],
+  ): Promise<PublishCommandResult> {
+    const startedAt = performance.now();
+    try {
+      const result = await this.options.database.withClientTransaction(context, async (client) => await publishPromotionVersion(client, context, input));
+      this.metrics.increment("pricing.promotion.publish.success", 1, { status: result.status, replayed: String(result.replayed) });
+      this.metrics.observe("pricing.promotion.publish.duration_ms", performance.now() - startedAt, { status: result.status });
+      return result;
+    } catch (error) {
+      this.metrics.increment("pricing.promotion.publish.failure", 1, { error: error instanceof Error ? error.name : "UnknownError" });
+      throw error;
+    }
+  }
 }

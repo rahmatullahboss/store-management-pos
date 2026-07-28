@@ -8,7 +8,7 @@
 **Neon project:** `store-management-pos-nonprod` (`twilight-boat-26805962`)  
 **Neon branch:** `dev/module-catalog-pricing-tax` (`br-fancy-bird-axo3z9ek`)  
 **Database:** `neondb`  
-**Workpack state:** `active`
+**Workpack state:** `handoff_ready`
 
 ## Safety and activation evidence
 
@@ -126,6 +126,24 @@ Evidence:
 - stable module-owned event envelopes for catalog, pricing, promotion and tax changes;
 - full repository verification passed 45/45 tests.
 
-## Current checkpoint
+## Final implementation checkpoint
 
-Catalog, pricing, tax, combined price-tax snapshots, POS feed, event contracts, immutable publishing, module admin UI and local 250,000-variant PostgreSQL evidence are complete. Runbooks/observability, full fresh rebuild evidence, Neon scale rerun and final integration handoff remain active.
+MOD-A implementation and module-owned evidence are complete.
+
+Final evidence:
+
+- `docs/architecture/mod-a/final-handoff.md`;
+- repository verification passed 53/53 tests;
+- browser evidence passed 6/6 with Axe 0 and Impeccable findings 0;
+- fresh empty PostgreSQL rebuild passed with 13 migrations, 40 forced-RLS tables, 40 tenant policies, 14 append-only triggers and 18 permissions;
+- fresh recovery evidence passed 7/7;
+- observability, SLOs, permissions, contracts and runbooks are documented under `docs/modules/catalog-pricing-tax/`;
+- scheduled boundary, cash rounding, checkout snapshot consumption and historical snapshot stability tests passed;
+- degraded Impeccable finish review passed and recorded no remaining module-owned visual defect.
+
+## External gates before integration merge
+
+1. Run the prepared 250,000-variant harness against isolated Neon branch `br-fancy-bird-axo3z9ek` when its connection is available.
+2. Serially integrate `CCR-0001` in the Foundation-owned admin route composer and mount the module-owned route descriptors.
+
+These are external integration/evidence gates. No MOD-A implementation item remains open within the workpack ownership boundary.

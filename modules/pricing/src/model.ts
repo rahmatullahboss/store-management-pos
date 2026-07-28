@@ -188,7 +188,7 @@ export function resolvePrice(
   if (!Number.isInteger(context.quantityScale) || context.quantityScale < 0 || context.quantityScale > 18) throw new RangeError("Price quantity scale is invalid");
   const currency = currencyCode(context.currency);
   const activeLists = priceLists
-    .filter((list) => list.status === "active")
+    .filter((list) => list.status === "active" || list.status === "scheduled")
     .filter((list) => list.currency === currency && list.scale === context.scale)
     .filter((list) => effectiveAt(list.effectiveFrom, list.effectiveUntil, at))
     .filter((list) => scopeMatches(list.scope, context));

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { money } from "../../build/packages/foundation/src/money.js";
-import { allocateMoneyExact, divideRounded, percentageOf } from "../../build/modules/pricing/src/exact.js";
+import { allocateMoneyExact, divideRounded, percentageOf, roundMoneyToIncrement } from "../../build/modules/pricing/src/exact.js";
 import { definePriceList, definePriceRule, resolvePrice } from "../../build/modules/pricing/src/model.js";
 import { evaluateManualDiscount, evaluatePromotions } from "../../build/modules/pricing/src/promotions.js";
 
@@ -47,6 +47,60 @@ test("pricing exact arithmetic applies deterministic rounding and allocation", (
   assert.equal(percentageOf(money(999n, "GBP", 2), 1_500n, "half_up").amountMinor, 150n);
   const allocated = allocateMoneyExact(money(10n, "GBP", 2), [1n, 1n, 1n]);
   assert.deepEqual(allocated.map((entry) => entry.amountMinor), [4n, 3n, 3n]);
+});
+
+test("configured cash rounding uses exact minor-unit increments", () => {
+  const up = roundMoneyToIncrement(money(1_003n, "GBP", 2), 5n, "half_up");
+  assert.equal(up.rounded.amountMinor, 1_005n);
+  assert.equal(up.adjustment.amountMinor, 2n);
+  const down = roundMoneyToIncrement(money(1_002n, "GBP", 2), 5n, "half_up");
+  assert.equal(down.rounded.amountMinor, 1_000n);
+  assert.equal(down.adjustment.amountMinor, -2n);
+  const negative = roundMoneyToIncrement(money(-1_003n, "GBP", 2), 5n, "half_up");
+  assert.equal(negative.rounded.amountMinor, -1_005n);
+  assert.equal(negative.adjustment.amountMinor, -2n);
+  assert.throws(() => roundMoneyToIncrement(money(100n, "GBP", 2), 0n, "half_up"), /increment must be positive/);
+});
+
+test("scheduled prices and promotions activate at timezone-normalized boundaries", () => {
+  const scheduled = basePriceList({
+    id: "018f2000-0000-7000-8000-000000000099",
+    code: "SCHEDULED-GBP",
+    name: "Scheduled GBP",
+    status: "scheduled",
+    effectiveFrom: "2026-08-01T00:00:00+06:00",
+    effectiveUntil: "2026-09-01T00:00:00+06:00",
+  });
+  const rule = priceRule(scheduled.id, 1_250n);
+  assert.throws(() => resolvePrice([scheduled], [rule], {
+    variantId: VARIANT_ID, unitCode: "EA", quantityMinor: 1n, quantityScale: 0,
+    currency: "GBP", scale: 2, channel: "pos", at: "2026-07-31T17:59:59.999Z",
+  }), /No effective price rule/);
+  assert.equal(resolvePrice([scheduled], [rule], {
+    variantId: VARIANT_ID, unitCode: "EA", quantityMinor: 1n, quantityScale: 0,
+    currency: "GBP", scale: 2, channel: "pos", at: "2026-07-31T18:00:00.000Z",
+  }).unitPrice.amountMinor, 1_250n);
+  assert.throws(() => resolvePrice([scheduled], [rule], {
+    variantId: VARIANT_ID, unitCode: "EA", quantityMinor: 1n, quantityScale: 0,
+    currency: "GBP", scale: 2, channel: "pos", at: "2026-08-31T18:00:00.000Z",
+  }), /No effective price rule/);
+
+  const promotion = {
+    id: "scheduled-promotion",
+    code: "START10",
+    name: "Scheduled ten percent",
+    status: "scheduled",
+    priority: 10,
+    exclusive: false,
+    conditions: [],
+    action: { type: "percentage", basisPoints: 1_000n },
+    effectiveFrom: "2026-07-31T18:00:00.000Z",
+    effectiveUntil: "2026-08-31T18:00:00.000Z",
+    version: 1n,
+  };
+  const line = { lineId: "line", variantId: VARIANT_ID, categoryIds: [], tags: [], quantityMinor: 1n, quantityScale: 0, unitPrice: money(1_000n, "GBP", 2) };
+  assert.equal(evaluatePromotions([promotion], { lines: [line], channel: "pos", at: "2026-07-31T18:00:00.000Z" }).discountTotal.amountMinor, 100n);
+  assert.equal(evaluatePromotions([promotion], { lines: [line], channel: "pos", at: "2026-08-31T18:00:00.000Z" }).discountTotal.amountMinor, 0n);
 });
 
 test("price resolution honours scope specificity and quantity tiers", () => {

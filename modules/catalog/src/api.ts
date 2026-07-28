@@ -1,6 +1,7 @@
 import { JsonLogger, NoopMetricSink, type MetricSink, type NeonDatabase, type RequestContext } from "../../../packages/foundation/src/index.js";
 import { createCatalogProduct, type ProductInput } from "./model.js";
-import { changeCatalogProductStatus, queryCatalogVariantFeed, saveCatalogProduct, type CatalogVariantFeedRow, type CatalogWriteResult } from "./repository.js";
+import { changeCatalogProductStatus, queryCatalogSnapshotFeed, queryCatalogVariantFeed, saveCatalogProduct, type CatalogVariantFeedRow, type CatalogWriteResult } from "./repository.js";
+import type { CatalogFeedPage } from "./feed.js";
 
 export interface CatalogApiOptions {
   readonly database: NeonDatabase;
@@ -59,5 +60,22 @@ export class CatalogApi {
     this.metrics.observe("catalog.search.duration_ms", performance.now() - startedAt, { resultCount: String(result.length) });
     this.metrics.increment("catalog.search.request", 1, { resultCount: String(result.length) });
     return result;
+  }
+
+  async snapshotFeed(
+    context: RequestContext,
+    input: { readonly locale: string; readonly snapshotAt: string; readonly cursor?: string; readonly limit?: number },
+  ): Promise<CatalogFeedPage> {
+    const startedAt = performance.now();
+    try {
+      const page = await this.options.database.withClientTransaction(context, async (client) => await queryCatalogSnapshotFeed(client, context, input));
+      this.metrics.increment("catalog.feed.request", 1, { hasMore: String(page.hasMore) });
+      this.metrics.observe("catalog.feed.duration_ms", performance.now() - startedAt, { pageSize: String(page.entries.length), hasMore: String(page.hasMore) });
+      this.metrics.observe("catalog.feed.page_size", page.entries.length, { hasMore: String(page.hasMore) });
+      return page;
+    } catch (error) {
+      this.metrics.increment("catalog.feed.failure", 1, { error: error instanceof Error ? error.name : "UnknownError" });
+      throw error;
+    }
   }
 }

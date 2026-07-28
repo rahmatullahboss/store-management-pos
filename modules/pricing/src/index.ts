@@ -1,4 +1,5 @@
 export * from "./api.js";
+export * from "./checkout.js";
 export * from "./events.js";
 export * from "./exact.js";
 export * from "./model.js";

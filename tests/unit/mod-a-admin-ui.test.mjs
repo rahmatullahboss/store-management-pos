@@ -35,6 +35,54 @@ test("MOD-A pricing and tax admin explains precedence, snapshots and approvals",
   assert.match(html, /£96\.00/);
 });
 
+test("pricing admin renders a supplied immutable PriceTaxSnapshot contract", () => {
+  const html = renderPricingTaxAdmin({
+    snapshot: {
+      schemaVersion: "1.0",
+      snapshotId: "018fb000-0000-7000-8000-000000000001",
+      sourceLineId: "checkout-line-one",
+      variantId: "018fb000-0000-7000-8000-000000000002",
+      unitCode: "EA",
+      quantityMinor: 2n,
+      quantityScale: 0,
+      currency: "GBP",
+      moneyScale: 2,
+      priceListId: "018fb000-0000-7000-8000-000000000003",
+      priceRuleId: "018fb000-0000-7000-8000-000000000004",
+      priceListVersion: 7n,
+      priceRuleVersion: 3n,
+      unitPriceMinor: 1_000n,
+      subtotalMinor: 2_000n,
+      discountMinor: 200n,
+      promotedAmountMinor: 1_800n,
+      promotions: [],
+      taxCodeId: "018fb000-0000-7000-8000-000000000005",
+      jurisdictionId: "018fb000-0000-7000-8000-000000000006",
+      taxTreatment: "standard",
+      taxPriceMode: "exclusive",
+      netMinor: 1_800n,
+      taxMinor: 360n,
+      grossMinor: 2_160n,
+      taxCalculationVersion: "tax-v1:2:5",
+      taxComponents: [],
+      roundingMode: "half_up",
+      calculatedAt: "2026-07-28T10:00:00.000Z",
+      calculationHash: "abcd" + "0".repeat(56) + "ef01",
+    },
+  });
+  assert.match(html, /Immutable price-tax snapshot/);
+  assert.match(html, /£10\.00/);
+  assert.match(html, /£20\.00/);
+  assert.match(html, /£18\.00/);
+  assert.match(html, /£3\.60/);
+  assert.match(html, /£21\.60/);
+  assert.match(html, /abcd…ef01/);
+  assert.match(html, /No promotion was applied/);
+  assert.match(html, /Snapshot locked/);
+  assert.doesNotMatch(html, /SAVE10/);
+  assert.doesNotMatch(html, /Approval pending/);
+});
+
 test("MOD-A admin surfaces externalise primary copy and preserve Arabic RTL", () => {
   for (const locale of locales) {
     const catalog = renderCatalogAdmin({ locale });

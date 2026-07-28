@@ -181,7 +181,7 @@ export function evaluatePromotions(
 
   const candidates = [...promotions].sort((left, right) => right.priority - left.priority || left.code.localeCompare(right.code));
   for (const promotion of candidates) {
-    if (promotion.status !== "active" || !effective(promotion, at)) {
+    if ((promotion.status !== "active" && promotion.status !== "scheduled") || !effective(promotion, at)) {
       rejected.push({ promotionId: promotion.id, reason: "inactive_or_outside_effective_window" });
       continue;
     }
