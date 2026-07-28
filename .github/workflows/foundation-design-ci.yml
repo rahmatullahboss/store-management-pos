@@ -39,4 +39,12 @@ jobs:
         with:
           node-version: 22
       - name: Load Foundation UI context
-        run: node .agents/skills/impeccable/scripts/context.mjs --target packages/ui/src/app-shell.ts
+        run: |
+          mkdir -p artifacts/foundation
+          node .agents/skills/impeccable/scripts/context.mjs --target packages/ui/src/app-shell.ts | tee artifacts/foundation/impeccable-context.txt
+      - name: Upload Impeccable context
+        uses: actions/upload-artifact@v4
+        with:
+          name: foundation-impeccable-context-${{ github.run_id }}
+          path: artifacts/foundation/impeccable-context.txt
+          retention-days: 14
