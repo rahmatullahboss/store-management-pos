@@ -294,19 +294,19 @@ try {
   ]);
 
   const publicPreviewUrl = await resolvePreviewUrl(previewOutput);
-  let benchmarkUrl = publicPreviewUrl;
-  let benchmarkMode = "public-version-preview";
-  let publicPreviewError = null;
-  let firstRequest;
+  const publicPreviewProbe = { reachable: false, elapsedMs: null, error: null };
   try {
-    firstRequest = await awaitHealth(publicPreviewUrl, 4);
+    const publicResponse = await awaitHealth(publicPreviewUrl, 4);
+    publicPreviewProbe.reachable = true;
+    publicPreviewProbe.elapsedMs = Number(publicResponse.elapsedMs.toFixed(2));
   } catch (error) {
-    publicPreviewError = redact(error.message);
-    benchmarkMode = "remote-preview-proxy";
-    benchmarkUrl = `http://127.0.0.1:${REMOTE_DEV_PORT}/health`;
-    remoteDevProcess = startRemoteDev();
-    firstRequest = await awaitHealth(benchmarkUrl, 24);
+    publicPreviewProbe.error = redact(error.message);
   }
+
+  const benchmarkMode = "remote-preview-proxy";
+  const benchmarkUrl = `http://127.0.0.1:${REMOTE_DEV_PORT}/health`;
+  remoteDevProcess = startRemoteDev();
+  const firstRequest = await awaitHealth(benchmarkUrl, 24);
 
   const sequential = [];
   for (let index = 0; index < 20; index += 1) sequential.push((await requestHealth(benchmarkUrl)).elapsedMs);
@@ -319,7 +319,7 @@ try {
     workerName,
     previewAlias: PREVIEW_ALIAS,
     publicPreviewUrl,
-    publicPreviewError,
+    publicPreviewProbe,
     benchmarkMode,
     benchmarkUrl,
     wranglerVersion: WRANGLER_VERSION,
