@@ -9,3 +9,4 @@ workspace:
   - packages/api_client
   - packages/app_core
   - packages/design_system
+  - packages/sync_engine
