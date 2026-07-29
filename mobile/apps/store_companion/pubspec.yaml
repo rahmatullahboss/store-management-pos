@@ -19,6 +19,8 @@ dependencies:
     path: ../../packages/app_core
   store_companion_design_system:
     path: ../../packages/design_system
+  store_companion_runtime_config:
+    path: ../../packages/runtime_config
   store_companion_session_core:
     path: ../../packages/session_core
   store_companion_sync_engine:
