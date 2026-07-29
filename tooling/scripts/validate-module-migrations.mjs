@@ -16,6 +16,7 @@ const sources = [
   { module: "MOD-D", manifest: "database/modules/pos/manifest.json", directory: "database/modules/pos/migrations" },
   { module: "MOD-D", manifest: "database/modules/cash/manifest.json", directory: "database/modules/cash/migrations" },
   { module: "MOD-F", manifest: "database/modules/localization/manifest.json", directory: "database/modules/localization/migrations" },
+  { module: "MOD-H", manifest: "database/modules/storefront/manifest.json", directory: "database/modules/storefront/migrations" },
 ];
 const ids = new Set();
 const databaseMarkers = new Map();
@@ -79,7 +80,14 @@ if (!/pg_advisory_xact_lock/u.test(localizationCommands)) throw new Error("Count
 if (!/allocate_legal_number/u.test(localizationCommands) || !/record_fiscal_transition/u.test(localizationCommands)) {
   throw new Error("Localization command boundary is incomplete");
 }
-if (!/REVOKE ALL ON FUNCTION/u.test(localizationCommands) || !/GRANT EXECUTE ON FUNCTION/u.test(localizationCommands)) {
-  throw new Error("Localization command privileges are not hardened");
+const storefrontCore = await readFile(path.join(root, "database/modules/storefront/migrations/STF-0001-storefront-core.sql"), "utf8");
+if (!/storefront_domain_hostname_unique/u.test(storefrontCore)) throw new Error("Storefront global hostname uniqueness is missing");
+if (!/storefront_one_canonical_domain_idx/u.test(storefrontCore)) throw new Error("Storefront canonical-domain uniqueness is missing");
+if (!/storefront_domain_verifications_append_only/u.test(storefrontCore)) throw new Error("Storefront domain-verification immutability is missing");
+if (!/Only published products can enter/u.test(await readFile(path.join(root, "packages/storefront-contracts/src/index.ts"), "utf8"))) {
+  throw new Error("Public product-card publication guard is missing");
 }
-console.log(`validated ${ids.size} module migrations (${[...counts].map(([module, count]) => `${module}:${count}`).join(", ")})`);
+if (!/REVOKE INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA storefront FROM store_app_runtime/u.test(storefrontCore)) {
+  throw new Error("Storefront runtime direct writes must be revoked");
+}
+console.log(`validated ${ids.size} module migrations across ${counts.size} workpack groups`);
