@@ -110,7 +110,7 @@ export class LocalizationService {
     });
   }
 
-  async readEffectiveConfiguration(context: RequestContext, onDate = context.businessDate): Promise<EffectiveLocalizationConfiguration> {
+  async readEffectiveConfiguration(context: RequestContext, onDate: string = context.businessDate): Promise<EffectiveLocalizationConfiguration> {
     requirePermission(context, "localization.pack.read");
     requireLegalEntity(context);
     if (!/^\d{4}-\d{2}-\d{2}$/u.test(onDate)) {
