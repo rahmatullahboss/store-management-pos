@@ -1,21 +1,30 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { adminRoutes } from "../../build/apps/admin-web/src/app-shell/routes.js";
+import { renderAdminShell } from "../../build/apps/admin-web/src/app-shell/index.js";
 import { renderAccountingControlPage } from "../../build/apps/admin-web/src/modules/accounting/page.js";
 import { renderBankReconciliationPage } from "../../build/apps/admin-web/src/modules/banking/page.js";
 import { renderPaymentOperationsPage } from "../../build/apps/admin-web/src/modules/payments/page.js";
 import { formatFinanceMoney } from "../../build/apps/admin-web/src/modules/reporting/finance-ui.js";
-import { permittedRoutes } from "../../build/packages/ui/src/app-shell.js";
 
 const gbp = (amountMinor) => ({ amountMinor, currency: "GBP", scale: 2 });
 
-test("finance routes remain permission scoped", () => {
-  const paymentsOnly = permittedRoutes(adminRoutes, new Set(["payment.read"]));
-  assert.ok(paymentsOnly.some((route) => route.path === "/finance/payments"));
-  assert.ok(!paymentsOnly.some((route) => route.path === "/finance/accounting"));
-  assert.ok(!paymentsOnly.some((route) => route.path === "/finance/banking"));
-  const finance = permittedRoutes(adminRoutes, new Set(["payment.read", "accounting.read", "banking.read"]));
-  assert.equal(finance.filter((route) => route.path.startsWith("/finance/")).length, 3);
+function renderFinanceNavigation(permissions) {
+  return renderAdminShell({
+    displayName: "Finance operator",
+    tenantName: "Integration tenant",
+    permissions: new Set(permissions),
+    currentPath: "/",
+    content: "<p>Finance navigation test</p>",
+  });
+}
+
+test("finance routes remain permission scoped in the integrated admin shell", () => {
+  const paymentsOnly = renderFinanceNavigation(["payment.read"]);
+  assert.match(paymentsOnly, /href="\/finance\/payments"/u);
+  assert.doesNotMatch(paymentsOnly, /href="\/finance\/accounting"/u);
+  assert.doesNotMatch(paymentsOnly, /href="\/finance\/banking"/u);
+  const finance = renderFinanceNavigation(["payment.read", "accounting.read", "banking.read"]);
+  assert.equal(finance.match(/href="\/finance\/(?:payments|accounting|banking)"/gu)?.length, 3);
 });
 
 test("payment operations page exposes recovery state and escapes external references", () => {
