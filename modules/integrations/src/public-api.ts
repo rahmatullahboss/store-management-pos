@@ -3,7 +3,7 @@ import type { ApiClientV1, PublicApiRequestV1 } from "./contracts.js";
 
 const SCOPE_PATTERN = /^(?:\*|[a-z][a-z0-9_-]*(?:\.[a-z][a-z0-9_-]*)*(?:\.\*)?)$/u;
 const CURSOR_PATTERN = /^[A-Za-z0-9_-]{8,512}$/u;
-const SORT_PATTERN = /^-?[a-z][a-z0-9_.-]{0,63}$/u;
+const SORT_PATTERN = /^-?[a-z][A-Za-z0-9_.-]{0,63}$/u;
 const SHA256_PATTERN = /^[a-f0-9]{64}$/u;
 
 function parseTimestamp(value: string, field: string): number {
