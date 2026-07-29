@@ -17,6 +17,7 @@ const benchmarkReportPath = path.join(artifactsDir, "neon-benchmark-report.json"
 const lifecycleReportPath = path.join(artifactsDir, "neon-preview-lifecycle.json");
 const safeRef = (GITHUB_HEAD_REF || "manual").toLowerCase().replace(/[^a-z0-9-]+/g, "-").slice(0, 36);
 const branchName = `preview/pr-${safeRef}-${GITHUB_RUN_ID || Date.now()}`;
+const stalePreviewMaxAgeMs = 2 * 60 * 60 * 1_000;
 const apiBase = `https://console.neon.tech/api/v2/projects/${NEON_PROJECT_ID}`;
 const headers = { Authorization: `Bearer ${NEON_API_KEY}`, "Content-Type": "application/json" };
 
@@ -39,7 +40,15 @@ function run(command, args, env) {
 async function cleanupStalePreviewBranches() {
   const response = await api("/branches");
   const branches = Array.isArray(response?.branches) ? response.branches : [];
-  const stale = branches.filter((branch) => typeof branch?.name === "string" && branch.name.startsWith("preview/pr-") && branch.id !== NEON_PARENT_BRANCH_ID);
+  const staleBefore = Date.now() - stalePreviewMaxAgeMs;
+  const stale = branches.filter((branch) => {
+    if (typeof branch?.name !== "string" || !branch.name.startsWith("preview/pr-") || branch.id === NEON_PARENT_BRANCH_ID) {
+      return false;
+    }
+    if (branch.name === branchName) return true;
+    const createdAt = Date.parse(branch.created_at || "");
+    return Number.isFinite(createdAt) && createdAt < staleBefore;
+  });
   for (const branch of stale) {
     await api(`/branches/${encodeURIComponent(branch.id)}`, { method: "DELETE" });
     console.log(`deleted stale Neon preview branch ${branch.name}`);
