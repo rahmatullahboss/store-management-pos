@@ -1,10 +1,11 @@
 # CCR-0003 — Additive First-Party Store Companion Contracts
 
-- **Status:** Proposed
+- **Status:** Accepted — additive contract family; server adapters remain owner-gated
 - **Requesting stream:** MOB-01 — Store Companion Mobile
 - **Request checkpoint:** documentation/activation checkpoint
 - **Starting base:** `47129e25191d1b1c8a8523dcd8f83c2a0b0edf55`
-- **Requested owners:** Foundation/programme integration plus affected module owners
+- **Decision owner:** Programme integration with Foundation/module ownership preserved
+- **Decision date:** 2026-07-29
 - **Breaking change:** No
 
 ## 1. Current contract
@@ -17,9 +18,9 @@ The platform already provides:
 - MOD-D device enrolment, health, offline operation and idempotent synchronization concepts for POS;
 - localisation/country and reporting/integration contracts owned by MOD-F and MOD-G.
 
-There is no approved first-party contract for a non-POS native companion client that needs bounded bootstrap/workspace composition, mobile device/push-token lifecycle, permission-scoped change feeds and generic per-operation batch outcomes across approved module commands.
+There was no approved first-party contract for a non-POS native companion client that needs bounded bootstrap/workspace composition, mobile device/push-token lifecycle, permission-scoped change feeds and generic per-operation batch outcomes across approved module commands.
 
-## 2. Requested additive contracts
+## 2. Accepted additive contracts
 
 ### `MobileBootstrapV1`
 
@@ -115,7 +116,7 @@ A composition/read contract referencing owning-module approval state:
 - safe preview fields;
 - supported decisions.
 
-Approval decisions continue through the owning module workflow. No new parallel approval database/state is requested.
+Approval decisions continue through the owning module workflow. No new parallel approval database/state is created.
 
 ### `MobileNotificationReferenceV1`
 
@@ -131,7 +132,7 @@ Without these additive first-party contracts, MOB-01 would either:
 - guess MOD-F/MOD-G contracts;
 - or create a separate backend/database.
 
-The requested contracts allow one secure client composition layer while preserving domain ownership and canonical data.
+The accepted contracts allow one secure client composition layer while preserving domain ownership and canonical data.
 
 ## 4. Alternatives considered
 
@@ -141,7 +142,7 @@ Retained where an existing API fits the mobile task. Insufficient alone for boot
 
 ### Reuse MOD-D POS sync unchanged
 
-Rejected. POS sync includes register, receipt, cash and selling risk concepts that do not apply to a companion client. Only compatible envelope/idempotency/status principles should be reused.
+Rejected. POS sync includes register, receipt, cash and selling risk concepts that do not apply to a companion client. Only compatible envelope/idempotency/status principles are reused.
 
 ### Create mobile-owned PostgreSQL tables and policies
 
@@ -151,21 +152,23 @@ Rejected. MOB-01 owns no canonical business schema. Device registration or share
 
 Rejected because it creates dual authority, duplicated security and reconciliation risk.
 
-## 5. Affected streams
+## 5. Affected streams and ownership decision
 
-- Foundation/programme integration — identity/device/session, shared errors, request context and route composition;
-- MOD-A — bounded catalog/price/tax projection references;
-- MOD-B — receiving/count/transfer commands and projections;
-- MOD-C — customer/quote/order/fulfilment commands and projections;
-- MOD-D — compatible device/sync envelope principles without POS authority;
-- MOD-E — finance operational read/approval references;
-- MOD-F — effective localisation/country/privacy/cache restrictions;
-- MOD-G — metric/report/notification/entitlement/OpenAPI composition;
-- MOB-01 — generated client, local sync and UI.
+- **Foundation/programme integration** owns identity/device/session integration, request context, shared errors, bootstrap/workspace composition interfaces and any approved shared persistence.
+- **MOD-A** owns bounded catalog/price/tax projection adapters.
+- **MOD-B** owns receiving/count/transfer commands and projections.
+- **MOD-C** owns customer/quote/order/fulfilment commands and projections.
+- **MOD-D** provides compatible device/sync envelope principles without granting POS/register authority.
+- **MOD-E** owns finance operational read and approval references.
+- **MOD-F** owns effective localisation/country/privacy/cache restrictions.
+- **MOD-G** owns governed metric/report/notification/entitlement composition and canonical public OpenAPI publication.
+- **MOB-01** owns Dart transport/application models, local sync, native UI and platform integration only.
+
+Acceptance of this CCR does not transfer another workpack's tables, permissions, commands or read models to MOB-01.
 
 ## 6. Security and privacy impact
 
-Controls required:
+Required controls:
 
 - server-side authorization on every query/command;
 - opaque scoped workspace/cursor/device references;
@@ -190,15 +193,15 @@ Controls required:
 
 ## 8. Rollout and compatibility
 
-1. Approve schemas as additive `v1` first-party contracts.
-2. Provide deterministic fixtures before backend implementation.
-3. Add Foundation/mobile composition interfaces behind feature flags.
-4. Let each owning module publish bounded adapters/read-contract extensions.
-5. Maintain supported server/client compatibility window.
-6. Test old supported clients with additive fields/enum values.
-7. Enable in synthetic development/staging only.
-8. Integrate MOD-F and MOD-G fields when their contracts are reviewed.
-9. Pilot with explicit device/client version gates.
+1. The `v1` client contract family is accepted as additive.
+2. Deterministic fixtures and dependency-free Dart contract models may be implemented immediately.
+3. Foundation/mobile composition interfaces are added behind feature flags through the owning integration path.
+4. Each module publishes bounded adapters/read-contract extensions under its ownership.
+5. Supported server/client compatibility windows are maintained and tested.
+6. Old supported clients tolerate additive fields and unknown enum/status values safely.
+7. Initial execution remains synthetic development/staging only.
+8. MOD-F and MOD-G fields are integrated after their reviewed contracts land.
+9. Pilot uses explicit device/client version gates.
 10. Production activation requires separate release authorization.
 
 No existing web/POS/public API is removed or repurposed.
@@ -220,6 +223,38 @@ No existing web/POS/public API is removed or repurposed.
 - MOD-G metric definition/freshness/entitlement behaviour;
 - trace/log redaction.
 
-## 10. Approval boundary
+## 10. Acceptance evidence
 
-MOB-01 may build client interfaces and deterministic fixtures while this request is reviewed. It must not silently add shared Foundation tables, permissions, error meanings or cross-module reads. Backend implementation of each extension occurs through the approved owner/integration path.
+The initial client-side implementation provides:
+
+- `mobile/packages/api_client` with strict `MobileBootstrapContract`, workspace, localisation, compatibility, operation/result and safe error parsing;
+- preservation of unknown additive operation statuses;
+- explicit unknown-external-state blind-retry blocking;
+- exact client money model using integer minor units;
+- pure sync reducer separating authoritative server outcomes from transport retry;
+- unit/widget/contract tests under the pinned Flutter/Dart toolchain;
+- Mobile Foundation CI run `30456836145`, which passed exact toolchain verification, workspace resolution, formatting, analysis, tests and clean-source verification.
+
+This is client-boundary evidence only; it does not claim the Worker routes or module adapters are deployed.
+
+## 11. Integration decision
+
+CCR-0003 is accepted as a non-breaking additive contract family.
+
+MOB-01 may continue implementing:
+
+- client models and generated-schema seam;
+- deterministic fixtures;
+- local operation/sync state;
+- capability-aware UI;
+- synthetic contract tests.
+
+Server-side work remains gated as follows:
+
+- no shared Foundation table, permission or route is added without programme-integration review;
+- no module-private table is read or written by mobile composition code;
+- each module adapter is implemented or approved by its owning stream/integration path;
+- MOD-G remains the owner of the canonical published OpenAPI and governed cross-module reporting contracts;
+- production enablement remains feature-flagged and separately authorised.
+
+Rollback is additive: disable the mobile feature/routes and retain existing web/POS APIs unchanged. No destructive migration or repurposed field is approved by this decision.
