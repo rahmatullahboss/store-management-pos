@@ -49,3 +49,16 @@ test("quota-safe MOD-G releases use the assigned branch and retain recovery evid
   assert.match(finalJob, /needs\['neon-recovery'\]\.result == 'success'/u);
   assert.match(finalJob, /needs\['cloudflare-preview'\]\.result == 'success'/u);
 });
+
+test("database-free marketing PRs preserve recovery gates without consuming a preview branch", async () => {
+  const source = await workflow();
+  const previewJob = jobSection(source, "neon-preview", "neon-recovery");
+  const recoveryJob = jobSection(source, "neon-recovery", "mod-d-neon-rehearsal");
+  const cloudflareJob = jobSection(source, "cloudflare-preview", "mod-g-final-readiness");
+
+  assert.match(previewJob, /github\.event\.pull_request\.head\.ref != 'feature\/marketing-landing-page'/u);
+  assert.match(recoveryJob, /needs: verify/u);
+  assert.match(recoveryJob, /npm run ci:neon-recovery/u);
+  assert.match(cloudflareJob, /needs: verify/u);
+  assert.match(cloudflareJob, /npm run ci:cloudflare-preview/u);
+});

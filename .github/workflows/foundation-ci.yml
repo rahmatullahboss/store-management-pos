@@ -51,9 +51,9 @@ jobs:
 
   neon-preview:
     # Active module and integration-release PRs use persistent assigned branches below.
-    # Main and integration pushes have already passed an exact release PR rehearsal, so avoid consuming
-    # another ephemeral branch on the quota-limited non-production project.
-    if: ${{ (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]' && github.event.pull_request.head.ref != 'module/pos-cash-offline-v1' && github.event.pull_request.head.ref != 'module/localization-compliance-v1' && github.event.pull_request.head.ref != 'module/reporting-integrations-saas-v1' && github.event.pull_request.head.ref != 'program/integration-v1') || github.event_name == 'workflow_dispatch' }}
+    # Database-free marketing work is verified by core, recovery, Cloudflare and browser gates without
+    # consuming an ephemeral branch on the quota-limited non-production project.
+    if: ${{ (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]' && github.event.pull_request.head.ref != 'module/pos-cash-offline-v1' && github.event.pull_request.head.ref != 'module/localization-compliance-v1' && github.event.pull_request.head.ref != 'module/reporting-integrations-saas-v1' && github.event.pull_request.head.ref != 'program/integration-v1' && github.event.pull_request.head.ref != 'feature/marketing-landing-page') || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs:
