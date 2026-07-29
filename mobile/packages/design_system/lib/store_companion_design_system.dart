@@ -67,7 +67,6 @@ abstract final class OperationsLedgerTheme {
     final base = ThemeData.light(useMaterial3: true);
     final colorScheme = ColorScheme.fromSeed(
       seedColor: OperationsLedgerColors.accent,
-      brightness: Brightness.light,
     ).copyWith(
       primary: OperationsLedgerColors.accent,
       onPrimary: Colors.white,
@@ -104,11 +103,15 @@ abstract final class OperationsLedgerTheme {
         fillColor: OperationsLedgerColors.surfaceRaised,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: OperationsLedgerColors.lineStrong),
+          borderSide: const BorderSide(
+            color: OperationsLedgerColors.lineStrong,
+          ),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: OperationsLedgerColors.lineStrong),
+          borderSide: const BorderSide(
+            color: OperationsLedgerColors.lineStrong,
+          ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
