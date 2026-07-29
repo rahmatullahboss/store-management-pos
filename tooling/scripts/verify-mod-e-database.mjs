@@ -7,6 +7,8 @@ if (!connectionString) throw new Error("DATABASE_URL is required");
 const scripts = [
   "../../tests/integration/sql/mod-e-database-invariants.sql",
   "../../tests/integration/sql/mod-e-payment-lifecycle.sql",
+  "../../tests/integration/sql/mod-e-accounting-lifecycle.sql",
+  "../../tests/integration/sql/mod-e-banking-lifecycle.sql",
 ].map((relative) => fileURLToPath(new URL(relative, import.meta.url)));
 
 for (const scriptPath of scripts) {
@@ -19,4 +21,4 @@ for (const scriptPath of scripts) {
     child.on("exit", (code) => code === 0 ? resolve() : reject(new Error(`psql drill exited with ${code}: ${scriptPath}`)));
   });
 }
-console.log("MOD-E database invariant and payment lifecycle drills passed and rolled back");
+console.log("MOD-E database invariant, payment, accounting, and banking lifecycle drills passed and rolled back");
