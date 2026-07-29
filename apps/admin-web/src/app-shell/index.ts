@@ -1,12 +1,16 @@
 import { renderAppShell } from "../../../../packages/ui/src/app-shell.js";
 import { directionSupportStyles } from "../../../../packages/ui/src/direction-support.js";
 import { renderAdminFoundationReference, type FoundationReferenceOptions } from "../../../../packages/ui/src/foundation-reference.js";
+import { renderAccountingControlPage, type AccountingControlPage } from "../modules/accounting/page.js";
+import { renderBankReconciliationPage, type BankReconciliationPage } from "../modules/banking/page.js";
 import { CATALOG_ADMIN_ROUTES } from "../modules/catalog/routes.js";
 import { renderCustomerWorkspace, type CustomerWorkspaceInput } from "../modules/customer/surface.js";
 import { renderFulfillmentWorkspace, type FulfillmentWorkspaceInput } from "../modules/fulfillment/surface.js";
 import { renderInventoryOperationsPage, type InventoryDashboardFixture } from "../modules/inventory/index.js";
+import { renderPaymentOperationsPage, type PaymentOperationsPage } from "../modules/payments/page.js";
 import { PRICING_TAX_ADMIN_ROUTES } from "../modules/pricing/routes.js";
 import { renderProcurementOperationsPage, type ProcurementDashboardFixture } from "../modules/procurement/index.js";
+import { renderFinanceReadinessPage, type FinanceReadinessPage } from "../modules/reporting/finance-readiness-page.js";
 import { renderSalesWorkspace, type SalesWorkspaceInput } from "../modules/sales/surface.js";
 import { composeAdminRoutes, type AdminRouteDescriptor } from "./routes.js";
 
@@ -21,7 +25,14 @@ const MOD_C_ADMIN_ROUTES: readonly AdminRouteDescriptor[] = Object.freeze([
   Object.freeze({ id: "fulfillment.floor", path: "/fulfillment", navigationLabel: "Fulfillment", permission: "fulfillment.plan.read", module: "fulfillment", order: 330, exact: true }),
 ]);
 
-const integratedAdminRoutes = composeAdminRoutes([CATALOG_ADMIN_ROUTES, PRICING_TAX_ADMIN_ROUTES, MOD_B_ADMIN_ROUTES, MOD_C_ADMIN_ROUTES]);
+const MOD_E_ADMIN_ROUTES: readonly AdminRouteDescriptor[] = Object.freeze([
+  Object.freeze({ id: "finance.payments", path: "/finance/payments", navigationLabel: "Payments", permission: "payment.read", module: "payments", order: 410, exact: true }),
+  Object.freeze({ id: "finance.accounting", path: "/finance/accounting", navigationLabel: "Accounting", permission: "accounting.read", module: "accounting", order: 420, exact: true }),
+  Object.freeze({ id: "finance.banking", path: "/finance/banking", navigationLabel: "Banking", permission: "banking.read", module: "banking", order: 430, exact: true }),
+  Object.freeze({ id: "finance.readiness", path: "/finance/readiness", navigationLabel: "Finance readiness", permission: "platform.audit.read", module: "finance", order: 440, exact: true }),
+]);
+
+const integratedAdminRoutes = composeAdminRoutes([CATALOG_ADMIN_ROUTES, PRICING_TAX_ADMIN_ROUTES, MOD_B_ADMIN_ROUTES, MOD_C_ADMIN_ROUTES, MOD_E_ADMIN_ROUTES]);
 
 export interface AdminShellInput {
   readonly displayName: string;
@@ -77,4 +88,20 @@ export function renderSalesAdminPage(input: Omit<AdminShellInput, "content" | "c
 
 export function renderFulfillmentAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, workspace: FulfillmentWorkspaceInput): string {
   return renderAdminShell({ ...input, currentPath: "/fulfillment", content: renderFulfillmentWorkspace(workspace) });
+}
+
+export function renderPaymentsAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page: PaymentOperationsPage): string {
+  return renderAdminShell({ ...input, currentPath: "/finance/payments", content: renderPaymentOperationsPage(page, input.locale ?? "en-US") });
+}
+
+export function renderAccountingAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page: AccountingControlPage): string {
+  return renderAdminShell({ ...input, currentPath: "/finance/accounting", content: renderAccountingControlPage(page, input.locale ?? "en-US") });
+}
+
+export function renderBankingAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page: BankReconciliationPage): string {
+  return renderAdminShell({ ...input, currentPath: "/finance/banking", content: renderBankReconciliationPage(page, input.locale ?? "en-US") });
+}
+
+export function renderFinanceReadinessAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page: FinanceReadinessPage): string {
+  return renderAdminShell({ ...input, currentPath: "/finance/readiness", content: renderFinanceReadinessPage(page) });
 }
