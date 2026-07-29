@@ -75,10 +75,8 @@ jobs:
       - name: Run browser, accessibility and deterministic design evidence
         run: npm run design:verify
       - name: Run MOD-F browser and accessibility evidence
-        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.ref == 'module/localization-compliance-v1' }}
         run: npm run mod-f:design:verify
       - name: Run MOD-G browser and accessibility evidence
-        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.ref == 'module/reporting-integrations-saas-v1' }}
         run: npm run mod-g:design:verify
       - name: Upload Impeccable evidence
         if: always()
