@@ -24,9 +24,9 @@ export function assertWebhookSubscription(subscription: WebhookSubscriptionV1): 
 }
 
 export function webhookDeliveryIdentity(input: Pick<WebhookDeliveryV1, "tenantId" | "subscriptionId" | "eventId">): string {
-  for (const [field, value] of Object.entries(input)) {
-    if (value.trim().length === 0) throw new TypeError(`${field} is required`);
-  }
+  if (input.tenantId.trim().length === 0) throw new TypeError("tenantId is required");
+  if (input.subscriptionId.trim().length === 0) throw new TypeError("subscriptionId is required");
+  if (input.eventId.trim().length === 0) throw new TypeError("eventId is required");
   return `${input.tenantId}:${input.subscriptionId}:${input.eventId}`;
 }
 
