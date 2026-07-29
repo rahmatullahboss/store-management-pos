@@ -1,0 +1,20 @@
+name: store_companion_mobile_workspace
+publish_to: none
+
+environment:
+  sdk: ^3.12.0
+
+workspace:
+  - apps/store_companion
+  - packages/api_client
+  - packages/app_core
+  - packages/design_system
+  - packages/local_data
+  - packages/runtime_config
+  - packages/session_core
+  - packages/sync_engine
+
+hooks:
+  user_defines:
+    sqlite3:
+      source: sqlite3mc

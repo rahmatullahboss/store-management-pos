@@ -1,0 +1,12 @@
+name: store_companion_design_system
+description: Operations Ledger Flutter tokens and theme for Store Companion.
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.12.0
+  flutter: ">=3.44.8"
+
+dependencies:
+  flutter:
+    sdk: flutter

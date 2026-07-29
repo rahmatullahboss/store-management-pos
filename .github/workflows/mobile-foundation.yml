@@ -1,0 +1,197 @@
+name: Mobile Foundation CI
+
+on:
+  pull_request:
+    branches:
+      - program/integration-v1
+      - main
+    paths:
+      - "mobile/**"
+      - "docs/mobile/**"
+      - "docs/architecture/mobile/**"
+      - "docs/agent-workpacks/MOB-01-STORE-COMPANION.md"
+      - "docs/contracts/change-requests/CCR-0003-MOBILE-FIRST-PARTY-CONTRACTS.md"
+      - ".github/workflows/mobile-foundation.yml"
+  push:
+    branches:
+      - module/store-companion-mobile-v1
+      - program/integration-v1
+      - main
+    paths:
+      - "mobile/**"
+      - ".github/workflows/mobile-foundation.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: mobile-foundation-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  FLUTTER_VERSION: 3.44.8
+  FLUTTER_COMMIT: 058e0af2c2b57e369d905a03ac9748b0ebf543c6
+  DART_VERSION: 3.12.2
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Install exact official Flutter SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter_dir="${RUNNER_TEMP}/flutter"
+          git clone \
+            --filter=blob:none \
+            --no-checkout \
+            https://github.com/flutter/flutter.git \
+            "${flutter_dir}"
+          git -C "${flutter_dir}" checkout --detach "${FLUTTER_COMMIT}"
+          actual_commit="$(git -C "${flutter_dir}" rev-parse HEAD)"
+          test "${actual_commit}" = "${FLUTTER_COMMIT}"
+          echo "${flutter_dir}/bin" >> "${GITHUB_PATH}"
+          "${flutter_dir}/bin/flutter" config --no-analytics
+          "${flutter_dir}/bin/flutter" --version
+
+      - name: Verify pinned toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter --version --machine > "${RUNNER_TEMP}/flutter-version.json"
+          dart --version
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          data = json.loads(
+              (Path(os.environ["RUNNER_TEMP"]) / "flutter-version.json").read_text()
+          )
+          assert data["frameworkVersion"] == os.environ["FLUTTER_VERSION"], data
+          assert data["dartSdkVersion"].startswith(os.environ["DART_VERSION"]), data
+          PY
+
+      - name: Resolve workspace
+        working-directory: mobile
+        run: |
+          flutter pub get
+          dart pub workspace list
+
+      - name: Format working tree
+        working-directory: mobile
+        run: dart format .
+
+      - name: Analyze
+        working-directory: mobile
+        run: flutter analyze
+
+      - name: Unit and widget tests
+        working-directory: mobile/apps/store_companion
+        run: flutter test --coverage
+
+      - name: Verify formatted source is committed
+        run: git diff --exit-code -- mobile
+
+      - name: Upload generated dependency lock evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mobile-pubspec-lock-${{ github.run_id }}
+          path: mobile/pubspec.lock
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload formatted source evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mobile-formatted-source-${{ github.run_id }}
+          path: mobile/**/*.dart
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload non-production coverage evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mobile-foundation-coverage-${{ github.run_id }}
+          path: mobile/apps/store_companion/coverage/lcov.info
+          if-no-files-found: warn
+          retention-days: 14
+
+  format-and-commit:
+    if: >-
+      ${{
+        github.event_name == 'push' &&
+        github.repository == 'rahmatullahboss/store-management-pos' &&
+        github.ref == 'refs/heads/module/store-companion-mobile-v1' &&
+        github.actor != 'dependabot[bot]'
+      }}
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Install exact official Flutter SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter_dir="${RUNNER_TEMP}/flutter"
+          git clone \
+            --filter=blob:none \
+            --no-checkout \
+            https://github.com/flutter/flutter.git \
+            "${flutter_dir}"
+          git -C "${flutter_dir}" checkout --detach "${FLUTTER_COMMIT}"
+          actual_commit="$(git -C "${flutter_dir}" rev-parse HEAD)"
+          test "${actual_commit}" = "${FLUTTER_COMMIT}"
+          echo "${flutter_dir}/bin" >> "${GITHUB_PATH}"
+          "${flutter_dir}/bin/flutter" config --no-analytics
+
+      - name: Resolve and format reviewed mobile source
+        working-directory: mobile
+        run: |
+          set -euo pipefail
+          flutter pub get
+          dart format .
+
+      - name: Verify formatter change boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          unexpected="$(
+            git status --porcelain=v1 --untracked-files=all \
+              | sed -E 's/^.. //' \
+              | grep -Ev '^mobile/.*\.dart$|^mobile/pubspec\.lock$' \
+              || true
+          )"
+          if [[ -n "${unexpected}" ]]; then
+            echo "Formatter changed paths outside the reviewed boundary:" >&2
+            printf '%s\n' "${unexpected}" >&2
+            exit 1
+          fi
+
+      - name: Commit canonical source and lockfile
+        shell: bash
+        run: |
+          set -euo pipefail
+          remote_head="$(git ls-remote origin refs/heads/module/store-companion-mobile-v1 | awk '{print $1}')"
+          test "${remote_head}" = "${GITHUB_SHA}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- ':(glob)mobile/**/*.dart' mobile/pubspec.lock
+          if git diff --cached --quiet; then
+            echo "Mobile source and lockfile are already canonical."
+            exit 0
+          fi
+          git commit -m "style(mobile): apply canonical Dart formatting"
+          git push origin HEAD:module/store-companion-mobile-v1

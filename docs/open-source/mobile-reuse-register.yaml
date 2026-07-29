@@ -1,0 +1,307 @@
+scope: MOB-01
+canonical_merge_target: docs/open-source/reuse-register.yaml
+policy: module_local_append_only_manifest_for_programme_integration
+
+verification_evidence:
+  source_head: 59e9112b99c5b45d4a4bf96c4e18470bf43c79b8
+  canonical_formatter_commit: 3bedec23e812677203af6a00169e73523dba701f
+  exact_lock_commit: d1d84d44e035b94e7265b038e64e9e9fd74e09aa
+  mobile_foundation:
+    run_id: 30471913267
+    job_id: 90644014213
+    result: passed
+  android_platform:
+    run_id: 30471899695
+    job_id: 90643959320
+    result: passed
+    generated_source:
+      artifact_id: 8732240471
+      sha256: 4653c9ade73bc9084588a9f76014bd428460707c6769a4c9f181999bc164af4e
+    development_apk:
+      artifact_id: 8732243594
+      sha256: b6e3d9028d82f49d78efdf4c5222111981ef5d40f1f993c97aca1eca01501a58
+    staging_apk:
+      artifact_id: 8732247000
+      sha256: 15bdd836db2b3923ed4c1d50f27cd4af383fc9839e92c3d39c63f54773a9235e
+    production_identity_debug_apk:
+      artifact_id: 8732250076
+      sha256: 799eb95ee797dcf045ec23bff4b1da905b4d6b7956edf89bcce3e4acfc1ba2c5
+  root_foundation:
+    run_id: 30471899839
+    verify_job_id: 90643959795
+    cloudflare_job_id: 90644074689
+    neon_recovery_job_id: 90644074870
+    neon_preview_job_id: 90644234942
+    result: passed
+  mobile_neon:
+    run_id: 30471899660
+    job_id: 90643959507
+    result: passed
+
+entries:
+  - id: OSS-MOB-0001
+    status: approved_dependency
+    purpose: Build the Android and iOS Store Companion application from one reviewed native client codebase.
+    reuse_mode: platform_adoption
+    project: Flutter SDK
+    repository: https://github.com/flutter/flutter
+    exact_commit_or_tag: 058e0af2c2b57e369d905a03ac9748b0ebf543c6
+    version: 3.44.8
+    bundled_dart_version: 3.12.2
+    files_or_packages:
+      - Flutter framework and toolchain
+      - Dart SDK bundled with Flutter
+      - flutter SDK package
+      - flutter_localizations SDK package
+      - flutter_test SDK package for development testing
+    declared_license: BSD-3-Clause
+    file_level_licenses_checked: true
+    notice_files:
+      - upstream:LICENSE
+      - upstream:PATENT_GRANT
+      - upstream:AUTHORS
+    copyright_holders:
+      - Google LLC
+      - Flutter contributors
+      - Dart contributors
+    modifications: No upstream source copied or modified. CI checks out the exact official Flutter commit and the application consumes SDK packages.
+    product_locations:
+      - mobile/toolchain.yaml
+      - mobile/pubspec.yaml
+      - mobile/apps/store_companion/pubspec.yaml
+      - mobile/packages/design_system/pubspec.yaml
+      - .github/workflows/mobile-foundation.yml
+    distributed_to_customers: true
+    network_service_use: false
+    compatible_with_product_model: approved
+    legal_review:
+      required: false
+      reviewer: mob-01-engineering-policy
+      decision: approved_permissive_platform_sdk
+      date: 2026-07-29
+    security_review:
+      owner: MOB-01
+      result: exact_stable_commit_and_official_source_pinned_no_third_party_setup_action
+    update_owner: MOB-01
+    upstream_tracking: Upgrade only at a coherent checkpoint after breaking-change, Android/iOS, dependency, migration and pending-operation verification.
+    sbom_components:
+      - pkg:github/flutter/flutter@058e0af2c2b57e369d905a03ac9748b0ebf543c6
+    third_party_notice_entry: pending_programme_integration_into_docs/THIRD_PARTY_NOTICES.md
+    tests:
+      - exact Flutter commit check in Mobile Foundation CI
+      - Flutter and Dart version machine-output check
+      - flutter analyze
+      - flutter test
+    notes: Current public CI installs Flutter directly from the official GitHub repository. Android debug flavour evidence is recorded separately; release signing remains blocked.
+
+  - id: OSS-MOB-0002
+    status: approved_dependency
+    purpose: Provide typed relational persistence and migration primitives for bounded mobile projections, drafts and operation state.
+    reuse_mode: package_dependency
+    project: drift
+    repository: https://github.com/simolus3/drift
+    exact_commit_or_tag: pub.dev-release-2.34.3
+    version: 2.34.3
+    files_or_packages:
+      - drift
+    declared_license: MIT
+    file_level_licenses_checked: true
+    notice_files:
+      - upstream:LICENSE
+    modifications: No upstream source copied or modified.
+    product_locations:
+      - mobile/packages/local_data/pubspec.yaml
+    distributed_to_customers: true
+    network_service_use: false
+    compatible_with_product_model: approved
+    legal_review:
+      required: false
+      reviewer: mob-01-engineering-policy
+      decision: approved_permissive_database_library
+      date: 2026-07-29
+    security_review:
+      owner: MOB-01
+      result: exact_lock_verified_codegen_not_enabled_raw_sql_boundary_runtime_tested
+    update_owner: MOB-01
+    upstream_tracking: Pin exact versions and review migration behavior, schema exports and generated code before upgrade.
+    sbom_components:
+      - pkg:pub/drift@2.34.3
+    third_party_notice_entry: pending_programme_integration_into_docs/THIRD_PARTY_NOTICES.md
+    tests:
+      - exact dependency lock verification
+      - encrypted local schema restart replay and partition tests
+
+  - id: OSS-MOB-0003
+    status: approved_dependency
+    purpose: Bundle reviewed SQLite native assets and expose the runtime API used to prove encrypted database support.
+    reuse_mode: package_and_native_asset_dependency
+    project: sqlite3 for Dart
+    repository: https://github.com/simolus3/sqlite3.dart
+    exact_commit_or_tag: pub.dev-release-3.5.0
+    version: 3.5.0
+    files_or_packages:
+      - sqlite3
+    declared_license: MIT
+    file_level_licenses_checked: true
+    notice_files:
+      - upstream:LICENSE
+    modifications: Workspace build hooks select the upstream-provided sqlite3mc binary set; no source patch is carried.
+    product_locations:
+      - mobile/pubspec.yaml
+      - mobile/packages/local_data/pubspec.yaml
+      - mobile/packages/local_data/lib/store_companion_local_data.dart
+      - mobile/packages/local_data/lib/store_companion_local_database.dart
+    distributed_to_customers: true
+    network_service_use: false
+    compatible_with_product_model: approved
+    legal_review:
+      required: false
+      reviewer: mob-01-engineering-policy
+      decision: approved_permissive_native_binding
+      date: 2026-07-29
+    security_review:
+      owner: MOB-01
+      result: runtime_cipher_probe_wrong_key_failure_and_three_android_flavour_builds_passed
+    update_owner: MOB-01
+    upstream_tracking: Track sqlite3 package release, bundled SQLite and SQLite3MultipleCiphers versions and binary digests as one checkpoint.
+    sbom_components:
+      - pkg:pub/sqlite3@3.5.0
+    third_party_notice_entry: pending_programme_integration_into_docs/THIRD_PARTY_NOTICES.md
+    tests:
+      - runtime PRAGMA cipher evidence
+      - wrong-key encrypted file rejection
+      - Android development staging and production-identity debug builds
+    prohibited_legacy_dependencies:
+      - sqlite3_flutter_libs
+      - sqlcipher_flutter_libs
+      - sqlite3_native_assets
+
+  - id: OSS-MOB-0004
+    status: approved_native_component
+    purpose: Encrypt the Store Companion local SQLite file using the cipher build supplied and integrity-pinned by package sqlite3.
+    reuse_mode: native_binary_selected_by_pub_build_hook
+    project: SQLite3 Multiple Ciphers
+    repository: https://github.com/utelle/SQLite3MultipleCiphers
+    exact_commit_or_tag: bundled-by-sqlite3-3.5.0
+    version: 2.3.6
+    files_or_packages:
+      - sqlite3mc native libraries selected by hooks.user_defines.sqlite3.source
+    declared_license: MIT
+    file_level_licenses_checked: true
+    notice_files:
+      - upstream:LICENSE
+      - upstream:LICENSE.spdx
+    modifications: No upstream source copied or modified. Precompiled native assets are selected through the sqlite3 package hook and verified by that package's embedded SHA-256 references.
+    product_locations:
+      - mobile/pubspec.yaml
+    distributed_to_customers: true
+    network_service_use: false
+    compatible_with_product_model: approved_with_runtime_assertion
+    legal_review:
+      required: false
+      reviewer: mob-01-engineering-policy
+      decision: approved_permissive_encryption_component
+      date: 2026-07-29
+    security_review:
+      owner: MOB-01
+      result: runtime_cipher_probe_key_redaction_wrong_key_and_android_native_asset_tests_passed
+    update_owner: MOB-01
+    upstream_tracking: Review cipher defaults, bundled SQLite version, cryptographic changes and migration compatibility before upgrade.
+    sbom_components:
+      - pkg:github/utelle/SQLite3MultipleCiphers@2.3.6
+    third_party_notice_entry: pending_programme_integration_into_docs/THIRD_PARTY_NOTICES.md
+    tests:
+      - PRAGMA cipher returned non-empty evidence
+      - application failed closed for wrong key
+      - encrypted schema survived close and reopen
+
+  - id: OSS-MOB-0005
+    status: approved_dependency
+    purpose: Store only the local database key and future opaque credential references in Android Keystore or Apple Keychain backed storage.
+    reuse_mode: platform_plugin_dependency
+    project: flutter_secure_storage
+    repository: https://github.com/juliansteenbakker/flutter_secure_storage
+    exact_commit_or_tag: pub.dev-release-10.3.1
+    version: 10.3.1
+    files_or_packages:
+      - flutter_secure_storage
+    declared_license: BSD-3-Clause
+    file_level_licenses_checked: true
+    notice_files:
+      - upstream:LICENSE
+    modifications: No upstream source copied or modified. Android application backup is disabled to prevent restoring encrypted preferences into a different keystore.
+    product_locations:
+      - mobile/packages/local_data/pubspec.yaml
+      - mobile/packages/local_data/lib/store_companion_local_data.dart
+      - mobile/apps/store_companion/android/app/src/main/AndroidManifest.xml
+      - tooling/mobile/generate-platform-projects.sh
+    distributed_to_customers: true
+    network_service_use: false
+    compatible_with_product_model: approved
+    legal_review:
+      required: false
+      reviewer: mob-01-engineering-policy
+      decision: approved_permissive_secure_storage_plugin
+      date: 2026-07-29
+    security_review:
+      owner: MOB-01
+      result: key_redaction_reference_validation_android_backup_disabled_and_android_builds_passed
+    update_owner: MOB-01
+    upstream_tracking: Review cipher defaults, platform minimums, migration behavior and biometric semantics before upgrade.
+    sbom_components:
+      - pkg:pub/flutter_secure_storage@10.3.1
+    third_party_notice_entry: pending_programme_integration_into_docs/THIRD_PARTY_NOTICES.md
+    tests:
+      - malformed key rejection
+      - opaque secure-storage reference validation
+      - key diagnostic redaction
+      - Android backup policy generation check
+
+  - id: OSS-MOB-0006
+    status: approved_dependency
+    purpose: Resolve application-support storage locations and construct platform-safe local database paths.
+    reuse_mode: platform_plugin_and_utility_dependency
+    project: path_provider and path
+    repository:
+      - https://github.com/flutter/packages/tree/main/packages/path_provider/path_provider
+      - https://github.com/dart-lang/core/tree/main/pkgs/path
+    exact_commit_or_tag:
+      - pub.dev-release-path_provider-2.1.6
+      - pub.dev-release-path-1.9.1
+    version:
+      path_provider: 2.1.6
+      path: 1.9.1
+    files_or_packages:
+      - path_provider
+      - path
+    declared_license: BSD-3-Clause
+    file_level_licenses_checked: true
+    notice_files:
+      - upstream:LICENSE
+    modifications: No upstream source copied or modified.
+    product_locations:
+      - mobile/packages/local_data/pubspec.yaml
+    distributed_to_customers: true
+    network_service_use: false
+    compatible_with_product_model: approved
+    legal_review:
+      required: false
+      reviewer: mob-01-engineering-policy
+      decision: approved_official_platform_and_dart_utilities
+      date: 2026-07-29
+    security_review:
+      owner: MOB-01
+      result: exact_lock_and_android_plugin_builds_passed_path_mapping_remains_application_owned
+    update_owner: MOB-01
+    upstream_tracking: Upgrade with Flutter platform support and local migration checkpoints.
+    sbom_components:
+      - pkg:pub/path_provider@2.1.6
+      - pkg:pub/path@1.9.1
+    third_party_notice_entry: pending_programme_integration_into_docs/THIRD_PARTY_NOTICES.md
+    tests:
+      - platform plugin build evidence passed
+      - application-support path adapter tests remain a functional M3 checkpoint
+
+future_dependencies:
+  default_status: proposed
+  rule: Every pub package, native SDK, telemetry provider, secure-storage/database library, OAuth helper, routing/state-management library and push provider requires a new reviewed entry before adoption.

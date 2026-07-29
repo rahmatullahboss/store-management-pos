@@ -6,7 +6,17 @@ import { performance } from "node:perf_hooks";
 import { neon, Client } from "@neondatabase/serverless";
 import { fileURLToPath } from "node:url";
 
-const { NEON_API_KEY, NEON_PROJECT_ID, NEON_PARENT_BRANCH_ID, GITHUB_HEAD_REF, GITHUB_RUN_ID, GITHUB_SHA } = process.env;
+const {
+  NEON_API_KEY,
+  NEON_PROJECT_ID,
+  NEON_PARENT_BRANCH_ID,
+  NEON_FALLBACK_BRANCH_ID,
+  NEON_FALLBACK_ENDPOINT_ID,
+  NEON_FALLBACK_ROLE_NAME = "neondb_owner",
+  GITHUB_HEAD_REF,
+  GITHUB_RUN_ID,
+  GITHUB_SHA
+} = process.env;
 if (!NEON_API_KEY || !NEON_PROJECT_ID || !NEON_PARENT_BRANCH_ID) {
   throw new Error("NEON_API_KEY, NEON_PROJECT_ID and NEON_PARENT_BRANCH_ID are required for Foundation preview CI");
 }
@@ -16,8 +26,11 @@ const artifactsDir = path.join(root, "artifacts", "foundation");
 const benchmarkReportPath = path.join(artifactsDir, "neon-benchmark-report.json");
 const lifecycleReportPath = path.join(artifactsDir, "neon-preview-lifecycle.json");
 const safeRef = (GITHUB_HEAD_REF || "manual").toLowerCase().replace(/[^a-z0-9-]+/g, "-").slice(0, 36);
-const previewBranchPrefix = `preview/pr-${safeRef}-`;
+const previewBranchRootPrefix = "preview/pr-";
+const previewBranchPrefix = `${previewBranchRootPrefix}${safeRef}-`;
 const branchName = `${previewBranchPrefix}${GITHUB_RUN_ID || Date.now()}`;
+const databaseName = `ci_preview_${String(GITHUB_RUN_ID || Date.now()).replace(/[^0-9]/g, "").slice(0, 40)}`;
+const globalStaleAgeMs = 45 * 60 * 1000;
 const coldWakeRetryLimit = 6;
 const apiBase = `https://console.neon.tech/api/v2/projects/${NEON_PROJECT_ID}`;
 const headers = { Authorization: `Bearer ${NEON_API_KEY}`, "Content-Type": "application/json" };
@@ -58,17 +71,42 @@ async function sleep(milliseconds) {
   await new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
-async function cleanupStalePreviewBranches() {
+function branchTimestamp(branch) {
+  for (const value of [branch?.created_at, branch?.updated_at]) {
+    const timestamp = typeof value === "string" ? Date.parse(value) : Number.NaN;
+    if (Number.isFinite(timestamp)) return timestamp;
+  }
+  return Number.NaN;
+}
+
+async function cleanupStalePreviewBranches({ allPreviewBranches = false } = {}) {
   const response = await api("/branches");
   const branches = Array.isArray(response?.branches) ? response.branches : [];
-  const stale = branches.filter((branch) => typeof branch?.name === "string"
-    && branch.name.startsWith(previewBranchPrefix)
-    && branch.id !== NEON_PARENT_BRANCH_ID);
+  const now = Date.now();
+  const stale = branches
+    .filter((branch) => {
+      if (typeof branch?.name !== "string"
+        || branch.id === NEON_PARENT_BRANCH_ID
+        || branch.id === NEON_FALLBACK_BRANCH_ID
+        || branch.name === branchName) return false;
+      if (!branch.name.startsWith(allPreviewBranches ? previewBranchRootPrefix : previewBranchPrefix)) return false;
+      if (!allPreviewBranches) return true;
+      const timestamp = branchTimestamp(branch);
+      return Number.isFinite(timestamp) && now - timestamp >= globalStaleAgeMs;
+    })
+    .sort((left, right) => branchTimestamp(left) - branchTimestamp(right));
+
+  let deleted = 0;
   for (const branch of stale) {
-    await api(`/branches/${encodeURIComponent(branch.id)}`, { method: "DELETE" });
-    console.log(`deleted stale Neon preview branch ${branch.name}`);
+    try {
+      await api(`/branches/${encodeURIComponent(branch.id)}`, { method: "DELETE" });
+      deleted += 1;
+      console.log(`deleted stale Neon preview branch ${branch.name}`);
+    } catch (error) {
+      console.warn(`could not delete stale Neon preview branch ${branch.name}: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
-  return stale.length;
+  return deleted;
 }
 
 function isBranchLimitError(error) {
@@ -77,7 +115,33 @@ function isBranchLimitError(error) {
     && error.payload?.code === "BRANCHES_LIMIT_EXCEEDED";
 }
 
-async function createPreviewBranch() {
+async function createFallbackDatabase() {
+  if (!NEON_FALLBACK_BRANCH_ID || !NEON_FALLBACK_ENDPOINT_ID) {
+    throw new Error("Neon branch quota is full and no reviewed fallback branch/endpoint is configured");
+  }
+
+  const databasePath = `/branches/${encodeURIComponent(NEON_FALLBACK_BRANCH_ID)}/databases/${encodeURIComponent(databaseName)}`;
+  await api(databasePath, { method: "DELETE" });
+  await api(`/branches/${encodeURIComponent(NEON_FALLBACK_BRANCH_ID)}/databases`, {
+    method: "POST",
+    body: JSON.stringify({
+      database: {
+        name: databaseName,
+        owner_name: NEON_FALLBACK_ROLE_NAME
+      }
+    })
+  });
+  console.warn(`using isolated Neon database ${databaseName} on fallback branch ${NEON_FALLBACK_BRANCH_ID}`);
+  return {
+    isolationMode: "database",
+    branchId: NEON_FALLBACK_BRANCH_ID,
+    endpointId: NEON_FALLBACK_ENDPOINT_ID,
+    databaseName,
+    roleName: NEON_FALLBACK_ROLE_NAME
+  };
+}
+
+async function createPreviewIsolation() {
   const request = {
     method: "POST",
     body: JSON.stringify({
@@ -86,13 +150,41 @@ async function createPreviewBranch() {
     })
   };
   try {
-    return { created: await api("/branches", request), branchLimitRetry: false };
+    const created = await api("/branches", request);
+    return {
+      isolationMode: "branch",
+      branchId: created.branch.id,
+      endpointId: created.endpoints?.[0]?.id,
+      databaseName: "neondb",
+      roleName: "neondb_owner",
+      branchLimitRetry: false,
+      branchLimitCleanupDeleted: 0
+    };
   } catch (error) {
     if (!isBranchLimitError(error)) throw error;
-    console.warn("Neon branch limit reached; cleaning stale branches for this pull request and retrying once");
-    await cleanupStalePreviewBranches();
+    console.warn("Neon branch limit reached; cleaning only preview/pr-* branches older than 45 minutes and retrying once");
+    const branchLimitCleanupDeleted = await cleanupStalePreviewBranches({ allPreviewBranches: true });
     await sleep(2_000);
-    return { created: await api("/branches", request), branchLimitRetry: true };
+    try {
+      const created = await api("/branches", request);
+      return {
+        isolationMode: "branch",
+        branchId: created.branch.id,
+        endpointId: created.endpoints?.[0]?.id,
+        databaseName: "neondb",
+        roleName: "neondb_owner",
+        branchLimitRetry: true,
+        branchLimitCleanupDeleted
+      };
+    } catch (retryError) {
+      if (!isBranchLimitError(retryError)) throw retryError;
+      const fallback = await createFallbackDatabase();
+      return {
+        ...fallback,
+        branchLimitRetry: true,
+        branchLimitCleanupDeleted
+      };
+    }
   }
 }
 
@@ -137,14 +229,21 @@ async function executeColdWake(connectionString) {
 }
 
 await mkdir(artifactsDir, { recursive: true });
+let isolationMode = null;
 let branchId;
 let endpointId;
+let activeDatabaseName = null;
+let roleName = null;
 let initialConnectMs = null;
 let coldWakeMs = null;
 let coldWakeAttempts = 0;
+let coldWakeSkippedReason = null;
 let idleObservedAt = null;
 let cleanupDeleted = false;
+let branchCleanupDeleted = false;
+let databaseCleanupDeleted = false;
 let staleBranchesDeleted = 0;
+let branchLimitCleanupDeleted = 0;
 let branchLimitRetry = false;
 let status = "failed";
 let failure = null;
@@ -152,14 +251,18 @@ let migrationIds = [];
 
 try {
   staleBranchesDeleted = await cleanupStalePreviewBranches();
-  const creation = await createPreviewBranch();
-  const created = creation.created;
-  branchLimitRetry = creation.branchLimitRetry;
-  branchId = created.branch.id;
-  endpointId = created.endpoints?.[0]?.id;
-  if (!endpointId) throw new Error("Neon API did not return a preview endpoint ID");
+  const isolation = await createPreviewIsolation();
+  isolationMode = isolation.isolationMode;
+  branchId = isolation.branchId;
+  endpointId = isolation.endpointId;
+  activeDatabaseName = isolation.databaseName;
+  roleName = isolation.roleName;
+  branchLimitRetry = isolation.branchLimitRetry;
+  branchLimitCleanupDeleted = isolation.branchLimitCleanupDeleted;
+  staleBranchesDeleted += branchLimitCleanupDeleted;
+  if (!endpointId) throw new Error("Neon API did not return or configure a preview endpoint ID");
 
-  const uriResponse = await api(`/connection_uri?branch_id=${encodeURIComponent(branchId)}&database_name=neondb&role_name=neondb_owner`);
+  const uriResponse = await api(`/connection_uri?branch_id=${encodeURIComponent(branchId)}&database_name=${encodeURIComponent(activeDatabaseName)}&role_name=${encodeURIComponent(roleName)}`);
   const connectionString = uriResponse.uri;
   if (typeof connectionString !== "string") throw new Error("Neon API did not return a connection URI");
 
@@ -187,31 +290,37 @@ try {
     FND_NEON_INTEGRATION: "1"
   });
 
-  idleObservedAt = await suspendEndpointAndWaitForIdle(endpointId);
-  const coldStarted = performance.now();
-  const coldWake = await executeColdWake(connectionString);
-  coldWakeMs = performance.now() - coldStarted;
-  coldWakeAttempts = coldWake.attempts;
+  if (isolationMode === "branch") {
+    idleObservedAt = await suspendEndpointAndWaitForIdle(endpointId);
+    const coldStarted = performance.now();
+    const coldWake = await executeColdWake(connectionString);
+    coldWakeMs = performance.now() - coldStarted;
+    coldWakeAttempts = coldWake.attempts;
+  } else {
+    coldWakeSkippedReason = "shared fallback compute must not be suspended by preview CI";
+  }
 
-  await run("npm", ["run", "benchmark:neon"], {
+  const benchmarkEnv = {
     ...process.env,
     DATABASE_URL: connectionString,
     BENCHMARK_ITERATIONS: "30",
     BENCHMARK_CONCURRENCY: "20",
     BENCHMARK_INITIAL_CONNECT_MS: String(initialConnectMs),
-    BENCHMARK_COLD_WAKE_MS: String(coldWakeMs),
     BENCHMARK_REPORT_PATH: benchmarkReportPath
-  });
+  };
+  if (coldWakeMs !== null) benchmarkEnv.BENCHMARK_COLD_WAKE_MS = String(coldWakeMs);
+  await run("npm", ["run", "benchmark:neon"], benchmarkEnv);
 
   status = "passed";
-  console.log(`Neon preview branch ${branchName} passed migrations, integration, cold-wake and benchmark checks`);
+  console.log(`Neon ${isolationMode} isolation passed migrations, integration and benchmark checks`);
 } catch (error) {
   failure = error instanceof Error ? error.message : String(error);
   throw error;
 } finally {
-  if (branchId) {
+  if (isolationMode === "branch" && branchId) {
     try {
       await api(`/branches/${encodeURIComponent(branchId)}`, { method: "DELETE" });
+      branchCleanupDeleted = true;
       cleanupDeleted = true;
       console.log(`deleted Neon preview branch ${branchName}`);
     } catch (cleanupError) {
@@ -219,25 +328,45 @@ try {
       process.exitCode = 1;
     }
   }
+  if (isolationMode === "database" && branchId && activeDatabaseName) {
+    try {
+      await api(`/branches/${encodeURIComponent(branchId)}/databases/${encodeURIComponent(activeDatabaseName)}`, { method: "DELETE" });
+      databaseCleanupDeleted = true;
+      cleanupDeleted = true;
+      console.log(`deleted Neon fallback database ${activeDatabaseName}`);
+    } catch (cleanupError) {
+      failure = `${failure ? `${failure}; ` : ""}cleanup: ${cleanupError instanceof Error ? cleanupError.message : String(cleanupError)}`;
+      process.exitCode = 1;
+    }
+  }
   const lifecycle = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     status,
     generatedAt: new Date().toISOString(),
     gitSha: GITHUB_SHA || null,
     runId: GITHUB_RUN_ID || null,
     projectId: NEON_PROJECT_ID,
     parentBranchId: NEON_PARENT_BRANCH_ID,
-    branchName,
+    isolationMode,
+    branchName: isolationMode === "branch" ? branchName : null,
     branchId: branchId || null,
     endpointId: endpointId || null,
+    databaseName: activeDatabaseName,
+    fallbackBranchId: isolationMode === "database" ? NEON_FALLBACK_BRANCH_ID : null,
+    fallbackEndpointId: isolationMode === "database" ? NEON_FALLBACK_ENDPOINT_ID : null,
     migrationIds,
     staleBranchesDeleted,
+    branchLimitCleanupDeleted,
     branchLimitRetry,
+    globalStaleAgeMinutes: globalStaleAgeMs / 60_000,
     initialComputeConnectMs: initialConnectMs === null ? null : Number(initialConnectMs.toFixed(2)),
     idleObservedAt,
     coldWakeMs: coldWakeMs === null ? null : Number(coldWakeMs.toFixed(2)),
     coldWakeRetryLimit,
     coldWakeAttempts,
+    coldWakeSkippedReason,
+    branchCleanupDeleted,
+    databaseCleanupDeleted,
     cleanupDeleted,
     failure
   };
