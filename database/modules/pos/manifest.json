@@ -12,6 +12,11 @@
       "id": "POS-0002",
       "file": "POS-0002-carts.sql",
       "sha256": "726e6f283a742235d5c5827a147dd255f05b381e7cc316a37d3a573e08ecea54"
+    },
+    {
+      "id": "POS-0003",
+      "file": "POS-0003-offline-sync-security.sql",
+      "sha256": "aa52f2a5cee2bce09cca89b3c0f682f2508cac6c051ba9565bea84e59244a2c0"
     }
   ]
 }
