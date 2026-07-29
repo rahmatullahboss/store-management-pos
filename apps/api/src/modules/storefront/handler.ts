@@ -6,6 +6,8 @@ import {
   StorefrontCommandService,
   type CreateSalesChannelInput,
   type CreateStorefrontInput,
+  type EntityCommandResult,
+  type PublicationCommandResult,
   type PublishThemeInput,
   type RecordDomainVerificationInput,
   type RegisterDomainInput,
@@ -14,7 +16,11 @@ import {
   type StorefrontDomainStatus,
   type StorefrontLifecycleStatus,
   type StorefrontPublicationState,
+  type ThemeCommandResult,
+  type TransitionCommandResult,
   type TransitionDomainInput,
+  type TransitionSalesChannelInput,
+  type TransitionStorefrontInput,
 } from "../../../../../modules/storefront/src/index.js";
 import {
   bodyRecord,
@@ -53,15 +59,15 @@ const certificateStatuses = ["none", "pending", "active", "expiring", "failed", 
 const backorderPolicies = ["deny", "allow", "preorder_only"] as const;
 
 export interface StorefrontCommands {
-  createStorefront(context: RequestContext, input: CreateStorefrontInput): ReturnType<StorefrontCommandService["createStorefront"]>;
-  transitionStorefront(context: RequestContext, input: Parameters<StorefrontCommandService["transitionStorefront"]>[1]): ReturnType<StorefrontCommandService["transitionStorefront"]>;
-  createSalesChannel(context: RequestContext, input: CreateSalesChannelInput): ReturnType<StorefrontCommandService["createSalesChannel"]>;
-  transitionSalesChannel(context: RequestContext, input: Parameters<StorefrontCommandService["transitionSalesChannel"]>[1]): ReturnType<StorefrontCommandService["transitionSalesChannel"]>;
-  setProductPublication(context: RequestContext, input: SetProductPublicationInput): ReturnType<StorefrontCommandService["setProductPublication"]>;
-  registerDomain(context: RequestContext, input: RegisterDomainInput): ReturnType<StorefrontCommandService["registerDomain"]>;
-  recordDomainVerification(context: RequestContext, input: RecordDomainVerificationInput): ReturnType<StorefrontCommandService["recordDomainVerification"]>;
-  transitionDomain(context: RequestContext, input: TransitionDomainInput): ReturnType<StorefrontCommandService["transitionDomain"]>;
-  publishTheme(context: RequestContext, input: PublishThemeInput): ReturnType<StorefrontCommandService["publishTheme"]>;
+  createStorefront(context: RequestContext, input: CreateStorefrontInput): Promise<EntityCommandResult>;
+  transitionStorefront(context: RequestContext, input: TransitionStorefrontInput): Promise<TransitionCommandResult>;
+  createSalesChannel(context: RequestContext, input: CreateSalesChannelInput): Promise<EntityCommandResult>;
+  transitionSalesChannel(context: RequestContext, input: TransitionSalesChannelInput): Promise<TransitionCommandResult>;
+  setProductPublication(context: RequestContext, input: SetProductPublicationInput): Promise<PublicationCommandResult>;
+  registerDomain(context: RequestContext, input: RegisterDomainInput): Promise<TransitionCommandResult>;
+  recordDomainVerification(context: RequestContext, input: RecordDomainVerificationInput): Promise<TransitionCommandResult>;
+  transitionDomain(context: RequestContext, input: TransitionDomainInput): Promise<TransitionCommandResult>;
+  publishTheme(context: RequestContext, input: PublishThemeInput): Promise<ThemeCommandResult>;
 }
 
 function commands(database: NeonDatabase): StorefrontCommands {
@@ -92,16 +98,19 @@ async function createStorefront(
   service: StorefrontCommands,
 ): Promise<Response> {
   const body = await bodyRecord(request);
+  const primaryStoreId = optionalUuid(body, "primaryStoreId");
+  const platformSubdomain = optionalString(body, "platformSubdomain", 63);
+  const settings = optionalRecord(body, "settings");
   const input: CreateStorefrontInput = {
     legalEntityId: requiredUuid(body, "legalEntityId"),
-    ...(optionalUuid(body, "primaryStoreId") ? { primaryStoreId: optionalUuid(body, "primaryStoreId") } : {}),
+    ...(primaryStoreId === undefined ? {} : { primaryStoreId }),
     code: requiredString(body, "code", 63),
     displayName: requiredString(body, "displayName", 160),
     defaultLocale: requiredString(body, "defaultLocale", 35),
     defaultCurrency: requiredString(body, "defaultCurrency", 3),
     timeZone: requiredString(body, "timeZone", 80),
-    ...(optionalString(body, "platformSubdomain", 63) ? { platformSubdomain: optionalString(body, "platformSubdomain", 63) } : {}),
-    ...(optionalRecord(body, "settings") ? { settings: optionalRecord(body, "settings") } : {}),
+    ...(platformSubdomain === undefined ? {} : { platformSubdomain }),
+    ...(settings === undefined ? {} : { settings }),
     idempotencyKey: idempotencyKey(request),
   };
   const result = await service.createStorefront(context, input);
@@ -131,18 +140,21 @@ async function createSalesChannel(
   storefrontId: string,
 ): Promise<Response> {
   const body = await bodyRecord(request);
+  const inventoryScope = optionalRecord(body, "inventoryScope");
+  const allowedCountryCodes = optionalStringArray(body, "allowedCountryCodes", 2);
   const guestCheckoutEnabled = optionalBoolean(body, "guestCheckoutEnabled");
   const customerAccountsEnabled = optionalBoolean(body, "customerAccountsEnabled");
+  const backorderPolicy = optionalEnum(body, "backorderPolicy", backorderPolicies);
   const input: CreateSalesChannelInput = {
     storefrontId: pathUuid(storefrontId, "storefrontId"),
     code: requiredString(body, "code", 63),
     displayName: requiredString(body, "displayName", 160),
     priceListId: requiredUuid(body, "priceListId"),
-    ...(optionalRecord(body, "inventoryScope") ? { inventoryScope: optionalRecord(body, "inventoryScope") } : {}),
-    ...(optionalStringArray(body, "allowedCountryCodes", 2) ? { allowedCountryCodes: optionalStringArray(body, "allowedCountryCodes", 2) } : {}),
+    ...(inventoryScope === undefined ? {} : { inventoryScope }),
+    ...(allowedCountryCodes === undefined ? {} : { allowedCountryCodes }),
     ...(guestCheckoutEnabled === undefined ? {} : { guestCheckoutEnabled }),
     ...(customerAccountsEnabled === undefined ? {} : { customerAccountsEnabled }),
-    ...(optionalEnum(body, "backorderPolicy", backorderPolicies) ? { backorderPolicy: optionalEnum(body, "backorderPolicy", backorderPolicies) } : {}),
+    ...(backorderPolicy === undefined ? {} : { backorderPolicy }),
     idempotencyKey: idempotencyKey(request),
   };
   const result = await service.createSalesChannel(context, input);
@@ -173,14 +185,16 @@ async function setProductPublication(
   productId: string,
 ): Promise<Response> {
   const body = await bodyRecord(request);
+  const scheduledFor = optionalString(body, "scheduledFor", 64);
+  const metadata = optionalRecord(body, "metadata");
   const input: SetProductPublicationInput = {
     storefrontId: requiredUuid(body, "storefrontId"),
     salesChannelId: pathUuid(salesChannelId, "salesChannelId"),
     productId: pathUuid(productId, "productId"),
     publicSlug: requiredString(body, "publicSlug", 180),
     state: requiredEnum(body, "state", publicationStates),
-    ...(optionalString(body, "scheduledFor", 64) ? { scheduledFor: optionalString(body, "scheduledFor", 64) } : {}),
-    ...(optionalRecord(body, "metadata") ? { metadata: optionalRecord(body, "metadata") } : {}),
+    ...(scheduledFor === undefined ? {} : { scheduledFor }),
+    ...(metadata === undefined ? {} : { metadata }),
     idempotencyKey: idempotencyKey(request),
   };
   const result = await service.setProductPublication(context, input);
@@ -194,13 +208,12 @@ async function registerDomain(
   storefrontId: string,
 ): Promise<Response> {
   const body = await bodyRecord(request);
+  const verificationMethod = optionalEnum(body, "verificationMethod", verificationMethods);
   const input: RegisterDomainInput = {
     storefrontId: pathUuid(storefrontId, "storefrontId"),
     hostname: requiredString(body, "hostname", 253),
     kind: requiredEnum(body, "kind", domainKinds),
-    ...(optionalEnum(body, "verificationMethod", verificationMethods)
-      ? { verificationMethod: optionalEnum(body, "verificationMethod", verificationMethods) }
-      : {}),
+    ...(verificationMethod === undefined ? {} : { verificationMethod }),
     idempotencyKey: idempotencyKey(request),
   };
   const result = await service.registerDomain(context, input);
@@ -214,6 +227,8 @@ async function recordDomainVerification(
   domainId: string,
 ): Promise<Response> {
   const body = await bodyRecord(request);
+  const providerReference = optionalString(body, "providerReference", 240);
+  const observedDetail = optionalRecord(body, "observedDetail");
   const input: RecordDomainVerificationInput = {
     domainId: pathUuid(domainId, "domainId"),
     attempt: requiredInteger(body, "attempt"),
@@ -221,8 +236,8 @@ async function recordDomainVerification(
     challengeName: requiredString(body, "challengeName", 320),
     challengeValueHash: requiredString(body, "challengeValueHash", 64),
     resultStatus: requiredEnum(body, "resultStatus", verificationStatuses),
-    ...(optionalString(body, "providerReference", 240) ? { providerReference: optionalString(body, "providerReference", 240) } : {}),
-    ...(optionalRecord(body, "observedDetail") ? { observedDetail: optionalRecord(body, "observedDetail") } : {}),
+    ...(providerReference === undefined ? {} : { providerReference }),
+    ...(observedDetail === undefined ? {} : { observedDetail }),
     observedAt: requiredString(body, "observedAt", 64),
     expiresAt: requiredString(body, "expiresAt", 64),
     idempotencyKey: idempotencyKey(request),
@@ -238,14 +253,17 @@ async function transitionDomain(
   domainId: string,
 ): Promise<Response> {
   const body = await bodyRecord(request);
+  const providerHostnameId = optionalString(body, "providerHostnameId", 240);
+  const failureCode = optionalString(body, "failureCode", 120);
+  const failureDetail = optionalString(body, "failureDetail", 1000);
   const canonical = optionalBoolean(body, "canonical");
   const input: TransitionDomainInput = {
     domainId: pathUuid(domainId, "domainId"),
     status: requiredEnum(body, "status", domainStatuses),
     certificateStatus: requiredEnum(body, "certificateStatus", certificateStatuses),
-    ...(optionalString(body, "providerHostnameId", 240) ? { providerHostnameId: optionalString(body, "providerHostnameId", 240) } : {}),
-    ...(optionalString(body, "failureCode", 120) ? { failureCode: optionalString(body, "failureCode", 120) } : {}),
-    ...(optionalString(body, "failureDetail", 1000) ? { failureDetail: optionalString(body, "failureDetail", 1000) } : {}),
+    ...(providerHostnameId === undefined ? {} : { providerHostnameId }),
+    ...(failureCode === undefined ? {} : { failureCode }),
+    ...(failureDetail === undefined ? {} : { failureDetail }),
     canonical: canonical ?? false,
     idempotencyKey: idempotencyKey(request),
   };
