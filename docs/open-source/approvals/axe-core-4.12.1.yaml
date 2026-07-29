@@ -1,0 +1,42 @@
+entry:
+  id: OSS-0006
+  status: approved_dependency
+  purpose: Run automated WCAG 2 A/AA and WCAG 2.1 AA checks against synthetic admin, POS and marketing browser fixtures.
+  reuse_mode: dependency
+  project: "axe-core"
+  repository: "https://github.com/dequelabs/axe-core"
+  exact_commit_or_tag: "4.12.1"
+  files_or_packages: ["axe-core"]
+  declared_license: MPL-2.0
+  file_level_licenses_checked: true
+  notice_files: ["LICENSE"]
+  copyright_holders: ["Deque Systems, Inc. and contributors"]
+  modifications: "No upstream source copied or modified; exact-pinned package is injected unmodified into synthetic browser fixtures for development verification."
+  product_locations:
+    - package.json
+    - package-lock.json
+    - tooling/scripts/foundation-design-evidence.mjs
+    - tooling/scripts/mod-f-design-evidence.mjs
+    - tooling/scripts/mod-g-design-evidence.mjs
+    - tooling/scripts/marketing-design-evidence.mjs
+  distributed_to_customers: false
+  network_service_use: false
+  compatible_with_product_model: approved_development_tooling
+  legal_review:
+    required: true
+    reviewer: engineering_policy
+    decision: approved_unmodified_development_dependency
+    date: 2026-07-30
+  security_review:
+    owner: foundation-platform
+    result: synthetic_fixture_only_no_customer_data_and_release_notes_reviewed
+  update_owner: foundation-platform
+  upstream_tracking: "npm exact version; updates require accessibility evidence, clean CI and MPL notice review"
+  sbom_component: "pkg:npm/axe-core@4.12.1"
+  third_party_notice_entry: "docs/THIRD_PARTY_NOTICES.md"
+  tests:
+    - npm run design:verify
+    - npm run mod-f:design:verify
+    - npm run mod-g:design:verify
+    - npm run design:marketing-evidence
+  notes: "MPL-covered package remains unmodified and development-only. Version 4.12 can surface new accessibility findings, so every browser evidence suite is required before merge."
