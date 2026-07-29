@@ -7,6 +7,7 @@ import { handleImportBankStatement, handleListUnreconciled, handleReconcileState
 import { observeFinanceOperation } from "./finance-observability.js";
 import { handleFinanceReadiness } from "./finance-readiness-handler.js";
 import { handleInventoryRequest } from "./modules/inventory/handler.js";
+import { handlePosRequest } from "./modules/pos/handler.js";
 import { handleProcurementRequest } from "./modules/procurement/handler.js";
 import { handleCreatePaymentIntent, handleCreateRefund, handleImportSettlement, handlePaymentAction } from "./payment-handler.js";
 import { buildRequestContext } from "./request-context.js";
@@ -41,6 +42,8 @@ export default {
       if (inventoryResponse) return inventoryResponse;
       const procurementResponse = await handleProcurementRequest(request, url, context, database);
       if (procurementResponse) return procurementResponse;
+      const posResponse = await handlePosRequest(request, url, context, database);
+      if (posResponse) return posResponse;
 
       if (request.method === "POST" && url.pathname === "/v1/payments/intents") return await observeFinance("payment", "intent.create", async () => await handleCreatePaymentIntent(request, context, database, env));
       const paymentAction = url.pathname.match(/^\/v1\/payments\/intents\/([^/]+)\/(authorize|capture|void|recover)$/u);
