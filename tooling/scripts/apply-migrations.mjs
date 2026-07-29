@@ -8,6 +8,7 @@ import { executeSqlStatements } from "./sql-statements.mjs";
 const root = fileURLToPath(new URL("../..", import.meta.url));
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error("DATABASE_URL is required");
+const migrationLockName = "store-management-pos:schema-migrations";
 
 const availableModules = [
   { name: "FOUNDATION", manifest: "database/foundation/manifest.json", migrations: "database/foundation/migrations" },
@@ -68,6 +69,7 @@ function acceptedMarkers(migration) {
 
 const client = new Client({ connectionString });
 await client.connect();
+await client.query("SELECT pg_advisory_lock(hashtextextended($1, 0))", [migrationLockName]);
 try {
   for (const source of availableModules.filter((item) => requested.has(item.name))) {
     const manifest = JSON.parse(await readFile(path.join(root, source.manifest), "utf8"));
@@ -94,5 +96,6 @@ try {
     console.log("loaded synthetic development seed");
   }
 } finally {
+  await client.query("SELECT pg_advisory_unlock(hashtextextended($1, 0))", [migrationLockName]).catch(() => undefined);
   await client.end();
 }
