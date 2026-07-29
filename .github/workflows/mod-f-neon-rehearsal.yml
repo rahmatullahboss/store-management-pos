@@ -28,6 +28,30 @@ on:
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/mod-f-neon-rehearsal.yml"
+  pull_request:
+    paths:
+      - "database/foundation/**"
+      - "database/migrations/catalog/**"
+      - "database/migrations/pricing/**"
+      - "database/migrations/tax/**"
+      - "database/modules/inventory/**"
+      - "database/modules/procurement/**"
+      - "database/modules/customer/**"
+      - "database/modules/sales/**"
+      - "database/modules/fulfillment/**"
+      - "database/modules/payments/**"
+      - "database/modules/accounting/**"
+      - "database/modules/banking/**"
+      - "database/modules/pos/**"
+      - "database/modules/cash/**"
+      - "database/modules/localization/**"
+      - "tests/integration/mod-f-neon.test.mjs"
+      - "tooling/scripts/apply-migrations.mjs"
+      - "tooling/scripts/mod-f-neon-rehearsal-ci.mjs"
+      - "tooling/scripts/sql-statements.mjs"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/mod-f-neon-rehearsal.yml"
 
 permissions:
   contents: read
