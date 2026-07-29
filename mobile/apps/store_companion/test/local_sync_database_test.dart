@@ -34,14 +34,11 @@ void main() {
     final sync = _openSync(databasePath, key);
     expect(sync.syncSchemaVersion, 1);
     final migrated = sync.readDispatchableOperations(now: _time(10));
-    expect(
-      migrated.map((value) => value.localSequence),
-      <int>[1, 2],
-    );
-    expect(
-      migrated.map((value) => value.operation.operationId),
-      <String>['operation-001', 'operation-002'],
-    );
+    expect(migrated.map((value) => value.localSequence), <int>[1, 2]);
+    expect(migrated.map((value) => value.operation.operationId), <String>[
+      'operation-001',
+      'operation-002',
+    ]);
     expect(
       sync.commitPendingOperation(
         operationId: 'operation-003',
@@ -117,10 +114,10 @@ void main() {
     );
 
     final batch = sync.readDispatchableOperations(now: _time(10));
-    expect(
-      batch.map((value) => value.operation.operationId),
-      <String>['operation-001', 'operation-003'],
-    );
+    expect(batch.map((value) => value.operation.operationId), <String>[
+      'operation-001',
+      'operation-003',
+    ]);
     expect(batch.map((value) => value.localSequence), <int>[1, 3]);
     expect(
       () => sync.readDispatchableOperations(now: _time(10), limit: 0),
