@@ -69,8 +69,7 @@ final class EffectiveLocalisationContext {
   /// Client-side regulated presentation gate.
   ///
   /// The server remains authoritative for every legal or fiscal operation.
-  bool get allowsRegulatedPresentation =>
-      effective.allowsRegulatedPresentation;
+  bool get allowsRegulatedPresentation => effective.allowsRegulatedPresentation;
 
   /// Whether the active interface direction is right-to-left.
   bool get isRightToLeft => bootstrap.rtl;
