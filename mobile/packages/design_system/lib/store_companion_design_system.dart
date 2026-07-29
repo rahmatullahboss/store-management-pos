@@ -65,24 +65,23 @@ abstract final class OperationsLedgerTheme {
   /// Builds the light operational theme without a network font dependency.
   static ThemeData light() {
     final base = ThemeData.light(useMaterial3: true);
-    final colorScheme = ColorScheme.fromSeed(
-      seedColor: OperationsLedgerColors.accent,
-    ).copyWith(
-      primary: OperationsLedgerColors.accent,
-      onPrimary: Colors.white,
-      primaryContainer: OperationsLedgerColors.accentSoft,
-      onPrimaryContainer: OperationsLedgerColors.ink,
-      secondary: OperationsLedgerColors.railSoft,
-      onSecondary: Colors.white,
-      surface: OperationsLedgerColors.surface,
-      onSurface: OperationsLedgerColors.ink,
-      error: OperationsLedgerColors.danger,
-      onError: Colors.white,
-      errorContainer: OperationsLedgerColors.dangerSoft,
-      onErrorContainer: OperationsLedgerColors.danger,
-      outline: OperationsLedgerColors.lineStrong,
-      outlineVariant: OperationsLedgerColors.line,
-    );
+    final colorScheme =
+        ColorScheme.fromSeed(seedColor: OperationsLedgerColors.accent).copyWith(
+          primary: OperationsLedgerColors.accent,
+          onPrimary: Colors.white,
+          primaryContainer: OperationsLedgerColors.accentSoft,
+          onPrimaryContainer: OperationsLedgerColors.ink,
+          secondary: OperationsLedgerColors.railSoft,
+          onSecondary: Colors.white,
+          surface: OperationsLedgerColors.surface,
+          onSurface: OperationsLedgerColors.ink,
+          error: OperationsLedgerColors.danger,
+          onError: Colors.white,
+          errorContainer: OperationsLedgerColors.dangerSoft,
+          onErrorContainer: OperationsLedgerColors.danger,
+          outline: OperationsLedgerColors.lineStrong,
+          outlineVariant: OperationsLedgerColors.line,
+        );
 
     return base.copyWith(
       colorScheme: colorScheme,
