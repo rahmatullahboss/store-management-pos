@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "status": "passed",
+  "generatedAt": "2026-07-28T19:06:54.357Z",
+  "evidenceClass": "fresh-local-postgresql-recovery",
+  "database": "mod_a_recovery_validation",
+  "checks": [
+    {
+      "check": "append_only_trigger",
+      "expected": "55000",
+      "observed": "55000",
+      "passed": true,
+      "detail": "ERROR:  55000: price_tax_snapshots is append-only"
+    },
+    {
+      "check": "effective_window_overlap",
+      "expected": "23P01",
+      "observed": "23P01",
+      "passed": true,
+      "detail": "effective price list scope overlaps an existing published version"
+    },
+    {
+      "check": "idempotency_hash_mismatch",
+      "expected": "P0001",
+      "observed": "P0001",
+      "passed": true,
+      "detail": "idempotency key payload mismatch"
+    },
+    {
+      "check": "idempotent_replay",
+      "expected": "replayed=true",
+      "observed": "replayed=t",
+      "passed": true,
+      "detail": "Existing immutable snapshot returned"
+    },
+    {
+      "check": "optimistic_version_conflict",
+      "expected": "40001",
+      "observed": "40001",
+      "passed": true,
+      "detail": "price list version conflict"
+    },
+    {
+      "check": "runtime_snapshot_mutation_denied",
+      "expected": "42501",
+      "observed": "42501",
+      "passed": true,
+      "detail": "permission denied for table price_tax_snapshots"
+    },
+    {
+      "check": "runtime_tenant_isolation",
+      "expected": "0 rows",
+      "observed": "0 rows",
+      "passed": true,
+      "detail": "Beta tenant cannot see Alpha snapshot"
+    }
+  ]
+}
