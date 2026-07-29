@@ -55,8 +55,8 @@ const integratedAdminRoutes = composeAdminRoutes([
 ]);
 
 const MOD_G_EMBEDDED_STYLES = `<style>
-  .modg-page,.modg-int,.modg-saas{background:#0b1217;padding:1rem;border-radius:1rem;color:#e8edf2}
-  .modg-page h1,.modg-page h2,.modg-int h1,.modg-int h2,.modg-saas h1,.modg-saas h2{color:#f2f5f7}
+  .modg-page,.modg-int,.modg-saas{background:#0b1217;padding:1rem;border-radius:1rem;color:#e8edf2;min-width:0}
+  .modg-page h1,.modg-page h2,.modg-int h1,.modg-int h2,.modg-saas h1,.modg-saas h2{color:#f2f5f7;overflow-wrap:anywhere}
   .modg-page .modg-tabs a{color:#d6dfe5}
   .modg-page .modg-eyebrow,.modg-int .modg-int-eyebrow,.modg-int .modg-int-heading p,.modg-saas .modg-saas-eyebrow{color:#9ce5d6!important}
   .modg-page .modg-section-heading>p,.modg-page .modg-state p,.modg-int .modg-int-state p,.modg-saas .modg-saas-state p{color:#c1ccd3}
@@ -74,9 +74,22 @@ const MOD_G_EMBEDDED_STYLES = `<style>
   .modg-saas .modg-saas-badge--suspended,.modg-saas .modg-saas-badge--cancelled,.modg-saas .modg-saas-badge--failed,.modg-saas .modg-saas-badge--critical,.modg-saas .modg-saas-badge--high,.modg-saas .modg-saas-badge--revoked{color:#ffc0c6}
   .modg-page .modg-badge--running,.modg-page .modg-badge--rebuilding,.modg-saas .modg-saas-badge--running,.modg-saas .modg-saas-badge--investigating{color:#b9e3ff}
   .modg-page .modg-list span.modg-badge,.modg-saas .modg-saas-list span.modg-saas-badge{display:inline-flex}
-  .modg-page .modg-context{grid-template-columns:repeat(2,minmax(0,1fr));min-width:0;flex:0 1 30rem}
-  .modg-page .modg-context div,.modg-page .modg-context dd{min-width:0;overflow-wrap:anywhere}
+  .modg-page .modg-context{grid-template-columns:repeat(2,minmax(0,1fr));min-width:0;max-width:100%;width:100%;flex:0 1 30rem}
+  .modg-page .modg-context div,.modg-page .modg-context dd,.modg-page .modg-metric dl,.modg-page .modg-metric dl>div,.modg-page .modg-metric dd{min-width:0;overflow-wrap:anywhere}
   .modg-page .modg-hero>div:first-child{min-width:0;flex:1}
+  .modg-saas>header,.modg-saas>header>div,.modg-saas>header dl,.modg-saas>header dl div{min-width:0;max-width:100%}
+  @media(max-width:1100px){
+    .modg-page .modg-hero{display:grid;grid-template-columns:minmax(0,1fr)}
+    .modg-page .modg-context{flex:none}
+  }
+  @media(max-width:720px){
+    .modg-page .modg-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible}
+    .modg-page .modg-tabs a{min-width:0;white-space:normal;text-align:center;overflow-wrap:anywhere}
+    .modg-saas>header{display:grid;grid-template-columns:minmax(0,1fr)}
+    .modg-saas>header dl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.45rem;overflow:visible!important}
+    .modg-saas>header dl div{min-width:0!important;padding:.5rem .35rem!important}
+    .modg-saas>header dd{overflow-wrap:anywhere}
+  }
 </style>`;
 
 export interface AdminShellInput {
