@@ -1,0 +1,40 @@
+{
+  "generatedAt": "2026-07-29T13:26:09.420Z",
+  "workflowRunId": 30455964989,
+  "artifactId": 8725518499,
+  "artifactDigest": "sha256:a7ddf2891ea3fc17083cd6408c01fb4ac1d0712b6a8fee03ae50f4c352e6fff9",
+  "projectId": "twilight-boat-26805962",
+  "databaseName": "neondb",
+  "roleName": "neondb_owner",
+  "branch": {
+    "id": "br-cool-mode-axxzm8to",
+    "name": "dev/module-store-companion-mobile",
+    "parentId": "br-rapid-river-axoz0rfs",
+    "createdDuringRecordedRun": false
+  },
+  "parent": {
+    "id": "br-rapid-river-axoz0rfs",
+    "name": "dev/module-pos-cash-offline"
+  },
+  "verification": {
+    "schemaMatches": true,
+    "relationMatches": true,
+    "rlsMatches": true,
+    "migrationTableMatches": true,
+    "schemaCount": 19,
+    "relationGroups": 21,
+    "forcedRlsCount": 184,
+    "migrationTables": [
+      {
+        "table_schema": "platform",
+        "table_name": "schema_migrations"
+      }
+    ]
+  },
+  "safety": {
+    "productionDataUsed": false,
+    "businessSchemaOwnedByMobile": false,
+    "directMobileDatabaseAccessAllowed": false,
+    "branchRetainedForSyntheticEvidence": true
+  }
+}
