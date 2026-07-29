@@ -156,8 +156,16 @@ manifest_text = manifest_text.replace(
     'android:label="store_companion"',
     'android:label="@string/app_name"',
 )
+manifest_text = manifest_text.replace(
+    'android:label="@string/app_name"\n        android:name=',
+    'android:label="@string/app_name"\n'
+    '        android:allowBackup="false"\n'
+    '        android:name=',
+)
 if 'android:label="@string/app_name"' not in manifest_text:
     raise SystemExit("Android application label did not match the reviewed template")
+if 'android:allowBackup="false"' not in manifest_text:
+    raise SystemExit("Android secure-storage backup policy was not applied")
 manifest.write_text(manifest_text)
 
 project = app_dir / "ios/Runner.xcodeproj/project.pbxproj"
@@ -180,6 +188,8 @@ launch_readme.write_text(launch_readme.read_text().rstrip("\n") + "\n")
     "- development: `com.ozzyl.storecompanion.dev`\n"
     "- staging: `com.ozzyl.storecompanion.staging`\n"
     "- production: `com.ozzyl.storecompanion`\n\n"
+    "Android application backup is disabled so platform secure-storage keys "
+    "and encrypted preferences are not restored into a different keystore.\n\n"
     "Generated launcher artwork is development-only Flutter placeholder art. "
     "Signed pilot and production release remain blocked until approved Store "
     "Companion artwork is supplied and reviewed.\n"
