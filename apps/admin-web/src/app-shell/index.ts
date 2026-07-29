@@ -7,6 +7,8 @@ import { CATALOG_ADMIN_ROUTES } from "../modules/catalog/routes.js";
 import { renderCustomerWorkspace, type CustomerWorkspaceInput } from "../modules/customer/surface.js";
 import { renderFulfillmentWorkspace, type FulfillmentWorkspaceInput } from "../modules/fulfillment/surface.js";
 import { renderInventoryOperationsPage, type InventoryDashboardFixture } from "../modules/inventory/index.js";
+import { renderLocalizationControlPage, type LocalizationControlPage } from "../modules/localization/page.js";
+import { LOCALIZATION_COMPLIANCE_ADMIN_ROUTES } from "../modules/localization/routes.js";
 import { renderPaymentOperationsPage, type PaymentOperationsPage } from "../modules/payments/page.js";
 import { renderPosReconciliationPage, type PosReconciliationPage } from "../modules/pos/reconciliation-page.js";
 import { PRICING_TAX_ADMIN_ROUTES } from "../modules/pricing/routes.js";
@@ -37,7 +39,15 @@ const MOD_D_ADMIN_ROUTES: readonly AdminRouteDescriptor[] = Object.freeze([
   Object.freeze({ id: "pos.reconciliation", path: "/pos/reconciliation", navigationLabel: "POS reconciliation", permission: "pos.sync.read", module: "pos", order: 510, exact: true }),
 ]);
 
-const integratedAdminRoutes = composeAdminRoutes([CATALOG_ADMIN_ROUTES, PRICING_TAX_ADMIN_ROUTES, MOD_B_ADMIN_ROUTES, MOD_C_ADMIN_ROUTES, MOD_E_ADMIN_ROUTES, MOD_D_ADMIN_ROUTES]);
+const integratedAdminRoutes = composeAdminRoutes([
+  CATALOG_ADMIN_ROUTES,
+  PRICING_TAX_ADMIN_ROUTES,
+  MOD_B_ADMIN_ROUTES,
+  MOD_C_ADMIN_ROUTES,
+  MOD_E_ADMIN_ROUTES,
+  MOD_D_ADMIN_ROUTES,
+  LOCALIZATION_COMPLIANCE_ADMIN_ROUTES,
+]);
 
 export interface AdminShellInput {
   readonly displayName: string;
@@ -50,6 +60,30 @@ export interface AdminShellInput {
   readonly businessDate?: string;
   readonly locale?: string;
   readonly offline?: boolean;
+}
+
+function renderEmbeddedLocalizationControlPage(page: LocalizationControlPage): string {
+  const rendered = renderLocalizationControlPage(page);
+  const opening = '<main class="modf-control"';
+  const openingIndex = rendered.indexOf(opening);
+  const closingIndex = rendered.lastIndexOf("</main>");
+  if (openingIndex < 0 || closingIndex < openingIndex) {
+    throw new Error("Localization control page root contract is invalid");
+  }
+  let embedded = `${rendered.slice(0, openingIndex)}<section class="modf-control"${rendered.slice(openingIndex + opening.length, closingIndex)}</section>${rendered.slice(closingIndex + 7)}`;
+  embedded = embedded.replace(
+    '<div class="modf-table-wrap">',
+    '<div class="modf-table-wrap" tabindex="0" role="region" aria-label="Country-pack versions table">',
+  );
+  embedded = embedded.replace(
+    '<div class="modf-table-wrap">',
+    '<div class="modf-table-wrap" tabindex="0" role="region" aria-label="Compliance evidence table">',
+  );
+  return `<style>
+    .modf-active .modf-badge--attention{color:#f0d36d}
+    .modf-table-wrap:focus-visible{outline:3px solid #276e8f;outline-offset:-3px}
+    @media(max-width:1100px){.modf-active{grid-template-columns:1fr 1fr!important}.modf-active dl{grid-column:1/-1!important}}
+  </style>${embedded}`;
 }
 
 export function renderAdminShell(input: AdminShellInput): string {
@@ -113,4 +147,20 @@ export function renderFinanceReadinessAdminPage(input: Omit<AdminShellInput, "co
 
 export function renderPosReconciliationAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page: PosReconciliationPage): string {
   return renderAdminShell({ ...input, currentPath: "/pos/reconciliation", content: renderPosReconciliationPage(page) });
+}
+
+export function renderLocalizationAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page: LocalizationControlPage): string {
+  return renderAdminShell({
+    ...input,
+    currentPath: "/localization",
+    content: renderEmbeddedLocalizationControlPage({ ...page, focus: "country_packs" }),
+  });
+}
+
+export function renderComplianceAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page: LocalizationControlPage): string {
+  return renderAdminShell({
+    ...input,
+    currentPath: "/compliance",
+    content: renderEmbeddedLocalizationControlPage({ ...page, focus: "compliance" }),
+  });
 }
