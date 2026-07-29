@@ -5,6 +5,10 @@ import type {
 } from "./contracts.js";
 
 const SHA256_PATTERN = /^[a-f0-9]{64}$/u;
+const BLOCKED_DIAGNOSTIC_KEY = /(?:secret|token|password|credential|authorization|api[_-]?key|signature)/iu;
+const MAX_DIAGNOSTIC_DEPTH = 8;
+const MAX_DIAGNOSTIC_ENTRIES = 100;
+const MAX_DIAGNOSTIC_STRING = 4_096;
 
 export function assertWebhookSubscription(subscription: WebhookSubscriptionV1): void {
   let endpoint: URL;
@@ -41,29 +45,14 @@ export function transitionWebhookDelivery(
   if (!SHA256_PATTERN.test(delivery.payloadHash)) throw new TypeError("Webhook payload hash must be SHA-256 hex");
   const terminal = delivery.status === "delivered" || delivery.status === "dead_letter" || delivery.status === "cancelled";
   if (terminal) throw new TypeError(`Webhook delivery ${delivery.deliveryId} is terminal`);
-
-  if (command === "start" && delivery.status !== "queued" && delivery.status !== "retry_wait") {
-    throw new TypeError("Only queued or retrying webhook deliveries can start");
-  }
+  if (command === "start" && delivery.status !== "queued" && delivery.status !== "retry_wait") throw new TypeError("Only queued or retrying webhook deliveries can start");
   if (command === "deliver" && delivery.status !== "delivering") throw new TypeError("Webhook must be delivering before success");
-  if ((command === "retry" || command === "dead_letter") && delivery.status !== "delivering") {
-    throw new TypeError("Webhook failure outcome requires an active delivery attempt");
-  }
-
-  const status = command === "start"
-    ? "delivering"
-    : command === "deliver"
-      ? "delivered"
-      : command === "retry"
-        ? "retry_wait"
-        : command === "dead_letter"
-          ? "dead_letter"
-          : "cancelled";
-  const attemptCount = command === "start" ? delivery.attemptCount + 1 : delivery.attemptCount;
+  if ((command === "retry" || command === "dead_letter") && delivery.status !== "delivering") throw new TypeError("Webhook failure outcome requires an active delivery attempt");
+  const status = command === "start" ? "delivering" : command === "deliver" ? "delivered" : command === "retry" ? "retry_wait" : command === "dead_letter" ? "dead_letter" : "cancelled";
   return Object.freeze({
     ...delivery,
     status,
-    attemptCount,
+    attemptCount: command === "start" ? delivery.attemptCount + 1 : delivery.attemptCount,
     ...(command === "deliver" ? { deliveredAt: observedAt } : {}),
     ...(responseCode === undefined ? {} : { lastResponseCode: responseCode }),
   });
@@ -73,15 +62,11 @@ export function assertConnectorMappingsLoopSafe(mappings: readonly ConnectorFiel
   const identities = new Set<string>();
   const ownedPlatformFields = new Map<string, ConnectorFieldMappingV1>();
   const ownedExternalFields = new Map<string, ConnectorFieldMappingV1>();
-
   for (const mapping of mappings) {
     const identity = `${mapping.connectionId}:${mapping.resourceType}:${mapping.direction}:${mapping.platformField}:${mapping.externalField}`;
     if (identities.has(identity)) throw new TypeError("Duplicate connector field mapping");
     identities.add(identity);
-    if (mapping.platformField.trim().length === 0 || mapping.externalField.trim().length === 0) {
-      throw new TypeError("Connector mapping fields are required");
-    }
-
+    if (mapping.platformField.trim().length === 0 || mapping.externalField.trim().length === 0) throw new TypeError("Connector mapping fields are required");
     const scope = `${mapping.connectionId}:${mapping.resourceType}`;
     const platformKey = `${scope}:${mapping.platformField}`;
     const externalKey = `${scope}:${mapping.externalField}`;
@@ -95,18 +80,33 @@ export function assertConnectorMappingsLoopSafe(mappings: readonly ConnectorFiel
       if (existing && existing.direction !== mapping.direction) throw new TypeError("External-owned field cannot be synchronized in both directions");
       ownedExternalFields.set(externalKey, mapping);
     }
-    if (mapping.ownership === "platform" && mapping.direction !== "outbound") {
-      throw new TypeError("Platform-owned fields must synchronize outbound");
-    }
-    if (mapping.ownership === "external" && mapping.direction !== "inbound") {
-      throw new TypeError("External-owned fields must synchronize inbound");
-    }
+    if (mapping.ownership === "platform" && mapping.direction !== "outbound") throw new TypeError("Platform-owned fields must synchronize outbound");
+    if (mapping.ownership === "external" && mapping.direction !== "inbound") throw new TypeError("External-owned fields must synchronize inbound");
   }
 }
 
+function redactDiagnosticValue(value: unknown, depth: number, seen: WeakSet<object>): unknown {
+  if (typeof value === "string") return value.length <= MAX_DIAGNOSTIC_STRING ? value : `${value.slice(0, MAX_DIAGNOSTIC_STRING)}…`;
+  if (value === null || typeof value !== "object") return value;
+  if (depth >= MAX_DIAGNOSTIC_DEPTH) return "[MaxDepth]";
+  if (seen.has(value)) return "[Circular]";
+  seen.add(value);
+  if (Array.isArray(value)) {
+    const sanitized = value.slice(0, MAX_DIAGNOSTIC_ENTRIES).map((item) => redactDiagnosticValue(item, depth + 1, seen));
+    if (value.length > MAX_DIAGNOSTIC_ENTRIES) sanitized.push(`[${value.length - MAX_DIAGNOSTIC_ENTRIES} more items]`);
+    return Object.freeze(sanitized);
+  }
+  const output: Record<string, unknown> = {};
+  const entries = Object.entries(value as Readonly<Record<string, unknown>>).slice(0, MAX_DIAGNOSTIC_ENTRIES);
+  for (const [key, nested] of entries) {
+    if (!BLOCKED_DIAGNOSTIC_KEY.test(key)) output[key] = redactDiagnosticValue(nested, depth + 1, seen);
+  }
+  if (Object.keys(value).length > MAX_DIAGNOSTIC_ENTRIES) output.truncatedEntries = Object.keys(value).length - MAX_DIAGNOSTIC_ENTRIES;
+  return Object.freeze(output);
+}
+
 export function redactIntegrationDiagnostic(input: Readonly<Record<string, unknown>>): Readonly<Record<string, unknown>> {
-  const blocked = /(?:secret|token|password|credential|authorization|api[_-]?key|signature)/iu;
-  return Object.freeze(Object.fromEntries(Object.entries(input).filter(([key]) => !blocked.test(key))));
+  return redactDiagnosticValue(input, 0, new WeakSet<object>()) as Readonly<Record<string, unknown>>;
 }
 
 export function protectSpreadsheetCell(value: string): string {
