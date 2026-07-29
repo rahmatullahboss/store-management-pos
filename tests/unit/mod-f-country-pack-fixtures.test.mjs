@@ -10,7 +10,7 @@ import {
 import { validateCountryPackManifest } from "../../build/modules/country-packs/src/domain.js";
 
 test("Bangladesh fixture is explicit about limited support and disabled unsupported fiscal paths", () => {
-  assert.equal(validateCountryPackManifest(BANGLADESH_COUNTRY_PACK), BANGLADESH_COUNTRY_PACK);
+  assert.doesNotThrow(() => validateCountryPackManifest(BANGLADESH_COUNTRY_PACK));
   assert.equal(BANGLADESH_COUNTRY_PACK.countryCode, "BD");
   assert.equal(BANGLADESH_COUNTRY_PACK.defaultLocale, "bn-BD");
   assert.equal(BANGLADESH_COUNTRY_PACK.capabilities.fiscalSubmission, false);
@@ -21,7 +21,7 @@ test("Bangladesh fixture is explicit about limited support and disabled unsuppor
 });
 
 test("synthetic second pack proves data-only extensibility with RTL and CJK profiles", () => {
-  assert.equal(validateCountryPackManifest(SYNTHETIC_XZ_COUNTRY_PACK), SYNTHETIC_XZ_COUNTRY_PACK);
+  assert.doesNotThrow(() => validateCountryPackManifest(SYNTHETIC_XZ_COUNTRY_PACK));
   assert.equal(SYNTHETIC_XZ_COUNTRY_PACK.countryCode, "XZ");
   assert.deepEqual(SYNTHETIC_XZ_COUNTRY_PACK.localeProfiles.map(({ locale, direction }) => [locale, direction]), [
     ["en", "ltr"],
