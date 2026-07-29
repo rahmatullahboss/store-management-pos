@@ -21,7 +21,7 @@ test("MOD-F migration manifest is deterministic and ordered after integrated MOD
   const { manifest, migrations } = await load();
   assert.equal(manifest.module, "MOD-F-LOCALIZATION");
   assert.equal(manifest.order, 50);
-  assert.deepEqual(migrations.map(({ id }) => id), ["LOC-0001", "LOC-0002", "LOC-0003"]);
+  assert.deepEqual(migrations.map(({ id }) => id), ["LOC-0001", "LOC-0002", "LOC-0003", "LOC-0004"]);
   const present = (await readdir(migrationsUrl)).filter((file) => file.endsWith(".sql")).sort();
   assert.deepEqual(present, migrations.map(({ file }) => file).sort());
   for (const migration of migrations) {
@@ -77,4 +77,18 @@ test("MOD-F command functions are tenant-scoped, idempotent and runtime-callable
   assert.match(sql, /REVOKE ALL ON FUNCTION/u);
   assert.match(sql, /GRANT EXECUTE ON FUNCTION/u);
   assert.doesNotMatch(sql, /CURRENT_DATE/u);
+});
+
+test("MOD-F provisions read permissions separately from privileged commands", async () => {
+  const { migrations } = await load();
+  const sql = migrations.map(({ sql: migrationSql }) => migrationSql).join("\n");
+  for (const permission of [
+    "localization.pack.read",
+    "localization.document.read",
+    "localization.fiscal.read",
+    "localization.privacy.read",
+  ]) assert.match(sql, new RegExp(permission.replaceAll(".", "\\."), "u"));
+  assert.match(sql, /localization\.document\.publish/u);
+  assert.match(sql, /localization\.fiscal\.submit/u);
+  assert.match(sql, /localization\.privacy\.execute/u);
 });
