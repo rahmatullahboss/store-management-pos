@@ -1,6 +1,6 @@
 # MOD-G — Reporting, Integrations and SaaS Administration Handoff
 
-**Checkpoint date:** 2026-07-29  
+**Checkpoint date:** 2026-07-30  
 **Git branch:** `module/reporting-integrations-saas-v1`  
 **Worktree:** `.worktrees/reporting-integrations-saas`  
 **Approved Wave 2 release:** `93f8d98164dc105141a71b85dd2af5a98e9e31e9`  
@@ -76,6 +76,19 @@ Checkpoint evidence is recorded in `docs/architecture/mod-g/worker-orchestration
 
 Checkpoint evidence is recorded in `docs/architecture/mod-g/public-api-control-plane-checkpoint.md`.
 
+## Completed checkpoint 4 — persistent API clients and credential verification
+
+- Added `INT-0003` with idempotent API-client registration, exact credential-version rotation and active/suspended/revoked status transitions.
+- Added append-only `integration.api_client_security_events` with forced tenant RLS and command-only runtime writes.
+- Credential material remains outside PostgreSQL; only namespaced `secret://`, `vault://`, `kms://` or `provider://` references are accepted.
+- Added optimistic version checks, advisory locks, idempotency conflict detection and terminal revocation.
+- Added transactional audit/outbox evidence without including credential references or presented key material in metadata or payloads.
+- Added a fail-closed credential provider port that checks tenant, client, authentication, status and validity before secret-provider access.
+- Added deterministic binding rotation that retires the old binding and increments the credential version.
+- Added unit and architecture coverage for reference safety, provider failure, rotation, migration order/checksum, forced RLS and absence of secret-value columns.
+
+Checkpoint evidence is recorded in `docs/architecture/mod-g/api-client-credentials-checkpoint.md`.
+
 ## Verification evidence
 
 ### Contracts and migration foundation
@@ -99,4 +112,4 @@ Implementation head `b308f5f1653e9c6a41b6e10bab849a59866893ef` passed:
 
 ## Current checkpoint
 
-Core runtime commands/workers and the public API authorization/discovery control plane are complete. The next coherent checkpoint is persistent API-client/service-principal commands and credential verification, followed by scoped partner data routes, generic CSV/REST connectors, SaaS lifecycle orchestration and the reporting/integration/SaaS admin web surfaces.
+Persistent API-client/service-principal commands and credential-reference verification are implemented. The next coherent checkpoint is scoped partner data routes and the complete OpenAPI operation catalog, followed by generic CSV/REST connectors, a priority ecommerce adapter, SaaS lifecycle orchestration and the reporting/integration/SaaS admin web surfaces.
