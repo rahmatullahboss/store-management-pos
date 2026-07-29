@@ -351,19 +351,21 @@ final class StoreCompanionSyncDatabase {
       ],
     );
 
-    return rows.map((Row row) {
-      final operationId = row['operation_id']! as String;
-      final operation = _base.readPendingOperation(operationId);
-      if (operation == null) {
-        throw const LocalDataSecurityException(
-          'A sequenced operation is missing its durable operation row.',
-        );
-      }
-      return SequencedPendingOperationSnapshot(
-        localSequence: row['local_sequence']! as int,
-        operation: operation,
-      );
-    }).toList(growable: false);
+    return rows
+        .map((Row row) {
+          final operationId = row['operation_id']! as String;
+          final operation = _base.readPendingOperation(operationId);
+          if (operation == null) {
+            throw const LocalDataSecurityException(
+              'A sequenced operation is missing its durable operation row.',
+            );
+          }
+          return SequencedPendingOperationSnapshot(
+            localSequence: row['local_sequence']! as int,
+            operation: operation,
+          );
+        })
+        .toList(growable: false);
   }
 
   /// Atomically applies one bounded change page and advances its cursor.
@@ -409,10 +411,7 @@ final class StoreCompanionSyncDatabase {
           mutation.projectionType,
           'projectionType',
         );
-        final resourceId = _validateOpaque(
-          mutation.resourceId,
-          'resourceId',
-        );
+        final resourceId = _validateOpaque(mutation.resourceId, 'resourceId');
         final serverVersion = _validateOpaque(
           mutation.serverVersion,
           'serverVersion',
@@ -461,9 +460,7 @@ final class StoreCompanionSyncDatabase {
             serverVersion,
             _validateJsonObject(payloadJson, 'payloadJson'),
             _timestamp(observedAt),
-            mutation.expiresAt == null
-                ? null
-                : _timestamp(mutation.expiresAt!),
+            mutation.expiresAt == null ? null : _timestamp(mutation.expiresAt!),
           ],
         );
         upserts += 1;
@@ -555,8 +552,7 @@ final class StoreCompanionSyncDatabase {
   }
 
   void _backfillSequences() {
-    final rows = _database.select(
-      '''
+    final rows = _database.select('''
       SELECT operation.partition_key, operation.operation_id
       FROM pending_operations AS operation
       LEFT JOIN pending_operation_sequences AS sequence
@@ -564,8 +560,7 @@ final class StoreCompanionSyncDatabase {
        AND sequence.operation_id = operation.operation_id
       WHERE sequence.operation_id IS NULL
       ORDER BY operation.partition_key, operation.created_at, operation.operation_id
-      ''',
-    );
+      ''');
     String? activePartition;
     var nextSequence = 1;
     for (final row in rows) {
@@ -582,11 +577,7 @@ final class StoreCompanionSyncDatabase {
           local_sequence
         ) VALUES (?, ?, ?)
         ''',
-        <Object?>[
-          rowPartition,
-          row['operation_id']! as String,
-          nextSequence,
-        ],
+        <Object?>[rowPartition, row['operation_id']! as String, nextSequence],
       );
       nextSequence += 1;
       _database.execute(
