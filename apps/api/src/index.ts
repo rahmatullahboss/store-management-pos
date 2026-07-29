@@ -53,20 +53,35 @@ export default {
       if (request.method === "POST" && url.pathname === "/v1/settlements/import") return await observeFinance("payment", "settlement.import", async () => await handleImportSettlement(request, context, database, env));
       if (request.method === "POST" && url.pathname === "/v1/accounting/journals") return await observeFinance("accounting", "journal.post", async () => await handlePostJournal(request, context, database));
       const journalReversal = url.pathname.match(/^\/v1\/accounting\/journals\/([^/]+)\/reverse$/u);
-      if (request.method === "POST" && journalReversal?.[1]) return await observeFinance("accounting", "journal.reverse", async () => await handleReverseJournal(request, context, database, journalReversal[1]));
+      if (request.method === "POST" && journalReversal?.[1]) {
+        const journalId = journalReversal[1];
+        return await observeFinance("accounting", "journal.reverse", async () => await handleReverseJournal(request, context, database, journalId));
+      }
       if (request.method === "POST" && url.pathname === "/v1/accounting/open-items") return await observeFinance("accounting", "open_item.create", async () => await handleCreateOpenItem(request, context, database));
       const openItemAllocation = url.pathname.match(/^\/v1\/accounting\/open-items\/([^/]+)\/allocations$/u);
-      if (request.method === "POST" && openItemAllocation?.[1]) return await observeFinance("accounting", "open_item.allocate", async () => await handleAllocateOpenItem(request, context, database, openItemAllocation[1]));
+      if (request.method === "POST" && openItemAllocation?.[1]) {
+        const openItemId = openItemAllocation[1];
+        return await observeFinance("accounting", "open_item.allocate", async () => await handleAllocateOpenItem(request, context, database, openItemId));
+      }
       const periodAction = url.pathname.match(/^\/v1\/accounting\/periods\/([^/]+)\/(close|reopen)$/u);
-      if (request.method === "POST" && periodAction?.[1] && periodAction[2] === "close") return await observeFinance("accounting", "period.close", async () => await handleClosePeriod(request, context, database, periodAction[1]));
-      if (request.method === "POST" && periodAction?.[1] && periodAction[2] === "reopen") return await observeFinance("accounting", "period.reopen", async () => await handleReopenPeriod(request, context, database, periodAction[1]));
+      if (request.method === "POST" && periodAction?.[1] && periodAction[2] === "close") {
+        const periodId = periodAction[1];
+        return await observeFinance("accounting", "period.close", async () => await handleClosePeriod(request, context, database, periodId));
+      }
+      if (request.method === "POST" && periodAction?.[1] && periodAction[2] === "reopen") {
+        const periodId = periodAction[1];
+        return await observeFinance("accounting", "period.reopen", async () => await handleReopenPeriod(request, context, database, periodId));
+      }
       if (request.method === "GET" && url.pathname === "/v1/accounting/reports/trial-balance") return await observeFinance("accounting", "report.trial_balance", async () => await handleTrialBalance(url, context, database));
       if (request.method === "GET" && url.pathname === "/v1/accounting/reports/general-ledger") return await observeFinance("accounting", "report.general_ledger", async () => await handleGeneralLedger(url, context, database));
       if (request.method === "GET" && url.pathname === "/v1/accounting/reports/open-item-aging") return await observeFinance("accounting", "report.open_item_aging", async () => await handleOpenItemAging(url, context, database));
       if (request.method === "POST" && url.pathname === "/v1/banking/statements/import") return await observeFinance("banking", "statement.import", async () => await handleImportBankStatement(request, context, database));
       if (request.method === "POST" && url.pathname === "/v1/banking/reconciliations") return await observeFinance("banking", "reconciliation.match", async () => await handleReconcileStatementLine(request, context, database));
       const reconciliationReversal = url.pathname.match(/^\/v1\/banking\/reconciliations\/([^/]+)\/reverse$/u);
-      if (request.method === "POST" && reconciliationReversal?.[1]) return await observeFinance("banking", "reconciliation.reverse", async () => await handleReverseReconciliation(request, context, database, reconciliationReversal[1]));
+      if (request.method === "POST" && reconciliationReversal?.[1]) {
+        const reconciliationId = reconciliationReversal[1];
+        return await observeFinance("banking", "reconciliation.reverse", async () => await handleReverseReconciliation(request, context, database, reconciliationId));
+      }
       if (request.method === "POST" && url.pathname === "/v1/banking/reconciliation-runs") return await observeFinance("banking", "reconciliation.run", async () => await handleRecordReconciliationRun(request, context, database));
       if (request.method === "GET" && url.pathname === "/v1/banking/unreconciled") return await observeFinance("banking", "reconciliation.unreconciled", async () => await handleListUnreconciled(url, context, database));
       if (request.method === "GET" && url.pathname === "/v1/finance/readiness") return await observeFinance("finance", "readiness.read", async () => await handleFinanceReadiness(context, database));
