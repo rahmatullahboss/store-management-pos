@@ -1,0 +1,17 @@
+{
+  "module": "MOD-F-LOCALIZATION",
+  "version": 1,
+  "order": 50,
+  "migrations": [
+    {
+      "id": "LOC-0001",
+      "file": "LOC-0001-localization-core.sql",
+      "sha256": "ad869cf3de59f814a7c562eb8f5ed72f58530de33437c8c46e1881f813b8d221"
+    },
+    {
+      "id": "LOC-0002",
+      "file": "LOC-0002-localization-commands.sql",
+      "sha256": "2fb4d647953e26461b0640291cdab7c049b325bc68ccb0c7a1fb4fea3e5709ac"
+    }
+  ]
+}
