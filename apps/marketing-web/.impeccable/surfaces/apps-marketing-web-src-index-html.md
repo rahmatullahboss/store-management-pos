@@ -28,16 +28,16 @@ The surface keeps the stock-room rail, warm ledger paper, exact numeric alignmen
 
 ## Pricing recommendation
 
-The launch model charges primarily by operating scale—stores and registers—rather than every ordinary staff seat.
+The launch model uses a low-friction entry price and then grows primarily by operating scale—stores and registers—rather than charging for every ordinary staff seat.
 
 | Plan | Monthly | Annual | Included scale |
 |---|---:|---:|---|
-| Launch | ৳2,990 | ৳29,900 | 1 store, 2 registers, 5 staff accounts |
-| Growth | ৳7,990 | ৳79,900 | 3 stores, 8 registers, 20 staff accounts |
-| Scale | ৳19,900 | ৳199,000 | 10 stores, 25 registers, 75 staff accounts |
+| Launch | ৳899 | ৳8,990 | 1 store, 2 registers, 5 staff accounts |
+| Growth | ৳2,499 | ৳24,990 | 3 stores, 8 registers, 20 staff accounts |
+| Scale | ৳5,999 | ৳59,990 | 10 stores, 25 registers, 75 staff accounts |
 | Enterprise | Custom | Custom | Country packs, legal entities, SSO, migration and tailored integrations |
 
-These are recommended early-access prices, not existing customer commitments. Validate willingness to pay through pilot proposals before public launch. Hardware, payment-processing fees, VAT, custom integrations, data migration and on-site implementation remain separate.
+Annual pricing includes roughly two months at no additional cost. These are recommended early-access prices, not existing customer commitments. Validate conversion, support cost and willingness to pay through pilot proposals before public launch. Hardware, payment-processing fees, VAT, custom integrations, data migration and on-site implementation remain separate.
 
 ## Verification
 
