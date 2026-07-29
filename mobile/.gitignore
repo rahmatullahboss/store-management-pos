@@ -1,0 +1,23 @@
+.dart_tool/
+.packages
+build/
+coverage/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.idea/
+.vscode/
+.DS_Store
+
+# Platform-specific transient files generated after Android/iOS projects land.
+**/android/.gradle/
+**/android/local.properties
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/Flutter/ephemeral/
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/flutter_export_environment.sh
+
+# Keep pubspec.lock committed for this application workspace after the first
+# executable `flutter pub get` checkpoint.
+!pubspec.lock
