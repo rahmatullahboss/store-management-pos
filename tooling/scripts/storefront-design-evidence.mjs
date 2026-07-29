@@ -82,7 +82,7 @@ async function waitForServer(server) {
     }
     try {
       const response = await fetch(
-        `${origin}/__evidence/storefront?locale=en-GB`,
+        `${origin}/evidence/storefront?locale=en-GB`,
         { signal: AbortSignal.timeout(1_000) },
       );
       if (response.ok) return;
@@ -125,7 +125,7 @@ async function runDetector() {
 }
 
 function scenarioUrl(scenario) {
-  const url = new URL("/__evidence/storefront", origin);
+  const url = new URL("/evidence/storefront", origin);
   if (scenario.locale === "ar") url.searchParams.set("locale", "ar");
   return url.toString();
 }
