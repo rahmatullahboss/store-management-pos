@@ -1,6 +1,6 @@
 {
   "module": "MOD-D-POS",
-  "version": 6,
+  "version": 7,
   "order": 40,
   "migrations": [
     {
@@ -32,6 +32,11 @@
       "id": "POS-0006",
       "file": "POS-0006-runtime-commands.sql",
       "sha256": "4f92accdd7ef23d91b0086b746822ac7c75623bb0cedefecaae9431f076cb84d"
+    },
+    {
+      "id": "POS-0007",
+      "file": "POS-0007-function-privilege-hardening.sql",
+      "sha256": "cb4bf12df726ca24276a97d2b4429e7a7a14d14d59a4c53f992099c51b60ca89"
     }
   ]
 }
