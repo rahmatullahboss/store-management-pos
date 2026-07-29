@@ -55,12 +55,8 @@ final class MobileRuntimeConfig {
     authorizationEndpoint: Uri.parse(
       'https://identity.store-companion.dev.test/authorize',
     ),
-    redirectUri: Uri.parse(
-      'com.ozzyl.storecompanion.dev://oauth/callback',
-    ),
-    allowedDeepLinkHosts: const <String>{
-      'links.store-companion.dev.test',
-    },
+    redirectUri: Uri.parse('com.ozzyl.storecompanion.dev://oauth/callback'),
+    allowedDeepLinkHosts: const <String>{'links.store-companion.dev.test'},
   );
 
   static final RegExp _applicationIdPattern = RegExp(
@@ -168,8 +164,7 @@ final class MobileRuntimeConfig {
 
     if (allowedDeepLinkHosts.isEmpty ||
         allowedDeepLinkHosts.any(
-          (String host) =>
-              host.trim().isEmpty || host != host.toLowerCase(),
+          (String host) => host.trim().isEmpty || host != host.toLowerCase(),
         )) {
       throw const RuntimeConfigurationException(
         'At least one lowercase reviewed deep-link host is required.',
@@ -196,9 +191,7 @@ final class MobileRuntimeConfig {
         uri.userInfo.isNotEmpty ||
         uri.hasQuery ||
         uri.hasFragment) {
-      throw RuntimeConfigurationException(
-        '$label must be a clean HTTPS URI.',
-      );
+      throw RuntimeConfigurationException('$label must be a clean HTTPS URI.');
     }
   }
 
