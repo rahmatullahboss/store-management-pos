@@ -147,3 +147,5 @@ export function assertSupportImpersonationActive(
   if (timestamp < Date.parse(grant.issuedAt) || timestamp >= Date.parse(grant.expiresAt)) throw new TypeError("Support impersonation grant is outside its approval window");
   if (!grant.scopes.includes(scope)) throw new TypeError("Support impersonation scope is not approved");
 }
+
+export const assertImpersonationGrantActive = assertSupportImpersonationActive;
