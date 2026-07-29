@@ -79,29 +79,20 @@ function offlineOperation() {
   };
 }
 
-test("MOD-D cart repository preserves an arbitrarily large exact decimal quantity", async () => {
+test("MOD-D cart command preserves the maximum-scale exact decimal quantity", async () => {
   const calls = [];
   const client = {
     async query(text, values = []) {
       calls.push({ text, values });
-      if (text.includes("FROM pos.register_sessions")) {
-        return result([{
-          id: IDS.session,
-          store_id: IDS.store,
-          register_id: IDS.register,
-          device_id: IDS.device,
-          status: "open",
-          business_date: "2026-07-29",
-          version: "1",
-        }]);
+      if (text.includes("pos.create_cart_v1")) {
+        return result([{ id: IDS.cart, status: "open", version: "1", line_count: 1, replayed: false }]);
       }
-      if (text.includes("FROM pos.carts")) return result();
-      return result();
+      throw new Error(`unexpected query: ${text}`);
     },
   };
 
   const repository = new PosSqlRepository();
-  const quantity = "999999999999999999999999999999.000000000001";
+  const quantity = "999999999999999999.000000000001";
   const created = await repository.createCart(client, context(), {
     id: IDS.cart,
     sessionId: IDS.session,
@@ -120,9 +111,10 @@ test("MOD-D cart repository preserves an arbitrarily large exact decimal quantit
   });
 
   assert.equal(created.id, IDS.cart);
-  const lineInsert = calls.find(({ text }) => text.includes("INSERT INTO pos.cart_lines"));
-  assert.ok(lineInsert);
-  assert.equal(lineInsert.values[5], quantity);
+  const command = calls.find(({ text }) => text.includes("pos.create_cart_v1"));
+  assert.ok(command);
+  const lines = JSON.parse(command.values[5]);
+  assert.equal(lines[0].quantity, quantity);
 });
 
 test("MOD-D checkout rejects inconsistent exact totals before database access", async () => {
@@ -156,7 +148,7 @@ test("MOD-D checkout idempotency rejects a changed replay hash", async () => {
           version: "1",
         }]);
       }
-      return result();
+      throw new Error(`unexpected query: ${text}`);
     },
   };
   const repository = new PosSqlRepository();
@@ -167,13 +159,15 @@ test("MOD-D checkout idempotency rejects a changed replay hash", async () => {
   );
 });
 
-test("MOD-D offline upload returns an explicit rejection for invalid authorization", async () => {
+test("MOD-D offline command returns an explicit rejection for invalid authorization", async () => {
   const calls = [];
   const client = {
     async query(text, values = []) {
       calls.push({ text, values });
       if (text.includes("FROM pos.offline_operations")) return result();
-      if (text.includes("FROM pos.offline_authorizations")) return result();
+      if (text.includes("pos.register_offline_operation_v1")) {
+        return result([{ status: "rejected", offline_operation_id: null, reason_code: "OFFLINE_AUTHORIZATION_INVALID", replayed: false }]);
+      }
       throw new Error(`unexpected query: ${text}`);
     },
   };
@@ -185,7 +179,8 @@ test("MOD-D offline upload returns an explicit rejection for invalid authorizati
     status: "rejected",
     reasonCode: "OFFLINE_AUTHORIZATION_INVALID",
   }]);
-  assert.equal(calls.some(({ text }) => text.includes("INSERT INTO pos.offline_operations")), false);
+  assert.equal(calls.some(({ text }) => /INSERT INTO pos\./u.test(text)), false);
+  assert.equal(calls.some(({ text }) => text.includes("pos.register_offline_operation_v1")), true);
 });
 
 test("MOD-D offline duplicate replay requires the full immutable envelope", async () => {
