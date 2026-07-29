@@ -14,6 +14,9 @@ enum LocalOperationState {
   /// Submission is waiting for usable connectivity.
   waitingForConnectivity,
 
+  /// Submission is waiting for a bounded transport retry time.
+  waitingForRetry,
+
   /// Submission is waiting for another local operation or attachment.
   waitingForDependency,
 
@@ -152,14 +155,16 @@ final class OperationReduction {
   final RetryDisposition retryDisposition;
 }
 
-/// Pure reducer for authoritative operation outcomes.
+/// Pure reducer for authoritative operation outcomes and transport failures.
 abstract final class OperationResultReducer {
-  /// Applies one authoritative result without performing network or storage I/O.
+  /// Applies one authoritative server result without network or storage I/O.
+  ///
+  /// Server business outcomes are never converted into blind retries. A retry
+  /// may only be scheduled by [transportFailure] when no authoritative result
+  /// was received.
   static OperationReduction apply({
     required LocalOperationRecord current,
     required MobileOperationResultContract result,
-    required DateTime now,
-    required int maximumAutomaticAttempts,
   }) {
     if (current.operation.operationId != result.operationId) {
       throw ArgumentError(
@@ -167,19 +172,11 @@ abstract final class OperationResultReducer {
         '${current.operation.operationId}.',
       );
     }
-    if (maximumAutomaticAttempts < 0) {
-      throw ArgumentError.value(
-        maximumAutomaticAttempts,
-        'maximumAutomaticAttempts',
-        'Must not be negative.',
-      );
-    }
 
     final state = _stateForStatus(result.status);
-    final attempts = current.attemptCount + 1;
     final baseRecord = current.copyWith(
       state: state,
-      attemptCount: attempts,
+      attemptCount: current.attemptCount + 1,
       clearNextRetryAt: true,
       traceId: result.traceId,
     );
@@ -194,24 +191,63 @@ abstract final class OperationResultReducer {
       );
     }
 
-    if (baseRecord.isTerminal || state == LocalOperationState.deferred) {
+    return OperationReduction(
+      record: baseRecord,
+      retryDisposition: RetryDisposition.none,
+    );
+  }
+
+  /// Records a transport failure where no authoritative result was received.
+  static OperationReduction transportFailure({
+    required LocalOperationRecord current,
+    required DateTime now,
+    required int maximumAutomaticAttempts,
+    required bool connectivityAvailable,
+  }) {
+    if (maximumAutomaticAttempts < 0) {
+      throw ArgumentError.value(
+        maximumAutomaticAttempts,
+        'maximumAutomaticAttempts',
+        'Must not be negative.',
+      );
+    }
+    if (current.isTerminal) {
       return OperationReduction(
-        record: baseRecord,
+        record: current,
         retryDisposition: RetryDisposition.none,
       );
     }
 
-    final retryable = result.error?.retryable ?? false;
-    if (!retryable || attempts > maximumAutomaticAttempts) {
+    final attempts = current.attemptCount + 1;
+    if (!connectivityAvailable) {
       return OperationReduction(
-        record: baseRecord,
+        record: current.copyWith(
+          state: LocalOperationState.waitingForConnectivity,
+          attemptCount: attempts,
+          clearNextRetryAt: true,
+        ),
+        retryDisposition: RetryDisposition.waitForConnectivity,
+      );
+    }
+
+    if (attempts > maximumAutomaticAttempts) {
+      return OperationReduction(
+        record: current.copyWith(
+          state: LocalOperationState.conflict,
+          attemptCount: attempts,
+          clearNextRetryAt: true,
+        ),
         retryDisposition: RetryDisposition.requireUserAction,
       );
     }
 
     final retryAt = now.add(_boundedBackoff(attempts));
     return OperationReduction(
-      record: baseRecord.copyWith(nextRetryAt: retryAt),
+      record: current.copyWith(
+        state: LocalOperationState.waitingForRetry,
+        attemptCount: attempts,
+        nextRetryAt: retryAt,
+      ),
       retryDisposition: RetryDisposition.retryLater,
     );
   }
@@ -234,8 +270,7 @@ abstract final class OperationResultReducer {
 
   static Duration _boundedBackoff(int attemptCount) {
     final exponent = attemptCount.clamp(1, 6);
-    final seconds = 1 << exponent;
-    return Duration(seconds: seconds);
+    return Duration(seconds: 1 << exponent);
   }
 }
 
@@ -257,9 +292,11 @@ abstract final class LocalOperationTransitions {
       LocalOperationState.draft => to == LocalOperationState.locallyCommitted,
       LocalOperationState.locallyCommitted =>
         to == LocalOperationState.waitingForConnectivity ||
+            to == LocalOperationState.waitingForRetry ||
             to == LocalOperationState.waitingForDependency ||
             to == LocalOperationState.uploading,
       LocalOperationState.waitingForConnectivity ||
+      LocalOperationState.waitingForRetry ||
       LocalOperationState.waitingForDependency =>
         to == LocalOperationState.uploading ||
             to == LocalOperationState.superseded,
