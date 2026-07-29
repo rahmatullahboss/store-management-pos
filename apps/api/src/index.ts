@@ -6,7 +6,10 @@ import { handleAllocateOpenItem, handleClosePeriod, handleCreateOpenItem, handle
 import { handleImportBankStatement, handleListUnreconciled, handleReconcileStatementLine, handleRecordReconciliationRun, handleReverseReconciliation } from "./banking-handler.js";
 import { observeFinanceOperation } from "./finance-observability.js";
 import { handleFinanceReadiness } from "./finance-readiness-handler.js";
+import { handleCashRequest } from "./modules/cash/handler.js";
 import { handleInventoryRequest } from "./modules/inventory/handler.js";
+import { handlePosRequest } from "./modules/pos/handler.js";
+import { handlePosReceiptRequest } from "./modules/pos/receipt-handler.js";
 import { handleProcurementRequest } from "./modules/procurement/handler.js";
 import { handleCreatePaymentIntent, handleCreateRefund, handleImportSettlement, handlePaymentAction } from "./payment-handler.js";
 import { buildRequestContext } from "./request-context.js";
@@ -41,6 +44,12 @@ export default {
       if (inventoryResponse) return inventoryResponse;
       const procurementResponse = await handleProcurementRequest(request, url, context, database);
       if (procurementResponse) return procurementResponse;
+      const posResponse = await handlePosRequest(request, url, context, database);
+      if (posResponse) return posResponse;
+      const receiptResponse = await handlePosReceiptRequest(request, url, context, database);
+      if (receiptResponse) return receiptResponse;
+      const cashResponse = await handleCashRequest(request, url, context, database);
+      if (cashResponse) return cashResponse;
 
       if (request.method === "POST" && url.pathname === "/v1/payments/intents") return await observeFinance("payment", "intent.create", async () => await handleCreatePaymentIntent(request, context, database, env));
       const paymentAction = url.pathname.match(/^\/v1\/payments\/intents\/([^/]+)\/(authorize|capture|void|recover)$/u);

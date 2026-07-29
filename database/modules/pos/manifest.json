@@ -1,0 +1,47 @@
+{
+  "module": "MOD-D-POS",
+  "version": 8,
+  "order": 40,
+  "migrations": [
+    {
+      "id": "POS-0001",
+      "file": "POS-0001-store-edge.sql",
+      "sha256": "c49a2bb6348021a1d299d21025ddb23dbe92a57fd71e09f4845e34d03dc02b02"
+    },
+    {
+      "id": "POS-0002",
+      "file": "POS-0002-carts.sql",
+      "sha256": "726e6f283a742235d5c5827a147dd255f05b381e7cc316a37d3a573e08ecea54"
+    },
+    {
+      "id": "POS-0003",
+      "file": "POS-0003-offline-sync-security.sql",
+      "sha256": "bc39f319d996a26003ae483f0bbfb93135d34db2ae68d0c3c7ba010138c7af7d"
+    },
+    {
+      "id": "POS-0004",
+      "file": "POS-0004-device-register-scope.sql",
+      "sha256": "635918728282602ebd869f301497ded90fab142a16929e1b681311edffd973cd"
+    },
+    {
+      "id": "POS-0005",
+      "file": "POS-0005-store-scope-controls.sql",
+      "sha256": "20eb0412ddfe137d63eca874a4d14d851d5dcef03aaf05b126ae1457d2cb1446"
+    },
+    {
+      "id": "POS-0006",
+      "file": "POS-0006-runtime-commands.sql",
+      "sha256": "4f92accdd7ef23d91b0086b746822ac7c75623bb0cedefecaae9431f076cb84d"
+    },
+    {
+      "id": "POS-0007",
+      "file": "POS-0007-function-privilege-hardening.sql",
+      "sha256": "cb4bf12df726ca24276a97d2b4429e7a7a14d14d59a4c53f992099c51b60ca89"
+    },
+    {
+      "id": "POS-0008",
+      "file": "POS-0008-receipt-delivery.sql",
+      "sha256": "99391c7fa4342075fb403e0d49805035bc190887b57b6ab083d7e975ffa62b84"
+    }
+  ]
+}
