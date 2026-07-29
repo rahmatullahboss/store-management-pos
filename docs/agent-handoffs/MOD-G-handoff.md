@@ -103,6 +103,19 @@ Checkpoint evidence is recorded in `docs/architecture/mod-g/api-client-credentia
 
 Checkpoint evidence is recorded in `docs/architecture/mod-g/partner-api-routes-checkpoint.md`.
 
+## Completed checkpoint 6 — connector framework and ecommerce adapter
+
+- Published connector configuration on the versioned connection contract without embedding secret values.
+- Added a bounded generic CSV adapter with strict UTF-8, quoted-field, CRLF, header, row-shape, identity and deterministic cursor controls.
+- Added a generic REST adapter with credential-free HTTPS origins, restricted credential headers, bounded JSON-pointer extraction, cursor pagination and retryable/permanent provider error categories.
+- Selected Shopify GraphQL Admin API as the first launch-priority ecommerce adapter and required an explicit quarterly API version.
+- Added Shopify product and variant pagination with a 250-record ceiling and external access-token resolution.
+- Added deterministic inbound mapping transforms, external/manual ownership decisions, explicit manual conflicts and prototype-pollution path rejection.
+- Preserved the outcome-before-cursor invariant; provider outages produce no item outcomes and no cursor movement.
+- Added tests for CSV parsing, duplicate identities, REST pagination/outage recovery, Shopify GraphQL cursoring, mapping conflicts and safe paths.
+
+Checkpoint evidence is recorded in `docs/architecture/mod-g/connectors-checkpoint.md`.
+
 ## Verification evidence
 
 ### Contracts and migration foundation
@@ -115,14 +128,7 @@ Implementation head `abae858f7861c49b3de0397971af9d21bd3c56c6` passed Foundation
 
 ### Public API control plane
 
-Implementation head `b308f5f1653e9c6a41b6e10bab849a59866893ef` passed:
-
-- Foundation CI run `30479261530`;
-- verify job `90668729127` with `311/311` tests and all repository/security/supply-chain checks;
-- MOD-G Neon full-chain and replay job `90668845254`;
-- Neon recovery job `90668845181`;
-- Cloudflare preview, runtime metrics and cleanup job `90668845158`;
-- Foundation Design CI run `30479261178`.
+Implementation head `b308f5f1653e9c6a41b6e10bab849a59866893ef` passed Foundation CI run `30479261530`, `311/311` tests, MOD-G Neon replay, Neon recovery, Cloudflare preview/runtime/cleanup and Foundation Design CI.
 
 ### API-client credential lifecycle
 
@@ -130,17 +136,21 @@ Implementation head `0929798c81dc2994e2cff4510a9ed0f1756f62b1` passed Foundation
 
 ### Scoped partner routes
 
-Implementation head `13ed32f3ec8c1f92f9f9bc5e86ff08f043113acb` passed:
+Implementation head `13ed32f3ec8c1f92f9f9bc5e86ff08f043113acb` passed Foundation CI run `30483170747`, `319/319` tests, complete MOD-G Neon replay, Neon recovery, Cloudflare preview/runtime/cleanup and Foundation Design CI.
 
-- Foundation CI run `30483170747`;
-- verify job `90682181316` with `319/319` tests;
+### Connector framework
+
+Implementation head `67f9771804432ae79143d862d68a37e2b0e6f18f` passed:
+
+- Foundation CI run `30484495094`;
+- verify job `90686647684` with `325/325` tests;
 - format, lint, architecture boundaries and strict TypeScript;
 - secret scan, licence register, SBOM and dependency audit;
-- MOD-G complete-chain and deterministic replay job `90682280851` including `INT-0004`;
-- Neon recovery job `90682280829`;
-- Foundation Design CI run `30483170613`;
+- MOD-G complete-chain and deterministic replay job `90686733818`;
+- Neon recovery job `90686733744`;
+- Foundation Design CI run `30484495340`;
 - Cloudflare preview/runtime/cleanup under the same Foundation run.
 
 ## Current checkpoint
 
-Scoped public partner routes and the complete implemented-operation OpenAPI catalog are complete. The next coherent checkpoint is generic CSV/REST connectors and one launch-priority ecommerce adapter, followed by SaaS lifecycle orchestration and the reporting/integration/SaaS admin web surfaces.
+Generic CSV/REST connectors, launch-priority Shopify GraphQL product synchronization, mapping conflict controls and outage/cursor recovery evidence are complete. The next coherent checkpoint is persistent SaaS plans, entitlements, exact usage meters, tenant lifecycle orchestration, rollout/incidents and approved support controls, followed by reporting/integration/SaaS admin web surfaces.
