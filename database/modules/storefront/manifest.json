@@ -1,0 +1,11 @@
+{
+  "module": "MOD-H-STOREFRONT",
+  "version": 1,
+  "migrations": [
+    {
+      "id": "STF-0001",
+      "file": "STF-0001-storefront-core.sql",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ]
+}
