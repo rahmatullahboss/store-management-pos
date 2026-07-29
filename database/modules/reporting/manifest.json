@@ -1,0 +1,12 @@
+{
+  "module": "MOD-G-REPORTING",
+  "version": 1,
+  "order": 60,
+  "migrations": [
+    {
+      "id": "RPT-0001",
+      "file": "RPT-0001-reporting-foundation.sql",
+      "sha256": "80548fb17da1e0f7395def49d7ed0a3530e2aeb27e49a6313658a2467592d77f"
+    }
+  ]
+}
