@@ -8,6 +8,7 @@ import { observeFinanceOperation } from "./finance-observability.js";
 import { handleFinanceReadiness } from "./finance-readiness-handler.js";
 import { handleCashRequest } from "./modules/cash/handler.js";
 import { handleInventoryRequest } from "./modules/inventory/handler.js";
+import { handleLocalizationRequest } from "./modules/localization/handler.js";
 import { handlePosRequest } from "./modules/pos/handler.js";
 import { handlePosReceiptRequest } from "./modules/pos/receipt-handler.js";
 import { handleProcurementRequest } from "./modules/procurement/handler.js";
@@ -50,6 +51,8 @@ export default {
       if (receiptResponse) return receiptResponse;
       const cashResponse = await handleCashRequest(request, url, context, database);
       if (cashResponse) return cashResponse;
+      const localizationResponse = await handleLocalizationRequest(request, url, context, database);
+      if (localizationResponse) return localizationResponse;
 
       if (request.method === "POST" && url.pathname === "/v1/payments/intents") return await observeFinance("payment", "intent.create", async () => await handleCreatePaymentIntent(request, context, database, env));
       const paymentAction = url.pathname.match(/^\/v1\/payments\/intents\/([^/]+)\/(authorize|capture|void|recover)$/u);
