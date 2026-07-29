@@ -17,6 +17,11 @@
       "id": "LOC-0003",
       "file": "LOC-0003-compliance-commands.sql",
       "sha256": "6c892a141a2c6fcfb266de2a72000bf9b2b418877b6e75a2302b5eeed02c84d5"
+    },
+    {
+      "id": "LOC-0004",
+      "file": "LOC-0004-read-permissions.sql",
+      "sha256": "b4e277150e27e4d1955546f88c7d137f698defa4195c7e93f0b9ceebbe6fc160"
     }
   ]
 }
