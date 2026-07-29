@@ -21,6 +21,8 @@ const availableModules = [
   { name: "MOD-E-PAYMENT", manifest: "database/modules/payments/manifest.json", migrations: "database/modules/payments/migrations" },
   { name: "MOD-E-ACCOUNTING", manifest: "database/modules/accounting/manifest.json", migrations: "database/modules/accounting/migrations" },
   { name: "MOD-E-BANKING", manifest: "database/modules/banking/manifest.json", migrations: "database/modules/banking/migrations" },
+  { name: "MOD-D-POS", manifest: "database/modules/pos/manifest.json", migrations: "database/modules/pos/migrations" },
+  { name: "MOD-D-CASH", manifest: "database/modules/cash/manifest.json", migrations: "database/modules/cash/migrations" },
 ];
 
 const dependencies = new Map([
@@ -35,6 +37,19 @@ const dependencies = new Map([
   ["MOD-E-PAYMENT", ["FOUNDATION", "MOD-C-SALES"]],
   ["MOD-E-ACCOUNTING", ["FOUNDATION", "MOD-C-SALES", "MOD-E-PAYMENT"]],
   ["MOD-E-BANKING", ["FOUNDATION", "MOD-E-PAYMENT", "MOD-E-ACCOUNTING"]],
+  ["MOD-D-POS", [
+    "FOUNDATION",
+    "MOD-A-CATALOG",
+    "MOD-A-PRICING",
+    "MOD-A-TAX",
+    "MOD-B-INVENTORY",
+    "MOD-C-CUSTOMER",
+    "MOD-C-SALES",
+    "MOD-C-FULFILLMENT",
+    "MOD-E-PAYMENT",
+    "MOD-E-ACCOUNTING",
+  ]],
+  ["MOD-D-CASH", ["FOUNDATION", "MOD-D-POS"]],
 ]);
 
 const requested = new Set((process.env.MIGRATION_MODULES ?? availableModules.map((item) => item.name).join(",")).split(",").map((item) => item.trim()).filter(Boolean));
