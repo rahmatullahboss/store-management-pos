@@ -37,42 +37,45 @@ void main() {
     maximumBatchSize: maximumBatchSize,
   );
 
-  test('revocation blocks sync, locks cache and clears credential references', () {
-    final plan = BackgroundSyncPolicy.decide(
-      snapshot(
-        sessionRevoked: true,
-        pendingOperationCount: 4,
-        projectionRefreshDue: true,
-      ),
-    );
+  test(
+    'revocation blocks sync, locks cache and clears credential references',
+    () {
+      final plan = BackgroundSyncPolicy.decide(
+        snapshot(
+          sessionRevoked: true,
+          pendingOperationCount: 4,
+          projectionRefreshDue: true,
+        ),
+      );
 
-    expect(plan.kind, BackgroundSyncPlanKind.blocked);
-    expect(plan.reason, BackgroundSyncPlanReason.sessionRevoked);
-    expect(plan.requestProjectionPull, isFalse);
-    expect(plan.requestOperationPush, isFalse);
-    expect(plan.lockRestrictedCache, isTrue);
-    expect(plan.clearCredentialReferences, isTrue);
-    expect(plan.requiresForegroundReconciliation, isTrue);
-  });
+      expect(plan.kind, BackgroundSyncPlanKind.blocked);
+      expect(plan.reason, BackgroundSyncPlanReason.sessionRevoked);
+      expect(plan.requestProjectionPull, isFalse);
+      expect(plan.requestOperationPush, isFalse);
+      expect(plan.lockRestrictedCache, isTrue);
+      expect(plan.clearCredentialReferences, isTrue);
+      expect(plan.requiresForegroundReconciliation, isTrue);
+    },
+  );
 
-  test('unknown external state permits recovery pull but prohibits blind push', () {
-    final plan = BackgroundSyncPolicy.decide(
-      snapshot(
-        pendingOperationCount: 8,
-        hasUnknownExternalState: true,
-      ),
-    );
+  test(
+    'unknown external state permits recovery pull but prohibits blind push',
+    () {
+      final plan = BackgroundSyncPolicy.decide(
+        snapshot(pendingOperationCount: 8, hasUnknownExternalState: true),
+      );
 
-    expect(plan.kind, BackgroundSyncPlanKind.recoveryOnly);
-    expect(
-      plan.reason,
-      BackgroundSyncPlanReason.unknownExternalStateRecovery,
-    );
-    expect(plan.requestProjectionPull, isTrue);
-    expect(plan.requestOperationPush, isFalse);
-    expect(plan.operationBatchLimit, 0);
-    expect(plan.requiresForegroundReconciliation, isTrue);
-  });
+      expect(plan.kind, BackgroundSyncPlanKind.recoveryOnly);
+      expect(
+        plan.reason,
+        BackgroundSyncPlanReason.unknownExternalStateRecovery,
+      );
+      expect(plan.requestProjectionPull, isTrue);
+      expect(plan.requestOperationPush, isFalse);
+      expect(plan.operationBatchLimit, 0);
+      expect(plan.requiresForegroundReconciliation, isTrue);
+    },
+  );
 
   test('platform background work is capped at ten operations', () {
     final plan = BackgroundSyncPolicy.decide(
@@ -84,30 +87,30 @@ void main() {
     expect(plan.operationBatchLimit, 10);
   });
 
-  test('foreground and user work remains bounded at twenty-five operations', () {
-    final foreground = BackgroundSyncPolicy.decide(
-      snapshot(
-        trigger: SyncExecutionTrigger.appResume,
-        pendingOperationCount: 42,
-      ),
-    );
-    final user = BackgroundSyncPolicy.decide(
-      snapshot(
-        trigger: SyncExecutionTrigger.userInitiated,
-        pendingOperationCount: 42,
-      ),
-    );
+  test(
+    'foreground and user work remains bounded at twenty-five operations',
+    () {
+      final foreground = BackgroundSyncPolicy.decide(
+        snapshot(
+          trigger: SyncExecutionTrigger.appResume,
+          pendingOperationCount: 42,
+        ),
+      );
+      final user = BackgroundSyncPolicy.decide(
+        snapshot(
+          trigger: SyncExecutionTrigger.userInitiated,
+          pendingOperationCount: 42,
+        ),
+      );
 
-    expect(foreground.operationBatchLimit, 25);
-    expect(user.operationBatchLimit, 25);
-  });
+      expect(foreground.operationBatchLimit, 25);
+      expect(user.operationBatchLimit, 25);
+    },
+  );
 
   test('configured batch size can make the platform cap stricter', () {
     final plan = BackgroundSyncPolicy.decide(
-      snapshot(
-        pendingOperationCount: 42,
-        maximumBatchSize: 6,
-      ),
+      snapshot(pendingOperationCount: 42, maximumBatchSize: 6),
     );
 
     expect(plan.operationBatchLimit, 6);
@@ -115,10 +118,7 @@ void main() {
 
   test('battery or data saver delays opportunistic background work', () {
     final plan = BackgroundSyncPolicy.decide(
-      snapshot(
-        batterySaverEnabled: true,
-        pendingOperationCount: 1,
-      ),
+      snapshot(batterySaverEnabled: true, pendingOperationCount: 1),
     );
 
     expect(plan.kind, BackgroundSyncPlanKind.delayed);
@@ -208,7 +208,10 @@ void main() {
     expect(corrupt.requiresForegroundReconciliation, isTrue);
 
     expect(incompatible.kind, BackgroundSyncPlanKind.blocked);
-    expect(incompatible.reason, BackgroundSyncPlanReason.supportedUpdateRequired);
+    expect(
+      incompatible.reason,
+      BackgroundSyncPlanReason.supportedUpdateRequired,
+    );
     expect(incompatible.lockRestrictedCache, isTrue);
   });
 
@@ -237,17 +240,8 @@ void main() {
   });
 
   test('invalid counts and limits fail before scheduling', () {
-    expect(
-      () => snapshot(pendingOperationCount: -1),
-      throwsArgumentError,
-    );
-    expect(
-      () => snapshot(maximumBatchSize: 0),
-      throwsArgumentError,
-    );
-    expect(
-      () => snapshot(maximumBatchSize: 101),
-      throwsArgumentError,
-    );
+    expect(() => snapshot(pendingOperationCount: -1), throwsArgumentError);
+    expect(() => snapshot(maximumBatchSize: 0), throwsArgumentError);
+    expect(() => snapshot(maximumBatchSize: 101), throwsArgumentError);
   });
 }

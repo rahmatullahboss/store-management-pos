@@ -148,12 +148,9 @@ abstract final class BackgroundSyncPolicy {
       return _blocked(BackgroundSyncPlanReason.authenticationRequired);
     }
     if (!snapshot.workspaceAuthorized) {
-      return _blocked(
-        BackgroundSyncPlanReason.workspaceAuthorizationRequired,
-      );
+      return _blocked(BackgroundSyncPlanReason.workspaceAuthorizationRequired);
     }
-    if (snapshot.storageHealth ==
-        LocalStorageHealth.quarantinedCorruption) {
+    if (snapshot.storageHealth == LocalStorageHealth.quarantinedCorruption) {
       return _blocked(BackgroundSyncPlanReason.storageRecoveryRequired);
     }
     if (snapshot.storageHealth == LocalStorageHealth.incompatibleSchema) {
