@@ -1,6 +1,8 @@
 import type { ConnectorConnectionV1, ConnectorFieldMappingV1, ConnectorSyncOutcomeV1 } from "./contracts.js";
 import type { ConnectorAdapterPort, ConnectorPageV1, ConnectorRecordV1 } from "./workers.js";
 
+type ConnectorReadRequestV1 = Parameters<ConnectorAdapterPort["read"]>[0];
+
 const PATH_SEGMENT_PATTERN = /^[A-Za-z_][A-Za-z0-9_-]{0,63}$/u;
 const SHOPIFY_VERSION_PATTERN = /^20[2-9][0-9]-(?:01|04|07|10)$/u;
 const SHOPIFY_DOMAIN_PATTERN = /^[a-z0-9][a-z0-9-]{0,62}\.myshopify\.com$/u;
@@ -85,15 +87,11 @@ export interface ShopifyProductConnectorConfigV1 {
 }
 
 function assertPlainObject(value: unknown, field: string): asserts value is Readonly<Record<string, unknown>> {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) {
-    throw new TypeError(`${field} must be an object`);
-  }
+  if (value === null || typeof value !== "object" || Array.isArray(value)) throw new TypeError(`${field} must be an object`);
 }
 
 function assertBoundedPositiveInteger(value: number, field: string, maximum: number): void {
-  if (!Number.isInteger(value) || value < 1 || value > maximum) {
-    throw new RangeError(`${field} must be between 1 and ${maximum}`);
-  }
+  if (!Number.isInteger(value) || value < 1 || value > maximum) throw new RangeError(`${field} must be between 1 and ${maximum}`);
 }
 
 function assertResourceRequest(input: {
@@ -107,9 +105,7 @@ function assertResourceRequest(input: {
     throw new TypeError(`Connector type ${input.connection.connectorType} is not supported by this adapter`);
   }
   if (input.direction !== "inbound") throw new TypeError("This connector adapter currently supports inbound synchronization only");
-  if (input.configuredResourceType !== input.requestedResourceType) {
-    throw new TypeError("Connector resource type does not match adapter configuration");
-  }
+  if (input.configuredResourceType !== input.requestedResourceType) throw new TypeError("Connector resource type does not match adapter configuration");
 }
 
 function parseJson(body: Uint8Array, maximumBytes: number, field: string): unknown {
@@ -146,12 +142,8 @@ function safeHeaders(input: Readonly<Record<string, string>>): Readonly<Record<s
   for (const [name, value] of Object.entries(input)) {
     const normalized = name.toLowerCase();
     if (!/^[a-z0-9-]{1,80}$/u.test(normalized)) throw new TypeError("Connector credential header name is invalid");
-    if (/^(?:host|content-length|connection|transfer-encoding)$/u.test(normalized)) {
-      throw new TypeError("Connector credential port attempted to control a restricted header");
-    }
-    if (value.length === 0 || value.length > 8_192 || /[\r\n]/u.test(value)) {
-      throw new TypeError("Connector credential header value is invalid");
-    }
+    if (/^(?:host|content-length|connection|transfer-encoding)$/u.test(normalized)) throw new TypeError("Connector credential port attempted to control a restricted header");
+    if (value.length === 0 || value.length > 8_192 || /[\r\n]/u.test(value)) throw new TypeError("Connector credential header value is invalid");
     headers[normalized] = value;
   }
   return Object.freeze(headers);
@@ -187,9 +179,7 @@ function normalizeExternalId(value: unknown, field: string): string {
     throw new PermanentConnectorProviderError("external_id_invalid", `${field} must resolve to a string or integer`);
   }
   const externalId = String(value).trim();
-  if (externalId.length === 0 || externalId.length > 1_024) {
-    throw new PermanentConnectorProviderError("external_id_invalid", `${field} is empty or too long`);
-  }
+  if (externalId.length === 0 || externalId.length > 1_024) throw new PermanentConnectorProviderError("external_id_invalid", `${field} is empty or too long`);
   return externalId;
 }
 
@@ -211,7 +201,6 @@ function parseCsv(input: string, delimiter: string, maxColumns: number, maxCellC
   let row: string[] = [];
   let cell = "";
   let quoted = false;
-
   const pushCell = (): void => {
     if (cell.length > maxCellCharacters) throw new PermanentConnectorProviderError("csv_cell_too_large", "CSV cell exceeded the configured character limit");
     row.push(cell);
@@ -257,8 +246,7 @@ function parseCsv(input: string, delimiter: string, maxColumns: number, maxCellC
   }
   if (quoted) throw new PermanentConnectorProviderError("csv_quote_unclosed", "CSV input contains an unclosed quoted field");
   if (cell.length > 0 || row.length > 0) pushRow();
-  const last = rows.at(-1);
-  if (last?.every((value) => value.length === 0) === true) rows.pop();
+  if (rows.at(-1)?.every((value) => value.length === 0) === true) rows.pop();
   return Object.freeze(rows.map((value) => Object.freeze(value)));
 }
 
@@ -279,14 +267,8 @@ export function createGenericCsvAdapter(input: {
   assertBoundedPositiveInteger(maximumCellCharacters, "CSV connector maxCellCharacters", 1_000_000);
 
   return Object.freeze({
-    async read(request): Promise<ConnectorPageV1> {
-      assertResourceRequest({
-        connection: request.connection,
-        expectedConnectorTypes: ["csv", "generic_csv"],
-        configuredResourceType: input.configuration.resourceType,
-        requestedResourceType: request.resourceType,
-        direction: request.direction,
-      });
+    async read(request: ConnectorReadRequestV1): Promise<ConnectorPageV1> {
+      assertResourceRequest({ connection: request.connection, expectedConnectorTypes: ["csv", "generic_csv"], configuredResourceType: input.configuration.resourceType, requestedResourceType: request.resourceType, direction: request.direction });
       assertBoundedPositiveInteger(request.limit, "CSV connector page size", MAX_CONNECTOR_RECORDS);
       const content = await input.source.load({ connection: request.connection, objectReference: input.configuration.objectReference });
       if (content.byteLength > maximumBytes) throw new PermanentConnectorProviderError("csv_too_large", "CSV object exceeded the configured byte limit");
@@ -303,34 +285,23 @@ export function createGenericCsvAdapter(input: {
       if (new Set(headers).size !== headers.length) throw new PermanentConnectorProviderError("csv_header_duplicate", "CSV headers must be unique");
       const idIndex = headers.indexOf(input.configuration.externalIdColumn);
       if (idIndex < 0) throw new PermanentConnectorProviderError("csv_external_id_missing", "CSV external ID column is absent from the header");
-
       const records = rows.slice(1);
       const offset = parseCsvCursor(request.cursor);
       if (offset > records.length) throw new TypeError("CSV connector cursor exceeds the available row count");
       const pageRows = records.slice(offset, offset + request.limit);
       const identities = new Set<string>();
       const pageRecords: ConnectorRecordV1[] = pageRows.map((values, pageIndex) => {
-        if (values.length !== headers.length) {
-          throw new PermanentConnectorProviderError("csv_column_mismatch", `CSV row ${offset + pageIndex + 2} does not match the header column count`);
-        }
+        if (values.length !== headers.length) throw new PermanentConnectorProviderError("csv_column_mismatch", `CSV row ${offset + pageIndex + 2} does not match the header column count`);
         const payload: Record<string, unknown> = {};
         for (const [index, header] of headers.entries()) payload[header] = values[index] ?? "";
         const externalId = normalizeExternalId(values[idIndex], "CSV external ID column");
         if (identities.has(externalId)) throw new PermanentConnectorProviderError("csv_external_id_duplicate", "CSV page contains duplicate external IDs");
         identities.add(externalId);
-        return Object.freeze({
-          syncId: connectorSyncId("csv", request.connection.connectionId, request.resourceType, externalId),
-          externalId,
-          payload: Object.freeze(payload),
-        });
+        return Object.freeze({ syncId: connectorSyncId("csv", request.connection.connectionId, request.resourceType, externalId), externalId, payload: Object.freeze(payload) });
       });
       const nextOffset = offset + pageRecords.length;
       const exhausted = nextOffset >= records.length;
-      return Object.freeze({
-        records: Object.freeze(pageRecords),
-        ...(exhausted ? {} : { nextCursor: csvCursor(nextOffset) }),
-        exhausted,
-      });
+      return Object.freeze({ records: Object.freeze(pageRecords), ...(exhausted ? {} : { nextCursor: csvCursor(nextOffset) }), exhausted });
     },
   });
 }
@@ -344,9 +315,7 @@ function validateGenericRestConfiguration(configuration: GenericRestConnectorCon
   } catch {
     throw new TypeError("REST connector base URL is invalid");
   }
-  if (base.protocol !== "https:" || base.username !== "" || base.password !== "" || base.search !== "" || base.hash !== "") {
-    throw new TypeError("REST connector base URL must be a credential-free HTTPS origin or base path");
-  }
+  if (base.protocol !== "https:" || base.username !== "" || base.password !== "" || base.search !== "" || base.hash !== "") throw new TypeError("REST connector base URL must be a credential-free HTTPS origin or base path");
   if (!configuration.path.startsWith("/") || configuration.path.startsWith("//")) throw new TypeError("REST connector path must be absolute and origin-relative");
   assertJsonPointer(configuration.itemsPointer, "REST connector itemsPointer");
   assertJsonPointer(configuration.externalIdPointer, "REST connector externalIdPointer");
@@ -367,14 +336,8 @@ export function createGenericRestAdapter(input: {
   assertBoundedPositiveInteger(maximumBytes, "REST connector maxResponseBytes", 100_000_000);
 
   return Object.freeze({
-    async read(request): Promise<ConnectorPageV1> {
-      assertResourceRequest({
-        connection: request.connection,
-        expectedConnectorTypes: ["rest", "generic_rest"],
-        configuredResourceType: input.configuration.resourceType,
-        requestedResourceType: request.resourceType,
-        direction: request.direction,
-      });
+    async read(request: ConnectorReadRequestV1): Promise<ConnectorPageV1> {
+      assertResourceRequest({ connection: request.connection, expectedConnectorTypes: ["rest", "generic_rest"], configuredResourceType: input.configuration.resourceType, requestedResourceType: request.resourceType, direction: request.direction });
       assertBoundedPositiveInteger(request.limit, "REST connector page size", MAX_CONNECTOR_RECORDS);
       const url = new URL(input.configuration.path, base);
       if (url.origin !== base.origin) throw new TypeError("REST connector path escaped the configured origin");
@@ -384,15 +347,8 @@ export function createGenericRestAdapter(input: {
       }
       url.searchParams.set(input.configuration.limitQueryParameter ?? "limit", String(request.limit));
       if (request.cursor !== undefined) url.searchParams.set(input.configuration.cursorQueryParameter ?? "cursor", request.cursor);
-      const credentialHeaders = safeHeaders(await input.credentials.headersFor({
-        providerKey: request.connection.providerKey,
-        credentialReference: request.connection.credentialReference,
-      }));
-      const response = await input.transport.request({
-        method: "GET",
-        url: url.toString(),
-        headers: Object.freeze({ accept: "application/json", ...credentialHeaders }),
-      });
+      const credentialHeaders = safeHeaders(await input.credentials.headersFor({ providerKey: request.connection.providerKey, credentialReference: request.connection.credentialReference }));
+      const response = await input.transport.request({ method: "GET", url: url.toString(), headers: Object.freeze({ accept: "application/json", ...credentialHeaders }) });
       classifyHttpStatus(response.statusCode, "REST provider");
       const document = parseJson(response.body, maximumBytes, "REST connector response");
       const items = jsonPointer(document, input.configuration.itemsPointer);
@@ -404,11 +360,7 @@ export function createGenericRestAdapter(input: {
         const externalId = normalizeExternalId(jsonPointer(item, input.configuration.externalIdPointer), "REST connector external ID pointer");
         if (identities.has(externalId)) throw new PermanentConnectorProviderError("external_id_duplicate", "REST page contains duplicate external IDs");
         identities.add(externalId);
-        return Object.freeze({
-          syncId: connectorSyncId("rest", request.connection.connectionId, request.resourceType, externalId),
-          externalId,
-          payload: Object.freeze({ ...item }),
-        });
+        return Object.freeze({ syncId: connectorSyncId("rest", request.connection.connectionId, request.resourceType, externalId), externalId, payload: Object.freeze({ ...item }) });
       });
       let nextCursor: string | undefined;
       if (input.configuration.nextCursorPointer !== undefined) {
@@ -418,12 +370,7 @@ export function createGenericRestAdapter(input: {
           if (nextCursor.length > 512) throw new PermanentConnectorProviderError("cursor_too_large", "REST connector next cursor is too long");
         }
       }
-      const exhausted = nextCursor === undefined;
-      return Object.freeze({
-        records: Object.freeze(records),
-        ...(nextCursor === undefined ? {} : { nextCursor }),
-        exhausted,
-      });
+      return Object.freeze({ records: Object.freeze(records), ...(nextCursor === undefined ? {} : { nextCursor }), exhausted: nextCursor === undefined });
     },
   });
 }
@@ -433,24 +380,9 @@ const SHOPIFY_PRODUCTS_QUERY = `query OzzylProducts($first: Int!, $after: String
     edges {
       cursor
       node {
-        id
-        title
-        handle
-        status
-        vendor
-        productType
-        updatedAt
+        id title handle status vendor productType updatedAt
         variants(first: 100) {
-          nodes {
-            id
-            title
-            sku
-            barcode
-            price
-            compareAtPrice
-            inventoryQuantity
-            updatedAt
-          }
+          nodes { id title sku barcode price compareAtPrice inventoryQuantity updatedAt }
         }
       }
     }
@@ -470,65 +402,43 @@ export function createShopifyProductAdapter(input: {
   assertBoundedPositiveInteger(maximumBytes, "Shopify connector maxResponseBytes", 100_000_000);
 
   return Object.freeze({
-    async read(request): Promise<ConnectorPageV1> {
-      assertResourceRequest({
-        connection: request.connection,
-        expectedConnectorTypes: ["shopify", "shopify_graphql"],
-        configuredResourceType: input.configuration.resourceType,
-        requestedResourceType: request.resourceType,
-        direction: request.direction,
-      });
+    async read(request: ConnectorReadRequestV1): Promise<ConnectorPageV1> {
+      assertResourceRequest({ connection: request.connection, expectedConnectorTypes: ["shopify", "shopify_graphql"], configuredResourceType: input.configuration.resourceType, requestedResourceType: request.resourceType, direction: request.direction });
       assertBoundedPositiveInteger(request.limit, "Shopify connector page size", 250);
-      const credentialHeaders = safeHeaders(await input.credentials.headersFor({
-        providerKey: request.connection.providerKey,
-        credentialReference: request.connection.credentialReference,
-      }));
+      const credentialHeaders = safeHeaders(await input.credentials.headersFor({ providerKey: request.connection.providerKey, credentialReference: request.connection.credentialReference }));
       const variables: Record<string, unknown> = { first: request.limit, after: request.cursor ?? null };
       if (input.configuration.query !== undefined) variables.query = input.configuration.query;
-      const body = new TextEncoder().encode(JSON.stringify({ query: SHOPIFY_PRODUCTS_QUERY, variables }));
       const response = await input.transport.request({
         method: "POST",
         url: `https://${input.configuration.shopDomain}/admin/api/${input.configuration.apiVersion}/graphql.json`,
         headers: Object.freeze({ accept: "application/json", "content-type": "application/json", ...credentialHeaders }),
-        body,
+        body: new TextEncoder().encode(JSON.stringify({ query: SHOPIFY_PRODUCTS_QUERY, variables })),
       });
       classifyHttpStatus(response.statusCode, "Shopify");
       const document = parseJson(response.body, maximumBytes, "Shopify GraphQL response");
       assertPlainObject(document, "Shopify GraphQL response");
-      if (Array.isArray(document.errors) && document.errors.length > 0) {
-        throw new PermanentConnectorProviderError("graphql_rejected", "Shopify returned GraphQL errors");
-      }
+      if (Array.isArray(document.errors) && document.errors.length > 0) throw new PermanentConnectorProviderError("graphql_rejected", "Shopify returned GraphQL errors");
       const products = jsonPointer(document, "/data/products");
       assertPlainObject(products, "Shopify products connection");
-      const edges = products.edges;
-      if (!Array.isArray(edges)) throw new PermanentConnectorProviderError("products_invalid", "Shopify products connection did not contain edges");
-      if (edges.length > request.limit) throw new PermanentConnectorProviderError("page_too_large", "Shopify exceeded the requested product page size");
+      if (!Array.isArray(products.edges)) throw new PermanentConnectorProviderError("products_invalid", "Shopify products connection did not contain edges");
+      if (products.edges.length > request.limit) throw new PermanentConnectorProviderError("page_too_large", "Shopify exceeded the requested product page size");
       const identities = new Set<string>();
-      const records = edges.map((edge) => {
+      const records = products.edges.map((edge) => {
         assertPlainObject(edge, "Shopify product edge");
         assertPlainObject(edge.node, "Shopify product node");
         const externalId = normalizeExternalId(edge.node.id, "Shopify product ID");
         if (identities.has(externalId)) throw new PermanentConnectorProviderError("external_id_duplicate", "Shopify page contains duplicate product IDs");
         identities.add(externalId);
-        return Object.freeze({
-          syncId: connectorSyncId("shopify", request.connection.connectionId, request.resourceType, externalId),
-          externalId,
-          payload: Object.freeze({ ...edge.node }),
-        });
+        return Object.freeze({ syncId: connectorSyncId("shopify", request.connection.connectionId, request.resourceType, externalId), externalId, payload: Object.freeze({ ...edge.node }) });
       });
       assertPlainObject(products.pageInfo, "Shopify products pageInfo");
-      const hasNextPage = products.pageInfo.hasNextPage;
-      if (typeof hasNextPage !== "boolean") throw new PermanentConnectorProviderError("page_info_invalid", "Shopify pageInfo.hasNextPage is invalid");
+      if (typeof products.pageInfo.hasNextPage !== "boolean") throw new PermanentConnectorProviderError("page_info_invalid", "Shopify pageInfo.hasNextPage is invalid");
       let nextCursor: string | undefined;
-      if (hasNextPage) {
+      if (products.pageInfo.hasNextPage) {
         nextCursor = normalizeExternalId(products.pageInfo.endCursor, "Shopify pageInfo.endCursor");
         if (nextCursor.length > 512) throw new PermanentConnectorProviderError("cursor_too_large", "Shopify cursor is too long");
       }
-      return Object.freeze({
-        records: Object.freeze(records),
-        ...(nextCursor === undefined ? {} : { nextCursor }),
-        exhausted: !hasNextPage,
-      });
+      return Object.freeze({ records: Object.freeze(records), ...(nextCursor === undefined ? {} : { nextCursor }), exhausted: !products.pageInfo.hasNextPage });
     },
   });
 }
@@ -559,9 +469,7 @@ function writeField(record: Record<string, unknown>, path: string, value: unknow
       return;
     }
     const existing = current[segment];
-    if (existing !== undefined && (existing === null || typeof existing !== "object" || Array.isArray(existing))) {
-      throw new TypeError("Connector mapping path collides with a scalar field");
-    }
+    if (existing !== undefined && (existing === null || typeof existing !== "object" || Array.isArray(existing))) throw new TypeError("Connector mapping path collides with a scalar field");
     const nested: Record<string, unknown> = existing === undefined ? {} : { ...(existing as Readonly<Record<string, unknown>>) };
     current[segment] = nested;
     current = nested;
@@ -570,11 +478,8 @@ function writeField(record: Record<string, unknown>, path: string, value: unknow
 
 function transformMappedValue(value: unknown, transformVersion: string): unknown {
   switch (transformVersion) {
-    case "identity.v1":
-      return value;
-    case "string.v1":
-      if (value === null || value === undefined) return value;
-      return String(value);
+    case "identity.v1": return value;
+    case "string.v1": return value === null || value === undefined ? value : String(value);
     case "trim.v1":
       if (typeof value !== "string") throw new TypeError("trim.v1 requires a string value");
       return value.trim();
@@ -586,8 +491,7 @@ function transformMappedValue(value: unknown, transformVersion: string): unknown
       if (!/^-?(?:0|[1-9][0-9]*)$/u.test(normalized)) throw new TypeError("integer-string.v1 requires an integer-compatible value");
       return normalized;
     }
-    default:
-      throw new TypeError(`Unsupported connector transform version: ${transformVersion}`);
+    default: throw new TypeError(`Unsupported connector transform version: ${transformVersion}`);
   }
 }
 
@@ -622,9 +526,7 @@ export function mapInboundConnectorRecord(input: {
       if (externalValue === undefined) return Object.freeze({ status: "rejected", reasonCode: "external_field_missing" });
       const transformed = transformMappedValue(externalValue, mapping.transformVersion);
       const currentValue = input.currentPlatformRecord === undefined ? undefined : readField(input.currentPlatformRecord, mapping.platformField);
-      if (mapping.ownership === "manual" && currentValue !== undefined && !valuesEqual(currentValue, transformed)) {
-        return Object.freeze({ status: "conflict", reasonCode: "manual_field_conflict" });
-      }
+      if (mapping.ownership === "manual" && currentValue !== undefined && !valuesEqual(currentValue, transformed)) return Object.freeze({ status: "conflict", reasonCode: "manual_field_conflict" });
       writeField(payload, mapping.platformField, transformed);
     }
   } catch {
