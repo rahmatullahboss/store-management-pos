@@ -204,8 +204,19 @@ export class ScopedOfflineReceiptAllocator {
       throw new TypeError("Receipt allocation expiry is invalid");
     }
     this.#next = allocation.next;
-    const { next: _next, ...immutable } = allocation;
-    this.#allocation = Object.freeze(immutable);
+    this.#allocation = Object.freeze({
+      allocationId: allocation.allocationId,
+      tenantId: allocation.tenantId,
+      storeId: allocation.storeId,
+      registerId: allocation.registerId,
+      deviceId: allocation.deviceId,
+      prefix: allocation.prefix,
+      start: allocation.start,
+      end: allocation.end,
+      expiresAt: allocation.expiresAt,
+      countryAllowsOfflineReceipt: allocation.countryAllowsOfflineReceipt,
+      requiresOnlineFiscalization: allocation.requiresOnlineFiscalization,
+    });
   }
 
   allocate(scope: ReceiptAllocationScope, now: string): AllocatedOfflineReceipt {
