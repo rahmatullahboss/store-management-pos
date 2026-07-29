@@ -7,21 +7,23 @@ const rtlScripts = new Set(["Adlm", "Arab", "Hebr", "Mand", "Nkoo", "Rohg", "Sam
 const timePattern = /^(?<hour>[01]\d|2[0-3]):(?<minute>[0-5]\d)(?::(?<second>[0-5]\d))?$/u;
 
 function canonicalLocale(value: string): Locale {
-  return locale(value.trim());
+  const normalized = value.trim();
+  if (normalized.length === 0) throw new PlatformError("VALIDATION_FAILED", "Locale is required", 400);
+  return locale(normalized);
 }
 
-function appendUnique(values: string[], value: string): void {
+function appendUnique(values: Locale[], value: Locale): void {
   if (!values.includes(value)) values.push(value);
 }
 
 function localeCandidates(value: Locale): readonly Locale[] {
   const parsed = new Intl.Locale(value);
-  const candidates: string[] = [];
+  const candidates: Locale[] = [];
   appendUnique(candidates, value);
   appendUnique(candidates, locale(parsed.baseName));
   if (parsed.script) appendUnique(candidates, locale(`${parsed.language}-${parsed.script}`));
   appendUnique(candidates, locale(parsed.language));
-  return candidates as readonly Locale[];
+  return Object.freeze(candidates);
 }
 
 export function textDirection(value: string): TextDirection {
@@ -103,7 +105,9 @@ export function selectCurrencyMetadata(
   });
   if (matches.length === 0) throw new PlatformError("NOT_FOUND", "No effective currency metadata version exists", 404);
   if (matches.length > 1) throw new PlatformError("CONFLICT", "Overlapping currency metadata versions are not allowed", 409);
-  return Object.freeze({ ...matches[0] });
+  const selected = matches[0];
+  if (!selected) throw new Error("Effective currency metadata selection failed");
+  return Object.freeze({ ...selected });
 }
 
 function parseBoundaryTime(value: string): number {
