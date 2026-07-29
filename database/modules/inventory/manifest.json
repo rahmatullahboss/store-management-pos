@@ -1,0 +1,16 @@
+{
+  "module": "MOD-B-INVENTORY",
+  "version": 1,
+  "migrations": [
+    {
+      "id": "INV-0001",
+      "file": "INV-0001-core.sql",
+      "sha256": "c8c18b0fddb28f4201351ee9fbbe3c4f2e8ea6f074bf0fc1793d4ffa3b1b57c8"
+    },
+    {
+      "id": "INV-0002",
+      "file": "INV-0002-operations.sql",
+      "sha256": "c70021da81a4388cbfe67cab20b66d20b39547fff2f9b2fc9fed13844d18ccee"
+    }
+  ]
+}

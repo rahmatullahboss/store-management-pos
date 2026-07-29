@@ -1,0 +1,55 @@
+name: MOD-B Neon Rehearsal
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - module/inventory-procurement-v1
+    paths:
+      - "database/foundation/**"
+      - "database/modules/inventory/**"
+      - "database/modules/procurement/**"
+      - "tooling/scripts/apply-migrations.mjs"
+      - "tooling/scripts/neon-mod-b-branch.mjs"
+      - "tooling/scripts/verify-mod-b-schema.mjs"
+      - ".github/workflows/mod-b-neon-rehearsal.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mod-b-neon-rehearsal
+  cancel-in-progress: false
+
+jobs:
+  rehearse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+      NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+      NEON_BRANCH_NAME: dev/module-inventory-procurement
+      MIGRATION_MODULES: FOUNDATION,MOD-B-INVENTORY,MOD-B-PROCUREMENT
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - id: neon
+        name: Create or verify persistent module branch
+        run: node tooling/scripts/neon-mod-b-branch.mjs
+      - name: Apply Foundation and MOD-B migrations
+        run: node tooling/scripts/apply-migrations.mjs
+      - name: Verify migration replay safety
+        run: node tooling/scripts/apply-migrations.mjs
+      - name: Assert schema, RLS, triggers and frozen boundaries
+        run: node tooling/scripts/verify-mod-b-schema.mjs
+      - name: Record branch evidence
+        run: |
+          echo "### MOD-B Neon rehearsal" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Branch: \`${{ steps.neon.outputs.branch_name }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Created this run: \`${{ steps.neon.outputs.created }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Migration replay: verified" >> "$GITHUB_STEP_SUMMARY"
+          echo "- RLS / append-only triggers / permissions: verified" >> "$GITHUB_STEP_SUMMARY"
