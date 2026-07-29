@@ -1,3 +1,4 @@
+import type { FiscalProviderRegistry } from "../../../modules/compliance/src/provider.js";
 import { NeonDatabase } from "../../../packages/foundation/src/db.js";
 import { errorResponse } from "../../../packages/foundation/src/errors.js";
 import { uuidV7 } from "../../../packages/foundation/src/ids.js";
@@ -7,6 +8,7 @@ import { handleImportBankStatement, handleListUnreconciled, handleReconcileState
 import { observeFinanceOperation } from "./finance-observability.js";
 import { handleFinanceReadiness } from "./finance-readiness-handler.js";
 import { handleCashRequest } from "./modules/cash/handler.js";
+import { handleComplianceRequest } from "./modules/compliance/handler.js";
 import { handleInventoryRequest } from "./modules/inventory/handler.js";
 import { handleLocalizationRequest } from "./modules/localization/handler.js";
 import { handlePosRequest } from "./modules/pos/handler.js";
@@ -26,6 +28,7 @@ export interface ApiEnvironment {
   readonly OIDC_JWKS_URI?: string;
   readonly OIDC_MFA_ACR_VALUES?: string;
   readonly FINANCE_METRICS?: MetricSink;
+  readonly FISCAL_PROVIDERS?: FiscalProviderRegistry;
 }
 
 export default {
@@ -53,6 +56,8 @@ export default {
       if (cashResponse) return cashResponse;
       const localizationResponse = await handleLocalizationRequest(request, url, context, database);
       if (localizationResponse) return localizationResponse;
+      const complianceResponse = await handleComplianceRequest(request, url, context, database, env.FISCAL_PROVIDERS);
+      if (complianceResponse) return complianceResponse;
 
       if (request.method === "POST" && url.pathname === "/v1/payments/intents") return await observeFinance("payment", "intent.create", async () => await handleCreatePaymentIntent(request, context, database, env));
       const paymentAction = url.pathname.match(/^\/v1\/payments\/intents\/([^/]+)\/(authorize|capture|void|recover)$/u);
