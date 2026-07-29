@@ -1,3 +1,12 @@
+/**
+ * Selected sanitisation patterns adapted for MOD-H from
+ * scaliuslabs/scalius-commerce-lite/packages/shared/src/storefront-theme.ts
+ * at commit 4cb83aecb6d27483951618dcf8398592e662f241.
+ *
+ * Product identity, defaults, field names and public contracts are Ozzyl-owned.
+ * See docs/architecture/storefront/upstream-file-manifest.yaml.
+ */
+
 export type StorefrontThemeDensityV1 = "compact" | "comfortable" | "airy";
 export type StorefrontThemeCornerV1 = "square" | "subtle" | "rounded";
 export type StorefrontThemeContainerV1 = "focused" | "standard" | "wide";
@@ -32,8 +41,27 @@ const COLOR_KEYS: readonly StorefrontThemeColorKeyV1[] = [
   "danger",
   "focus",
 ];
+const COLOR_KEY_SET = new Set<string>(COLOR_KEYS);
+const CSS_VARIABLES = new Map<StorefrontThemeColorKeyV1, string>(
+  COLOR_KEYS.map((key) => [
+    key,
+    `--storefront-${key.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}`,
+  ]),
+);
 
-const HEX_COLOR = /^#[0-9a-f]{6}$/i;
+const HEX_COLOR = /^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
+const COLOR_FUNCTION =
+  /^(?:rgb|rgba|hsl|hsla|oklch|oklab|lch|lab)\(\s*[-+0-9.%\s,/]+\)$/i;
+const UNSAFE_TOKEN =
+  /(?:\/\*|\*\/|@import|expression\s*\(|url\s*\(|javascript\s*:)/i;
+const STYLE_BREAKOUT = new Set([";", "{", "}", "<", ">", "\\"]);
+const NAMED_COLORS = new Set([
+  "transparent",
+  "currentcolor",
+  "black",
+  "white",
+]);
+
 const DENSITIES: readonly StorefrontThemeDensityV1[] = [
   "compact",
   "comfortable",
@@ -82,21 +110,87 @@ function enumValue<T extends string>(
     : fallback;
 }
 
-export function sanitizeStorefrontThemeV1(value: unknown): StorefrontThemeV1 {
-  if (!isRecord(value)) return DEFAULT_STOREFRONT_THEME_V1;
-  const sourceColors = isRecord(value.colors) ? value.colors : {};
-  const colors = { ...DEFAULT_STOREFRONT_THEME_V1.colors };
+function hasControlOrBreakoutCharacter(value: string): boolean {
+  for (const character of value) {
+    const code = character.charCodeAt(0);
+    if (code <= 31 || code === 127 || STYLE_BREAKOUT.has(character)) return true;
+  }
+  return false;
+}
 
-  for (const key of COLOR_KEYS) {
-    const candidate = sourceColors[key];
-    if (typeof candidate === "string" && HEX_COLOR.test(candidate.trim())) {
-      colors[key] = candidate.trim().toLowerCase();
+function isSafeThemeVariable(value: string): boolean {
+  const match = /^var\((--[a-z0-9-]+)\)$/i.exec(value);
+  if (!match?.[1]) return false;
+  return [...CSS_VARIABLES.values()].includes(match[1].toLowerCase());
+}
+
+export function isStorefrontThemeColorKeyV1(
+  value: string,
+): value is StorefrontThemeColorKeyV1 {
+  return COLOR_KEY_SET.has(value);
+}
+
+export function isSafeStorefrontThemeColorValueV1(value: string): boolean {
+  const normalized = value.trim();
+  if (
+    normalized.length === 0 ||
+    normalized.length > 128 ||
+    hasControlOrBreakoutCharacter(normalized) ||
+    UNSAFE_TOKEN.test(normalized)
+  ) {
+    return false;
+  }
+  return (
+    HEX_COLOR.test(normalized) ||
+    COLOR_FUNCTION.test(normalized) ||
+    NAMED_COLORS.has(normalized.toLowerCase()) ||
+    isSafeThemeVariable(normalized)
+  );
+}
+
+export function sanitizeStorefrontThemeColorsV1(
+  value: unknown,
+): Readonly<Record<StorefrontThemeColorKeyV1, string>> {
+  const colors: Record<StorefrontThemeColorKeyV1, string> = {
+    ...DEFAULT_STOREFRONT_THEME_V1.colors,
+  };
+  if (!isRecord(value)) return Object.freeze(colors);
+
+  for (const [key, candidate] of Object.entries(value)) {
+    if (
+      !isStorefrontThemeColorKeyV1(key) ||
+      typeof candidate !== "string" ||
+      !isSafeStorefrontThemeColorValueV1(candidate)
+    ) {
+      continue;
+    }
+    colors[key] = candidate.trim();
+  }
+  return Object.freeze(colors);
+}
+
+export function listInvalidStorefrontThemeColorEntriesV1(
+  value: unknown,
+): readonly string[] {
+  if (!isRecord(value)) return Object.freeze([]);
+  const invalid: string[] = [];
+  for (const [key, candidate] of Object.entries(value)) {
+    if (
+      !isStorefrontThemeColorKeyV1(key) ||
+      typeof candidate !== "string" ||
+      !isSafeStorefrontThemeColorValueV1(candidate)
+    ) {
+      invalid.push(key);
     }
   }
+  return Object.freeze([...new Set(invalid)]);
+}
 
+export function sanitizeStorefrontThemeV1(value: unknown): StorefrontThemeV1 {
+  if (!isRecord(value)) return DEFAULT_STOREFRONT_THEME_V1;
   return Object.freeze({
     version: "storefront-theme.v1",
-    colors: Object.freeze(colors),
+    colors: sanitizeStorefrontThemeColorsV1(value.colors),
     density: enumValue(
       value.density,
       DENSITIES,
@@ -113,4 +207,22 @@ export function sanitizeStorefrontThemeV1(value: unknown): StorefrontThemeV1 {
       DEFAULT_STOREFRONT_THEME_V1.container,
     ),
   });
+}
+
+export function buildStorefrontThemeTokensV1(
+  value: unknown,
+): Readonly<Record<string, string>> {
+  const theme = sanitizeStorefrontThemeV1(value);
+  const tokens: Record<string, string> = {};
+  for (const key of COLOR_KEYS) {
+    const variable = CSS_VARIABLES.get(key);
+    if (variable) tokens[variable] = theme.colors[key];
+  }
+  tokens["--storefront-density"] =
+    theme.density === "compact" ? "0.9" : theme.density === "airy" ? "1.1" : "1";
+  tokens["--storefront-radius"] =
+    theme.corner === "square" ? "0" : theme.corner === "rounded" ? "0.8rem" : "0.45rem";
+  tokens["--storefront-container"] =
+    theme.container === "focused" ? "64rem" : theme.container === "standard" ? "72rem" : "80rem";
+  return Object.freeze(tokens);
 }
