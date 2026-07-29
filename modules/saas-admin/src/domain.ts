@@ -90,11 +90,17 @@ export function transitionSubscription(
   const next = transitions[subscription.status][command];
   if (!next) throw new TypeError(`Invalid subscription transition: ${subscription.status} -> ${command}`);
   return Object.freeze({
-    ...subscription,
+    schemaVersion: "1.0",
+    subscriptionId: subscription.subscriptionId,
+    tenantId: subscription.tenantId,
+    planId: subscription.planId,
+    planVersion: subscription.planVersion,
     status: next,
+    startedAt: subscription.startedAt,
+    currentPeriodStart: subscription.currentPeriodStart,
+    currentPeriodEnd: subscription.currentPeriodEnd,
     version: (BigInt(subscription.version) + 1n).toString(),
     ...(next === "suspended" ? { suspendedAt: observedAt } : {}),
-    ...(next === "active" ? { suspendedAt: undefined } : {}),
     ...(next === "cancelled" ? { cancelledAt: observedAt } : {}),
   });
 }
