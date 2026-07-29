@@ -1,7 +1,7 @@
-import type { RequestContext } from "../../packages/foundation/src/context.js";
-import type { TransactionClient } from "../../packages/foundation/src/db.js";
-import { PlatformError } from "../../packages/foundation/src/errors.js";
-import { uuidV7 } from "../../packages/foundation/src/ids.js";
+import type { RequestContext } from "../../../packages/foundation/src/context.js";
+import type { TransactionClient } from "../../../packages/foundation/src/db.js";
+import { PlatformError } from "../../../packages/foundation/src/errors.js";
+import { uuidV7 } from "../../../packages/foundation/src/ids.js";
 
 const EXACT_INTEGER = /^(?:0|[1-9]\d*)$/u;
 const EXACT_DECIMAL = /^(?:0|[1-9]\d*)(?:\.\d+)?$/u;
@@ -14,8 +14,16 @@ function exactInteger(value: string, field: string, allowZero = true): bigint {
 }
 
 function exactDecimal(value: string, field: string): string {
-  if (!EXACT_DECIMAL.test(value) || !/[1-9]/u.test(value)) throw new PlatformError("VALIDATION_FAILED", `${field} must be an exact positive decimal string`, 400);
+  if (!EXACT_DECIMAL.test(value) || !/[1-9]/u.test(value)) {
+    throw new PlatformError("VALIDATION_FAILED", `${field} must be an exact positive decimal string`, 400);
+  }
   return value;
+}
+
+function timestamp(value: string, field: string): number {
+  const parsed = Date.parse(value);
+  if (!Number.isFinite(parsed)) throw new PlatformError("VALIDATION_FAILED", `${field} must be a valid timestamp`, 400);
+  return parsed;
 }
 
 export interface PosDeviceEnrollmentInput {
@@ -122,6 +130,33 @@ type CheckoutRow = Record<string, unknown> & {
   readonly status: string;
   readonly version: string;
 };
+
+type OfflineReplayRow = Record<string, unknown> & {
+  readonly id: string;
+  readonly register_id: string;
+  readonly authorization_id: string;
+  readonly device_sequence: string;
+  readonly operation_type: string;
+  readonly aggregate_id: string;
+  readonly aggregate_version: string;
+  readonly payload_hash: string;
+  readonly recorded_at: string;
+  readonly local_schema_version: string;
+  readonly app_version: string;
+};
+
+function sameOfflineEnvelope(existing: OfflineReplayRow, operation: OfflineOperationUploadInput): boolean {
+  return existing.register_id === operation.registerId
+    && existing.authorization_id === operation.authorizationId
+    && existing.device_sequence === operation.deviceSequence
+    && existing.operation_type === operation.operationType
+    && existing.aggregate_id === operation.aggregateId
+    && existing.aggregate_version === operation.aggregateVersion
+    && existing.payload_hash === operation.payloadHash
+    && timestamp(existing.recorded_at, "existing.recordedAt") === timestamp(operation.recordedAt, "recordedAt")
+    && existing.local_schema_version === operation.localSchemaVersion
+    && existing.app_version === operation.appVersion;
+}
 
 export class PosSqlRepository {
   async enrollDevice(client: TransactionClient, context: RequestContext, input: PosDeviceEnrollmentInput): Promise<Record<string, unknown>> {
@@ -315,15 +350,21 @@ export class PosSqlRepository {
     for (const operation of operations) {
       const sequence = exactInteger(operation.deviceSequence, "deviceSequence", false);
       const aggregateVersion = exactInteger(operation.aggregateVersion, "aggregateVersion");
-      const replay = await client.query<Record<string, unknown> & { readonly id: string; readonly payload_hash: string }>(
-        `SELECT id::text,payload_hash
+      timestamp(operation.recordedAt, "recordedAt");
+      const replay = await client.query<OfflineReplayRow>(
+        `SELECT id::text,register_id::text,authorization_id::text,device_sequence::text,
+                operation_type,aggregate_id,aggregate_version::text,payload_hash,
+                recorded_at::text,local_schema_version,app_version
          FROM pos.offline_operations
-         WHERE tenant_id=$1::uuid AND device_id=$2::uuid AND operation_id=$3`,
+         WHERE tenant_id=$1::uuid AND device_id=$2::uuid AND operation_id=$3
+         FOR UPDATE`,
         [context.tenantId, operation.deviceId, operation.operationId],
       );
       const existing = replay.rows[0];
       if (existing) {
-        if (existing.payload_hash !== operation.payloadHash) throw new PlatformError("IDEMPOTENCY_CONFLICT", "Offline operation was replayed with different content", 409);
+        if (!sameOfflineEnvelope(existing, operation)) {
+          throw new PlatformError("IDEMPOTENCY_CONFLICT", "Offline operation was replayed with different envelope content", 409);
+        }
         outcomes.push({ operationId: operation.operationId, status: "duplicate", offlineOperationId: existing.id });
         continue;
       }
@@ -333,9 +374,11 @@ export class PosSqlRepository {
          FROM pos.offline_authorizations
          WHERE tenant_id=$1::uuid AND id=$2::uuid
            AND device_id=$3::uuid AND register_id=$4::uuid
-           AND revoked_at IS NULL AND expires_at > now()
+           AND issued_at <= $5::timestamptz
+           AND expires_at > $5::timestamptz
+           AND (revoked_at IS NULL OR revoked_at > $5::timestamptz)
          FOR SHARE`,
-        [context.tenantId, operation.authorizationId, operation.deviceId, operation.registerId],
+        [context.tenantId, operation.authorizationId, operation.deviceId, operation.registerId, operation.recordedAt],
       );
       if (!authorization.rows[0]) {
         outcomes.push({ operationId: operation.operationId, status: "rejected", reasonCode: "OFFLINE_AUTHORIZATION_INVALID" });
@@ -365,6 +408,9 @@ export class PosSqlRepository {
   }
 
   async listReconciliation(client: TransactionClient, context: RequestContext, limit = 100): Promise<readonly Record<string, unknown>[]> {
+    if (!Number.isInteger(limit) || limit < 1 || limit > 500) {
+      throw new PlatformError("VALIDATION_FAILED", "Reconciliation limit must be between 1 and 500", 400);
+    }
     const result = await client.query(
       `SELECT o.id::text AS offline_operation_id,o.operation_id,o.device_sequence::text,o.operation_type,
               outcome.status,outcome.business_effect_ids,outcome.reason_code,outcome.reason_message,
