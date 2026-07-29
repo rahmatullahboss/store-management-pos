@@ -18,6 +18,7 @@ export interface MutableOfflineStore {
   list(): readonly OfflineOperationRecord[];
   append(record: OfflineOperationRecord): void;
   replace(record: OfflineOperationRecord): void;
+  uploadCursor(): bigint;
   setUploadCursor(sequence: bigint): void;
   setDownloadCursor(cursor: string | null): void;
   setProjectionVersion(version: string): void;
@@ -118,6 +119,7 @@ export class MemoryOfflineDurableStore implements OfflineDurableStore {
         if (!draft.operations.has(key)) throw new TypeError(`Offline operation ${key} does not exist`);
         draft.operations.set(key, record);
       },
+      uploadCursor: () => draft.uploadCursor,
       setUploadCursor: (sequence) => { draft.uploadCursor = sequence; },
       setDownloadCursor: (cursor) => { draft.downloadCursor = cursor; },
       setProjectionVersion: (version) => { draft.projectionVersion = version; },
@@ -208,6 +210,8 @@ export class DurableOfflineEngine {
   async advanceUploadCursor(sequence: bigint): Promise<void> {
     if (sequence < 0n) throw new RangeError("upload cursor cannot be negative");
     await this.store.transaction((transaction) => {
+      const currentCursor = transaction.uploadCursor();
+      if (sequence < currentCursor) throw new RangeError("upload cursor cannot move backwards");
       const maxSequence = transaction.list().at(-1)?.sequence ?? 0n;
       if (sequence > maxSequence) throw new RangeError("upload cursor cannot exceed the durable operation log");
       transaction.setUploadCursor(sequence);
