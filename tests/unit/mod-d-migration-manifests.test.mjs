@@ -30,6 +30,7 @@ test("MOD-D migrations run after the complete Wave 1 finance chain", async () =>
     "CSH-0003",
     "CSH-0004",
     "CSH-0005",
+    "CSH-0006",
   ];
   for (const migrationId of requiredIds) assert.ok(modDMigrationIds.includes(migrationId), `${migrationId} must remain registered`);
   assert.equal(new Set(modDMigrationIds).size, modDMigrationIds.length, "MOD-D migration IDs must remain unique");
