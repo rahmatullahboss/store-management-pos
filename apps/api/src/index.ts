@@ -14,8 +14,9 @@ import { handleLocalizationRequest } from "./modules/localization/handler.js";
 import { handlePosRequest } from "./modules/pos/handler.js";
 import { handlePosReceiptRequest } from "./modules/pos/receipt-handler.js";
 import { handleProcurementRequest } from "./modules/procurement/handler.js";
-import { handlePublicStorefrontRequest } from "./modules/storefront/public-handler.js";
 import { handleStorefrontRequest } from "./modules/storefront/handler.js";
+import { handlePublicStorefrontRequest } from "./modules/storefront/public-handler.js";
+import { handleStorefrontReadRequest } from "./modules/storefront/read-handler.js";
 import { handleCreatePaymentIntent, handleCreateRefund, handleImportSettlement, handlePaymentAction } from "./payment-handler.js";
 import { buildRequestContext } from "./request-context.js";
 import { handleCreateReference } from "./reference-handler.js";
@@ -62,6 +63,8 @@ export default {
       if (localizationResponse) return localizationResponse;
       const complianceResponse = await handleComplianceRequest(request, url, context, database, env.FISCAL_PROVIDERS);
       if (complianceResponse) return complianceResponse;
+      const storefrontReadResponse = await handleStorefrontReadRequest(request, url, context, database);
+      if (storefrontReadResponse) return storefrontReadResponse;
       const storefrontResponse = await handleStorefrontRequest(request, url, context, database);
       if (storefrontResponse) return storefrontResponse;
 
