@@ -1,3 +1,4 @@
+export * from "./adapters.js";
 export * from "./contracts.js";
 export * from "./credentials.js";
 export * from "./domain.js";
