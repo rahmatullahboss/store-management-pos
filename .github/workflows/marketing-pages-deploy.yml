@@ -1,10 +1,17 @@
 name: Marketing Pages Deploy
 
 on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "apps/marketing-web/**"
+      - "tests/architecture/marketing-landing.test.mjs"
+      - "tooling/scripts/marketing-design-evidence.mjs"
+      - ".github/workflows/marketing-pages-deploy.yml"
   push:
     branches:
       - main
-      - feature/marketing-landing-page
     paths:
       - "apps/marketing-web/**"
       - "tests/architecture/marketing-landing.test.mjs"
@@ -17,7 +24,7 @@ permissions:
   deployments: write
 
 concurrency:
-  group: marketing-pages-${{ github.ref }}
+  group: marketing-pages-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -48,7 +55,7 @@ jobs:
     needs: verify
     runs-on: ubuntu-latest
     environment:
-      name: ${{ github.ref_name == 'main' && 'production' || 'preview' }}
+      name: ${{ github.event_name == 'push' && 'production' || 'preview' }}
       url: ${{ steps.deploy.outputs.pages-deployment-alias-url || steps.deploy.outputs.deployment-url }}
     steps:
       - name: Checkout
@@ -61,7 +68,7 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           wranglerVersion: "4.114.0"
-          command: pages deploy apps/marketing-web/src --project-name=store-operating-system --branch=${{ github.ref_name }}
+          command: pages deploy apps/marketing-web/src --project-name=store-operating-system --branch=${{ github.event.pull_request.head.ref || github.ref_name }}
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish deployment links
