@@ -13,6 +13,8 @@ const sources = [
   { module: "MOD-E", manifest: "database/modules/payments/manifest.json", directory: "database/modules/payments/migrations" },
   { module: "MOD-E", manifest: "database/modules/accounting/manifest.json", directory: "database/modules/accounting/migrations" },
   { module: "MOD-E", manifest: "database/modules/banking/manifest.json", directory: "database/modules/banking/migrations" },
+  { module: "MOD-D", manifest: "database/modules/pos/manifest.json", directory: "database/modules/pos/migrations" },
+  { module: "MOD-D", manifest: "database/modules/cash/manifest.json", directory: "database/modules/cash/migrations" },
 ];
 const ids = new Set();
 const counts = new Map();
@@ -36,4 +38,11 @@ if (!/negative stock requires approval/u.test(inventory)) throw new Error("Negat
 const procurement = await readFile(path.join(root, "database/modules/procurement/migrations/PUR-0001-procurement.sql"), "utf8");
 if (/REFERENCES catalog\./u.test(procurement)) throw new Error("MOD-B must not depend on unmerged MOD-A tables");
 if (!/goods_receipt_lines_append_only/u.test(procurement)) throw new Error("Goods receipt lineage immutability is missing");
+const pos = await readFile(path.join(root, "database/modules/pos/migrations/POS-0001-store-edge.sql"), "utf8");
+if (!/receipt_snapshots_append_only/u.test(pos)) throw new Error("POS receipt snapshot append-only trigger is missing");
+if (!/checkout_operation_identity_immutable/u.test(pos)) throw new Error("POS checkout identity immutability guard is missing");
+if (!/payment_state <> 'unknown' OR status IN \('pending','unknown','review'\)/u.test(pos)) throw new Error("POS unknown-payment retry guard is missing");
+const cash = await readFile(path.join(root, "database/modules/cash/migrations/CSH-0001-cash-ledger.sql"), "utf8");
+if (!/cash_events_append_only/u.test(cash)) throw new Error("Cash event append-only trigger is missing");
+if (!/expected_minor/u.test(cash) || !/variance_minor/u.test(cash)) throw new Error("Cash reconciliation reconstruction is missing");
 console.log(`validated ${ids.size} module migrations (${[...counts].map(([module, count]) => `${module}:${count}`).join(", ")})`);
