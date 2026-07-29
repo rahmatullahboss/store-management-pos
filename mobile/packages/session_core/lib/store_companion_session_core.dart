@@ -272,9 +272,7 @@ final class SessionSnapshot {
   final bool requiresRestrictedDataPurge;
 
   /// Starts an external-browser authorization flow.
-  SessionSnapshot beginAuthorization({
-    required String correlationReference,
-  }) {
+  SessionSnapshot beginAuthorization({required String correlationReference}) {
     if (phase != SessionPhase.signedOut ||
         correlationReference.trim().isEmpty) {
       throw const SessionInvariantException(
@@ -331,16 +329,11 @@ final class SessionSnapshot {
         'Step-up may be requested only for an active session.',
       );
     }
-    return _copy(
-      phase: SessionPhase.stepUpRequired,
-      blockReason: reason,
-    );
+    return _copy(phase: SessionPhase.stepUpRequired, blockReason: reason);
   }
 
   /// Completes a server-approved step-up without changing session scope.
-  SessionSnapshot completeStepUp({
-    required DateTime reauthenticationAfterUtc,
-  }) {
+  SessionSnapshot completeStepUp({required DateTime reauthenticationAfterUtc}) {
     if (phase != SessionPhase.stepUpRequired) {
       throw const SessionInvariantException(
         'Step-up completion requires step-up state.',
@@ -449,9 +442,7 @@ final class SessionSnapshot {
   void _validate() {
     if (accessTokenExpiresAtUtc?.isUtc == false ||
         reauthenticationAfterUtc?.isUtc == false) {
-      throw const SessionInvariantException(
-        'Session timestamps must be UTC.',
-      );
+      throw const SessionInvariantException('Session timestamps must be UTC.');
     }
 
     switch (phase) {
