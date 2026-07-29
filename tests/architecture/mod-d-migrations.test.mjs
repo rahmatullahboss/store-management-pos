@@ -89,6 +89,11 @@ test("POS migration preserves checkout, receipt, sync and device evidence", asyn
   assert.match(sql, /receipt_delivery_events_append_only/u);
   assert.match(sql, /offline_operations_authorization_scope_fk/u);
   assert.match(sql, /checkout_operations_session_scope_fk/u);
+  assert.match(sql, /pos_device_store_scope/u);
+  assert.match(sql, /pos_session_store_scope/u);
+  assert.match(sql, /pos_checkout_store_scope/u);
+  assert.match(sql, /pos_offline_authorization_store_scope/u);
+  assert.match(sql, /offline authorization legal entity, store, register and device scope must match/u);
   assert.doesNotMatch(sql, /REFERENCES (?:catalog|pricing|tax|inventory|customer|sales|payment|accounting|banking)\./u);
 });
 
