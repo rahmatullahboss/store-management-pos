@@ -32,13 +32,13 @@ The dependency remains governed by its upstream licence and copyright notices.
 
 The vendored tooling remains governed by the upstream Apache-2.0 licence and notices.
 
-## Puppeteer Core 24.16.0
+## Puppeteer Core 25.4.0
 
 - Project: Puppeteer Core
 - Source: https://github.com/puppeteer/puppeteer
 - Licence: Apache-2.0
-- Use: Development-only control of the existing system Chrome browser for Foundation screenshot, responsive, keyboard and layout evidence.
-- Modification: None. The package is consumed as an exact-pinned npm development dependency and excluded from runtime deployment.
+- Use: Development-only control of the existing system Chrome browser for Foundation, localization, reporting, SaaS and marketing screenshot, responsive, keyboard and layout evidence.
+- Modification: None. The package is consumed as an exact-pinned npm development dependency, does not download a browser, and is excluded from runtime deployment.
 
 The dependency remains governed by its upstream Apache-2.0 licence and notices.
 
