@@ -15,7 +15,7 @@ const modules = [
     identity: "MOD-G-INTEGRATION",
     manifestPath: new URL("../../database/modules/integrations/manifest.json", import.meta.url),
     migrationsDirectory: new URL("../../database/modules/integrations/migrations/", import.meta.url),
-    expectedIds: ["INT-0001", "INT-0002", "INT-0003", "INT-0004"],
+    expectedIds: ["INT-0001", "INT-0002", "INT-0003", "INT-0004", "INT-0005", "INT-0006", "INT-0007"],
   },
 ];
 
@@ -141,4 +141,45 @@ test("integration migration preserves credential, public directory, webhook repl
   assert.match(sql, /INSERT INTO platform\.audit_events/u);
   assert.match(sql, /INSERT INTO platform\.outbox_events/u);
   assert.doesNotMatch(sql, /signing_key_reference[^\n]*metadata|credential_reference[^\n]*metadata/u);
+});
+
+test("SaaS platform migrations preserve immutable plans, exact usage, lifecycle safety and approved support controls", async () => {
+  const { migrations } = await loadModule(modules[1]);
+  const sql = migrations.map((migration) => migration.sql).join("\n");
+  for (const table of [
+    "saas_plan_definitions", "saas_plan_entitlements", "tenant_subscriptions",
+    "tenant_subscription_events", "usage_events", "usage_counters",
+    "tenant_lifecycle_jobs", "tenant_lifecycle_job_events",
+    "support_impersonation_grants", "support_impersonation_events",
+    "feature_rollouts", "feature_rollout_events", "support_incidents",
+    "support_incident_events",
+  ]) assert.match(sql, new RegExp(`platform\\.${table}`, "u"));
+  assert.match(sql, /quantity numeric\(78,0\)/u);
+  assert.match(sql, /usage_events_append_only/u);
+  assert.match(sql, /tenant_subscription_events_append_only/u);
+  assert.match(sql, /tenant_lifecycle_job_events_append_only/u);
+  assert.match(sql, /support_impersonation_events_append_only/u);
+  assert.match(sql, /feature_rollout_events_append_only/u);
+  assert.match(sql, /support_incident_events_append_only/u);
+  assert.match(sql, /support_actor_id <> approved_by/u);
+  assert.match(sql, /no longer than eight hours/u);
+  assert.match(sql, /cancelled tenant subscription is terminal/u);
+  assert.match(sql, /tenant subscription version conflict/u);
+  assert.match(sql, /tenant lifecycle job version conflict/u);
+  assert.match(sql, /SET status = v_tenant_status, updated_at = p_observed_at, version = version \+ 1/u);
+  assert.doesNotMatch(sql, /DELETE FROM platform\.(?:tenants|tenant_subscriptions|usage_events)/u);
+  for (const command of [
+    "publish_saas_plan", "assign_tenant_subscription", "transition_tenant_subscription",
+    "record_usage_event", "request_tenant_lifecycle_job", "transition_tenant_lifecycle_job",
+    "issue_support_impersonation_grant", "record_support_impersonation_use",
+    "revoke_support_impersonation_grant", "set_feature_rollout",
+    "open_support_incident", "transition_support_incident",
+  ]) {
+    assert.match(sql, new RegExp(`platform\\.${command}`, "u"));
+    assert.match(sql, new RegExp(`REVOKE ALL ON FUNCTION platform\\.${command}`, "u"));
+    assert.match(sql, new RegExp(`GRANT EXECUTE ON FUNCTION platform\\.${command}`, "u"));
+  }
+  assert.match(sql, /INSERT INTO platform\.audit_events/u);
+  assert.match(sql, /INSERT INTO platform\.outbox_events/u);
+  assert.doesNotMatch(sql, /CURRENT_DATE/u);
 });
