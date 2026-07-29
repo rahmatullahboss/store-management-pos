@@ -123,7 +123,11 @@ test("fiscal submission records provider acceptance once and replays without bli
     "accept",
     () => "2026-07-29T10:02:00.000Z",
   );
-  const wrapped = { ...provider, async submit(request) { calls += 1; return await provider.submit(request); } };
+  const wrapped = {
+    capabilityId: provider.capabilityId,
+    supportsCountryPack(version) { return provider.supportsCountryPack(version); },
+    async submit(request) { calls += 1; return await provider.submit(request); },
+  };
   const service = new ComplianceService(store, new MapFiscalProviderRegistry([[wrapped.capabilityId, wrapped]]));
   const first = await service.submitFiscal(context, fiscalCommand());
   assert.equal(first.status, "accepted");
