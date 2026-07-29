@@ -254,8 +254,7 @@ abstract final class OperationResultReducer {
 
   static LocalOperationState _stateForStatus(String status) => switch (status) {
     'accepted' => LocalOperationState.accepted,
-    'accepted_with_adjustment' =>
-      LocalOperationState.acceptedWithAdjustment,
+    'accepted_with_adjustment' => LocalOperationState.acceptedWithAdjustment,
     'duplicate_replay' => LocalOperationState.duplicateReplay,
     'deferred' => LocalOperationState.deferred,
     'requires_online_confirmation' =>
@@ -277,10 +276,7 @@ abstract final class OperationResultReducer {
 /// Validates state transitions before a storage adapter commits them.
 abstract final class LocalOperationTransitions {
   /// Whether the proposed transition is valid.
-  static bool allows(
-    LocalOperationState from,
-    LocalOperationState to,
-  ) {
+  static bool allows(LocalOperationState from, LocalOperationState to) {
     if (from == to) {
       return true;
     }
@@ -321,12 +317,11 @@ abstract final class LocalOperationTransitions {
     };
   }
 
-  static const Set<LocalOperationState> _terminalStates =
-      <LocalOperationState>{
-        LocalOperationState.accepted,
-        LocalOperationState.acceptedWithAdjustment,
-        LocalOperationState.duplicateReplay,
-        LocalOperationState.rejected,
-        LocalOperationState.superseded,
-      };
+  static const Set<LocalOperationState> _terminalStates = <LocalOperationState>{
+    LocalOperationState.accepted,
+    LocalOperationState.acceptedWithAdjustment,
+    LocalOperationState.duplicateReplay,
+    LocalOperationState.rejected,
+    LocalOperationState.superseded,
+  };
 }
