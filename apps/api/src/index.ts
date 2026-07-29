@@ -9,6 +9,7 @@ import { handleFinanceReadiness } from "./finance-readiness-handler.js";
 import { handleCashRequest } from "./modules/cash/handler.js";
 import { handleInventoryRequest } from "./modules/inventory/handler.js";
 import { handlePosRequest } from "./modules/pos/handler.js";
+import { handlePosReceiptRequest } from "./modules/pos/receipt-handler.js";
 import { handleProcurementRequest } from "./modules/procurement/handler.js";
 import { handleCreatePaymentIntent, handleCreateRefund, handleImportSettlement, handlePaymentAction } from "./payment-handler.js";
 import { buildRequestContext } from "./request-context.js";
@@ -45,6 +46,8 @@ export default {
       if (procurementResponse) return procurementResponse;
       const posResponse = await handlePosRequest(request, url, context, database);
       if (posResponse) return posResponse;
+      const receiptResponse = await handlePosReceiptRequest(request, url, context, database);
+      if (receiptResponse) return receiptResponse;
       const cashResponse = await handleCashRequest(request, url, context, database);
       if (cashResponse) return cashResponse;
 
