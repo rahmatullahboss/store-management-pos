@@ -1,156 +1,187 @@
 # MOD-G — Reporting, Integrations and SaaS Administration Handoff
 
-**Checkpoint date:** 2026-07-30  
+**Handoff date:** 2026-07-30  
 **Git branch:** `module/reporting-integrations-saas-v1`  
 **Worktree:** `.worktrees/reporting-integrations-saas`  
 **Approved Wave 2 release:** `93f8d98164dc105141a71b85dd2af5a98e9e31e9`  
+**Integration base:** `program/integration-v1` at `7c552a6c55844c6437ed4cc60ab85db3d8f8bb76`  
 **Neon branch:** `dev/module-reporting-integrations` (`br-mute-band-axbhmsky`)  
 **Review PR:** `#45`  
-**State:** `active`
+**Verified implementation head:** `3b8b4ae31d11aefd4ac5ae07d88f2351bf8a1c06`  
+**State:** `handoff_ready`
 
-## Activation safety
+## Safety and ownership
 
-- Git branch and Neon branch are isolated and verified.
-- No existing implementation was reset, discarded, overwritten or force-pushed.
-- All upstream module contracts are integrated; country/privacy behavior consumes MOD-F contracts without changing the Bangladesh pack's `limited` validation status.
-- The whole MOD-G workpack is owned by one implementation stream; no small task agents are used.
-- Mobile application paths and branches are not part of this workpack and were not modified.
+- MOD-G was implemented as one complete workpack by one owner.
+- No existing dirty work was reset, discarded, overwritten or force-pushed.
+- The branch is a strict descendant of the frozen integration base and is not behind it.
+- No production database or production customer data was used.
+- Credentials remain external references; plaintext credential material is not stored in PostgreSQL, audit events, outbox payloads, logs or public API responses.
+- Existing module ledgers remain authoritative. Reporting projections are rebuildable read models and cannot write authoritative business state.
+- Mobile application paths and branches remain outside MOD-G and were not modified.
+- MOD-F country/compliance contracts are consumed without changing Bangladesh's `limited` legal-validation status.
 
-## Planned checkpoint sequence
+## Completed workpack
 
-1. Metric catalog, immutable event-consumption cursor and control-total contracts.
-2. Reporting/integration schemas, forced RLS, append-only delivery/replay evidence and runtime commands.
-3. Projection workers, freshness/reconciliation, drill-through and rebuild controls.
-4. Public REST/OpenAPI, API clients/scopes, signed webhooks, retries, DLQ and replay.
-5. Connector framework, generic CSV/REST connector and one demand-selected ecommerce adapter.
-6. SaaS plans, entitlements, usage meters, tenant lifecycle and approved support controls.
-7. Admin dashboards, reporting/integration/SaaS consoles, asynchronous exports and developer documentation.
-8. Performance, tenant isolation, recovery, security, observability and final handoff evidence.
+### 1. Reporting contracts and persistence
 
-## Completed checkpoint 1 — contracts and migration foundation
+- Versioned metric catalog, query/result, provenance, projection cursor, reconciliation and export contracts.
+- Exact integer-string metric arithmetic, versioned definitions, freshness thresholds and control-total evidence.
+- `RPT-0001` reporting foundation and `RPT-0002` command migration.
+- Tenant-scoped metric definitions, projection cursors/events, snapshots, reconciliation evidence and export lifecycle.
+- Forced RLS, append-only evidence and command-only runtime writes.
 
-- Published versioned reporting metric/query/result, source provenance, projection cursor/event/reconciliation and export contracts.
-- Added exact metric/control-total arithmetic, duplicate replay handling, monotonic cursor enforcement and stale/fresh evaluation.
-- Published public API client, signed webhook, replay, connector mapping/cursor/outcome contracts.
-- Added HTTPS enforcement, terminal webhook lifecycle, connector ownership loop prevention, credential redaction and spreadsheet formula-injection protection.
-- Published versioned SaaS plan/entitlement, subscription, exact usage, lifecycle job and support impersonation contracts.
-- Added hard/soft entitlement decisions, explicit subscription transitions, exact/idempotent usage aggregation and independently approved time-boxed support access.
-- Added deterministic `RPT-0001` and `INT-0001` migrations after MOD-F.
-- Added 7 reporting and 9 integration tables with forced tenant RLS, exact values, append-only evidence and direct runtime write revocation.
-- Added dedicated `ci:neon-mod-g` complete-chain and deterministic replay rehearsal on the assigned Neon branch.
+### 2. Integration contracts and persistence
 
-## Completed checkpoint 2 — runtime commands and worker orchestration
+- API clients/scopes, signed webhook, delivery/replay, connector mapping/cursor/outcome and credential-reference contracts.
+- `INT-0001`–`INT-0004` for integration foundation, commands, persistent API-client credentials and public API directory.
+- `INT-0005`–`INT-0007` for SaaS plans/subscriptions/usage/lifecycle and support/rollout/incident controls.
+- Advisory locking, idempotent replay checks, optimistic versions, audit/outbox evidence and public execution revocation.
 
-### Database command layer
+### 3. Workers and asynchronous orchestration
 
-- Added `RPT-0002` and `INT-0002` command migrations.
-- Reporting commands cover metric publication, projection event consumption, metric snapshots, export requests and export transitions.
-- Integration commands cover webhook subscriptions/deliveries/attempts/replay and connector connections/mappings/sync outcomes.
-- Commands use security-definer functions, explicit execute grants, advisory locking, idempotent replay checks and transactional audit/outbox evidence.
-- Runtime roles retain no direct table insert/update/delete privileges.
+- Bounded tenant-scoped projection batches with applied, duplicate, retry, dead-letter and deferred outcomes.
+- Ordered processing prevents cursor gaps after retryable failures.
+- Bounded reporting export orchestration with renderer/storage/command ports, row and byte ceilings, safe object keys, expiry windows, SHA-256 storage receipts and explicit failure categories.
+- Signed webhook delivery with transient retry, exhausted-attempt dead letter and append-only attempt evidence.
+- Connector page orchestration advances a cursor only after every page outcome is recorded.
 
-### Reporting workers
+### 4. Public API and credentials
 
-- Added bounded tenant-scoped projection batches with explicit applied, duplicate, retry, dead-letter and deferred results.
-- Ordered processing stops on retryable infrastructure failure so later events cannot silently skip a cursor gap.
-- Added bounded asynchronous export orchestration through renderer, storage and command ports.
-- Export completion requires matching format/content type, exact row and byte counts, tenant-scoped object keys and a non-empty storage receipt.
+- Credential-first partner API composition before internal OIDC routes.
+- Tenant/client binding, exact scopes, expiry/status checks, rate limits, mutation idempotency and opaque cursor pagination.
+- Persistent client registration, rotation, suspension, reactivation and terminal revocation.
+- External `secret://`, `vault://`, `kms://` and `provider://` references only.
+- Fail-closed credential-provider verification before tenant business reads.
+- OpenAPI 3.1 and capabilities discovery without database initialization.
+- Implemented partner operations:
+  - `GET /public/v1/reporting/metrics`
+  - `POST /public/v1/reporting/queries`
+  - `POST /public/v1/reporting/exports`
+  - `GET /public/v1/reporting/exports/{exportId}`
+  - `GET /public/v1/integrations/webhook-deliveries`
+  - `POST /public/v1/integrations/webhook-deliveries/{deliveryId}/replay`
 
-### Integration workers
+### 5. Connectors
 
-- Added signed outbound webhook execution with active-subscription checks, tenant/event isolation, attempt evidence, transient retry classification and exhausted-attempt dead letter.
-- Added connector page orchestration with loop-safe mappings, bounded reads, scoped cursors, append-only outcome evidence and cursor advancement only after the full page is recorded.
-- Provider/internal errors are normalized to bounded categories without exposing credentials or raw secret values.
+- Generic CSV adapter with strict UTF-8, quoted fields, CRLF, header/shape validation, bounded rows, stable identity and deterministic cursoring.
+- Generic REST adapter with HTTPS origins, restricted credential headers, bounded JSON-pointer extraction, cursor pagination and retryable/permanent provider categories.
+- Shopify GraphQL Admin product/variant adapter with an explicit quarterly API version and a 250-record page ceiling.
+- Deterministic mapping transforms, platform/external/manual ownership, explicit conflict evidence and prototype-pollution path rejection.
+- Provider outages do not create item outcomes or advance cursors.
 
-Checkpoint evidence is recorded in `docs/architecture/mod-g/worker-orchestration-checkpoint.md`.
+### 6. SaaS administration
 
-## Completed checkpoint 3 — public API control plane
+- Immutable global plan versions and tenant-scoped subscriptions.
+- Exact append-only usage events and aggregate counters.
+- Hard, soft and observe entitlement enforcement with consistent warnings/denials.
+- Provision, suspend, resume, export and offboard lifecycle jobs that preserve tenant business data.
+- Deterministic tenant feature rollouts.
+- Support incident state machine.
+- Independently approved, scope-bound, time-boxed and auditable support impersonation grants.
 
-- Added API-client validation, tenant/client binding, explicit and namespace-wildcard scopes, status/expiry checks and fail-closed mutation idempotency requirements.
-- Added deterministic per-client/per-minute rate-limit windows with duplicate request protection and reset metadata.
-- Added exact SHA-256 idempotency state handling for new, in-progress, replay, failed and payload-conflict requests.
-- Added bounded opaque-cursor pagination and safe deterministic sort validation, including camelCase API fields.
-- Added database-free OpenAPI 3.1 and capabilities discovery routes before OIDC/database initialization.
-- Documented API-key and OAuth2 client-credentials conventions without exposing credential values.
-- Preserved every existing internal OIDC-authenticated business route unchanged.
+### 7. Admin web surfaces
 
-Checkpoint evidence is recorded in `docs/architecture/mod-g/public-api-control-plane-checkpoint.md`.
+- Five reporting audiences: owner, store manager, finance, inventory and platform.
+- Explainable metric cards with period, timezone, currency, version, freshness, control total and drill-through provenance.
+- Integration health console for connector state, redacted credential labels, webhook queues, retries and DLQ.
+- SaaS console for subscriptions, usage, lifecycle jobs, rollouts, incidents and visible support access.
+- Permission-filtered navigation and actions.
+- Explicit ready, loading, empty, error and denied states.
+- Responsive desktop/tablet/mobile layouts, Arabic RTL support, semantic landmarks, keyboard skip navigation and scrollable table regions.
 
-## Completed checkpoint 4 — persistent API clients and credential verification
+### 8. Final operational controls
 
-- Added `INT-0003` with idempotent API-client registration, exact credential-version rotation and active/suspended/revoked status transitions.
-- Added append-only `integration.api_client_security_events` with forced tenant RLS and command-only runtime writes.
-- Credential material remains outside PostgreSQL; only namespaced `secret://`, `vault://`, `kms://` or `provider://` references are accepted.
-- Added optimistic version checks, advisory locks, idempotency conflict detection and terminal revocation.
-- Added transactional audit/outbox evidence without including credential references or presented key material in metadata or payloads.
-- Added a fail-closed credential provider port that checks tenant, client, authentication, status and validity before secret-provider access.
-- Added deterministic binding rotation that retires the old binding and increments the credential version.
-- Added unit and architecture coverage for reference safety, provider failure, rotation, migration order/checksum, forced RLS and absence of secret-value columns.
+- Checkout-protecting workload admission for large reports and projection rebuilds.
+- Recursive integration diagnostic redaction.
+- Tenant-bound export object keys and bounded artifacts.
+- Rebuildable projections and deterministic migration replay.
+- Final machine-readable readiness artifact generated only after core, MOD-G Neon replay, Neon recovery and Cloudflare gates succeed.
 
-Checkpoint evidence is recorded in `docs/architecture/mod-g/api-client-credentials-checkpoint.md`.
+## Migrations
 
-## Completed checkpoint 5 — scoped partner REST routes and OpenAPI catalog
+Deterministic MOD-G migration order:
 
-- Added `INT-0004` with a pre-authentication API-client directory and service-principal actor mapping.
-- The directory function is security-definer, revoked from `PUBLIC` and returns only safe client metadata plus an external credential reference.
-- Added credential-first and rate-limit-first route composition before internal OIDC route handling.
-- Added tenant-RLS reporting metric list/query routes with freshness, source cursor and reconciliation provenance.
-- Added asynchronous export request/status routes backed by `reporting.request_export` and database idempotency.
-- Added webhook delivery health and dead-letter replay routes backed by `integration.request_webhook_replay`.
-- Webhook payloads, signatures and signing references remain excluded from public responses.
-- Added a complete OpenAPI 3.1 catalog for all implemented partner operations, authentication alternatives, scopes, pagination, idempotency, rate-limit headers and standard problem responses.
-- Added behavioural tests for authenticated tenant context, service-principal actor propagation, scope denial before business reads, fail-closed missing bindings, mutation idempotency and OpenAPI completeness.
+1. `RPT-0001-reporting-foundation.sql`
+2. `RPT-0002-reporting-commands.sql`
+3. `INT-0001-integration-foundation.sql`
+4. `INT-0002-integration-commands.sql`
+5. `INT-0003-api-client-credentials.sql`
+6. `INT-0004-public-api-directory.sql`
+7. `INT-0005-saas-platform-foundation.sql`
+8. `INT-0006-saas-platform-commands.sql`
+9. `INT-0007-saas-support-controls.sql`
 
-Checkpoint evidence is recorded in `docs/architecture/mod-g/partner-api-routes-checkpoint.md`.
+## Exact verification evidence
 
-## Completed checkpoint 6 — connector framework and ecommerce adapter
+### Foundation CI
 
-- Published connector configuration on the versioned connection contract without embedding secret values.
-- Added a bounded generic CSV adapter with strict UTF-8, quoted-field, CRLF, header, row-shape, identity and deterministic cursor controls.
-- Added a generic REST adapter with credential-free HTTPS origins, restricted credential headers, bounded JSON-pointer extraction, cursor pagination and retryable/permanent provider error categories.
-- Selected Shopify GraphQL Admin API as the first launch-priority ecommerce adapter and required an explicit quarterly API version.
-- Added Shopify product and variant pagination with a 250-record ceiling and external access-token resolution.
-- Added deterministic inbound mapping transforms, external/manual ownership decisions, explicit manual conflicts and prototype-pollution path rejection.
-- Preserved the outcome-before-cursor invariant; provider outages produce no item outcomes and no cursor movement.
-- Added tests for CSV parsing, duplicate identities, REST pagination/outage recovery, Shopify GraphQL cursoring, mapping conflicts and safe paths.
+Run `30494381767` on implementation head `3b8b4ae31d11aefd4ac5ae07d88f2351bf8a1c06` passed:
 
-Checkpoint evidence is recorded in `docs/architecture/mod-g/connectors-checkpoint.md`.
-
-## Verification evidence
-
-### Contracts and migration foundation
-
-GitHub run `30463780467` passed core, Design, MOD-G Neon full-chain/replay, Neon recovery and Cloudflare preview/runtime/cleanup gates. The assigned-branch artifact reports 48 applied migrations, 7 reporting tables, 9 integration tables, forced RLS on all 16 MOD-G tables, zero direct runtime writes, zero `PUBLIC` function execution and zero unsafe credential-value columns.
-
-### Runtime commands and workers
-
-Implementation head `abae858f7861c49b3de0397971af9d21bd3c56c6` passed Foundation CI run `30478165369`, verify job `90665021102`, including format, lint, boundaries, strict TypeScript, `306/306` tests, secret scan, licence register, SBOM and dependency audit. Its Design run encountered an isolated Chrome startup timeout; the next exact public-API head passed Design without source changes to existing visual surfaces.
-
-### Public API control plane
-
-Implementation head `b308f5f1653e9c6a41b6e10bab849a59866893ef` passed Foundation CI run `30479261530`, `311/311` tests, MOD-G Neon replay, Neon recovery, Cloudflare preview/runtime/cleanup and Foundation Design CI.
-
-### API-client credential lifecycle
-
-Implementation head `0929798c81dc2994e2cff4510a9ed0f1756f62b1` passed Foundation CI run `30481850859`, `314/314` tests, complete MOD-G Neon replay, Neon recovery, Cloudflare preview/runtime/cleanup and Foundation Design CI.
-
-### Scoped partner routes
-
-Implementation head `13ed32f3ec8c1f92f9f9bc5e86ff08f043113acb` passed Foundation CI run `30483170747`, `319/319` tests, complete MOD-G Neon replay, Neon recovery, Cloudflare preview/runtime/cleanup and Foundation Design CI.
-
-### Connector framework
-
-Implementation head `67f9771804432ae79143d862d68a37e2b0e6f18f` passed:
-
-- Foundation CI run `30484495094`;
-- verify job `90686647684` with `325/325` tests;
-- format, lint, architecture boundaries and strict TypeScript;
+- verify job `90719681926`;
+- format, lint and architecture boundaries;
+- strict TypeScript build;
+- `343/343` unit and architecture tests;
 - secret scan, licence register, SBOM and dependency audit;
-- MOD-G complete-chain and deterministic replay job `90686733818`;
-- Neon recovery job `90686733744`;
-- Foundation Design CI run `30484495340`;
-- Cloudflare preview/runtime/cleanup under the same Foundation run.
+- MOD-G complete-chain and deterministic replay job `90719767445`;
+- Neon recovery job `90719767378`;
+- Cloudflare preview, runtime metrics and cleanup job `90719767091`;
+- final readiness job `90720435656`.
 
-## Current checkpoint
+### Design CI
 
-Generic CSV/REST connectors, launch-priority Shopify GraphQL product synchronization, mapping conflict controls and outage/cursor recovery evidence are complete. The next coherent checkpoint is persistent SaaS plans, entitlements, exact usage meters, tenant lifecycle orchestration, rollout/incidents and approved support controls, followed by reporting/integration/SaaS admin web surfaces.
+Foundation Design run `30494381587`, evidence job `90719681447`, passed:
+
+- Foundation browser evidence;
+- MOD-G browser evidence `7/7`;
+- zero WCAG axe violations;
+- zero unexpected clipping or viewport overflow;
+- desktop, RTL tablet and mobile scenarios;
+- one main landmark, skip-link keyboard flow, reduced motion and 200% text scaling.
+
+### Final readiness artifact
+
+Artifact `mod-g-final-30494381767` (`8741086120`) reports:
+
+- 9 MOD-G migrations;
+- 4 forced-RLS statements covering module table groups;
+- 17 append-only triggers;
+- 28 security-definer functions and 28 explicit execute grants;
+- zero unsafe business-data deletes;
+- zero unsafe credential columns;
+- OpenAPI `3.1.0`, 8 paths and all 6 required partner paths;
+- 20,000 synthetic workload-admission decisions;
+- synthetic p95 decision time of 3 microseconds;
+- large exports/rebuilds deferred under checkout pressure;
+- recursive credential redaction, tenant delete guard and command-only runtime writes.
+
+## Documentation
+
+- `docs/architecture/mod-g/activation-checkpoint.md`
+- `docs/architecture/mod-g/contracts-migrations-checkpoint.md`
+- `docs/architecture/mod-g/worker-orchestration-checkpoint.md`
+- `docs/architecture/mod-g/public-api-control-plane-checkpoint.md`
+- `docs/architecture/mod-g/api-client-credentials-checkpoint.md`
+- `docs/architecture/mod-g/partner-api-routes-checkpoint.md`
+- `docs/architecture/mod-g/connectors-checkpoint.md`
+- `docs/architecture/mod-g/saas-lifecycle-checkpoint.md`
+- `docs/architecture/mod-g/admin-consoles-checkpoint.md`
+- `docs/architecture/mod-g/final-operational-readiness.md`
+- `docs/architecture/mod-g/design-evidence/`
+
+## Known boundaries
+
+- Country-specific legal, tax, privacy or accounting claims remain subject to separately approved country-pack validation.
+- Shopify synchronization requires an explicitly configured supported API version and externally resolved access token.
+- Connector/provider-specific production certification is separate from the generic adapter contract and synthetic evidence.
+- Projections and exports are read-side products; authoritative corrections remain reversals/commands in the owning module.
+- Main release must follow controlled serial integration; this handoff does not authorize parallel merging with another module.
+
+## Serial integration instructions
+
+1. Confirm `program/integration-v1` still equals or is an ancestor of this branch and no competing module merge is in progress.
+2. Confirm PR `#45` expected head matches the reviewed handoff head.
+3. Merge without force-push and retain the module branch until integration verification finishes.
+4. Run combined Foundation, Design, migration/replay, recovery and Cloudflare gates on `program/integration-v1`.
+5. Record the integration merge SHA and exact push-run jobs in a separate integration handoff.
+6. Only then advance MOD-G from `handoff_ready` to `integrated` and consider a controlled release PR to `main`.
