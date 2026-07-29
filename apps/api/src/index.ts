@@ -1,3 +1,4 @@
+import type { FiscalProviderRegistry } from "../../../modules/compliance/src/provider.js";
 import { NeonDatabase } from "../../../packages/foundation/src/db.js";
 import { errorResponse } from "../../../packages/foundation/src/errors.js";
 import { uuidV7 } from "../../../packages/foundation/src/ids.js";
@@ -6,14 +7,21 @@ import { handleAllocateOpenItem, handleClosePeriod, handleCreateOpenItem, handle
 import { handleImportBankStatement, handleListUnreconciled, handleReconcileStatementLine, handleRecordReconciliationRun, handleReverseReconciliation } from "./banking-handler.js";
 import { observeFinanceOperation } from "./finance-observability.js";
 import { handleFinanceReadiness } from "./finance-readiness-handler.js";
+import { handleCashRequest } from "./modules/cash/handler.js";
+import { handleComplianceRequest } from "./modules/compliance/handler.js";
 import { handleInventoryRequest } from "./modules/inventory/handler.js";
+import { handleLocalizationRequest } from "./modules/localization/handler.js";
+import { handlePosRequest } from "./modules/pos/handler.js";
+import { handlePosReceiptRequest } from "./modules/pos/receipt-handler.js";
 import { handleProcurementRequest } from "./modules/procurement/handler.js";
 import { handleCreatePaymentIntent, handleCreateRefund, handleImportSettlement, handlePaymentAction } from "./payment-handler.js";
+import { handlePublicApiDiscovery } from "./public-api-discovery.js";
+import { handlePublicPartnerApi, type PublicPartnerApiBindings } from "./public-partner-api.js";
 import { buildRequestContext } from "./request-context.js";
 import { handleCreateReference } from "./reference-handler.js";
 import { createTokenVerifier } from "./token-verifier.js";
 
-export interface ApiEnvironment {
+export interface ApiEnvironment extends PublicPartnerApiBindings {
   readonly DATABASE_URL: string;
   readonly APP_ENV: string;
   readonly REGION: string;
@@ -22,6 +30,7 @@ export interface ApiEnvironment {
   readonly OIDC_JWKS_URI?: string;
   readonly OIDC_MFA_ACR_VALUES?: string;
   readonly FINANCE_METRICS?: MetricSink;
+  readonly FISCAL_PROVIDERS?: FiscalProviderRegistry;
 }
 
 export default {
@@ -29,8 +38,12 @@ export default {
     const requestId = request.headers.get("x-request-id") ?? uuidV7();
     try {
       const url = new URL(request.url);
+      const discoveryResponse = handlePublicApiDiscovery(request, url);
+      if (discoveryResponse) return discoveryResponse;
       if (request.method === "GET" && url.pathname === "/health") return Response.json({ status: "healthy", service: "api", databaseMode: "direct-neon", region: env.REGION });
       const database = new NeonDatabase({ connectionString: env.DATABASE_URL });
+      const publicPartnerResponse = await handlePublicPartnerApi({ request, url, database, bindings: env, requestId, region: env.REGION });
+      if (publicPartnerResponse) return publicPartnerResponse;
       const verifier = createTokenVerifier(env, database);
       const context = await buildRequestContext(new Request(request, { headers: new Headers([...request.headers, ["x-request-id", requestId]]) }), verifier, env.REGION);
       const financeObserver = env.FINANCE_METRICS ? { metrics: env.FINANCE_METRICS } : {};
@@ -41,6 +54,16 @@ export default {
       if (inventoryResponse) return inventoryResponse;
       const procurementResponse = await handleProcurementRequest(request, url, context, database);
       if (procurementResponse) return procurementResponse;
+      const posResponse = await handlePosRequest(request, url, context, database);
+      if (posResponse) return posResponse;
+      const receiptResponse = await handlePosReceiptRequest(request, url, context, database);
+      if (receiptResponse) return receiptResponse;
+      const cashResponse = await handleCashRequest(request, url, context, database);
+      if (cashResponse) return cashResponse;
+      const localizationResponse = await handleLocalizationRequest(request, url, context, database);
+      if (localizationResponse) return localizationResponse;
+      const complianceResponse = await handleComplianceRequest(request, url, context, database, env.FISCAL_PROVIDERS);
+      if (complianceResponse) return complianceResponse;
 
       if (request.method === "POST" && url.pathname === "/v1/payments/intents") return await observeFinance("payment", "intent.create", async () => await handleCreatePaymentIntent(request, context, database, env));
       const paymentAction = url.pathname.match(/^\/v1\/payments\/intents\/([^/]+)\/(authorize|capture|void|recover)$/u);

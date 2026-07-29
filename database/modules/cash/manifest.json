@@ -1,0 +1,40 @@
+{
+  "module": "MOD-D-CASH",
+  "version": 6,
+  "order": 41,
+  "migrations": [
+    {
+      "id": "CSH-0001",
+      "file": "CSH-0001-cash-ledger.sql",
+      "sha256": "d6518a9bd6849f0b2a6c5c1eea9e8b87c39ec1900704069856492e3c5fd8d173"
+    },
+    {
+      "id": "CSH-0002",
+      "file": "CSH-0002-reversal-controls.sql",
+      "sha256": "60fc230a94a78e94b9bcffefe1c6def6ab7b20b287dc3748030790333a7e52f4"
+    },
+    {
+      "id": "CSH-0003",
+      "file": "CSH-0003-function-privilege-hardening.sql",
+      "sha256": "43c2aae378255a628bc6c5d1b7d7dd9bf6f9552641a1837f3003c8e6aa10e58e"
+    },
+    {
+      "id": "CSH-0004",
+      "file": "CSH-0004-runtime-commands.sql",
+      "sha256": "8a82d7ca92d730d2bb7ae414ad07bfb850bdfa5fdc15f93cd172c5656b3e9884",
+      "legacyMarkers": [
+        "manifest:CSH-0003-runtime-commands.sql"
+      ]
+    },
+    {
+      "id": "CSH-0005",
+      "file": "CSH-0005-cash-scope-and-reversal-controls.sql",
+      "sha256": "a38b676c0a88ba72ee05508ce5d990372bcae8c7ab9c3c516f261cc0bfa78457"
+    },
+    {
+      "id": "CSH-0006",
+      "file": "CSH-0006-final-function-privilege-hardening.sql",
+      "sha256": "debd8852517fb1b1e813d757441cb4d1084c7f4f277bce77d95d92f3e8091315"
+    }
+  ]
+}

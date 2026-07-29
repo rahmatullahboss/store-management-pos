@@ -8,8 +8,10 @@ One agent owns the entire store-edge workpack: checkout UX, cash shifts, local d
 Git branch:   module/pos-cash-offline-v1
 Worktree:     .worktrees/pos-cash-offline
 Neon branch:  dev/module-pos-cash-offline
-Base:         program/foundation-v1
+Base SHA:     6badafe06a9e0013d12ba036160c915b48fe1c13
 ```
+
+The base SHA is the secured Wave 1 `main` baseline after MOD-A, MOD-B, MOD-C and MOD-E integration and GitHub Actions/Neon cold-wake hardening. Do not rebase this workpack onto the earlier Foundation-only branch.
 
 ## Mission
 

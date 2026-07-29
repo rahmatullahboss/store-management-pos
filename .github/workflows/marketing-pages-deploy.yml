@@ -1,4 +1,4 @@
-name: Marketing Pages Deploy
+name: Marketing Pages Preview
 
 on:
   pull_request:
@@ -12,17 +12,23 @@ on:
       - main
     paths:
       - "apps/marketing-web/**"
+      - "docs/architecture/marketing/**"
       - "tests/architecture/marketing-landing.test.mjs"
       - "tooling/scripts/marketing-design-evidence.mjs"
       - ".github/workflows/marketing-pages-deploy.yml"
+      - "package.json"
+      - "package-lock.json"
   push:
     branches:
       - main
     paths:
       - "apps/marketing-web/**"
+      - "docs/architecture/marketing/**"
       - "tests/architecture/marketing-landing.test.mjs"
       - "tooling/scripts/marketing-design-evidence.mjs"
       - ".github/workflows/marketing-pages-deploy.yml"
+      - "package.json"
+      - "package-lock.json"
   workflow_dispatch:
 
 permissions:
@@ -36,7 +42,7 @@ jobs:
   verify:
     name: Verify landing page
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -53,26 +59,28 @@ jobs:
       - name: Verify repository
         run: npm run verify
 
-      - name: Verify Impeccable design rules
-        run: npm run design:detect
+      - name: Verify marketing browser and accessibility evidence
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+        run: npm run design:marketing-evidence
 
-  deploy:
-    name: Deploy to Cloudflare Pages
+  preview:
+    name: Deploy Cloudflare Pages preview
     needs: verify
-    if: ${{ github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]') }}
+    if: ${{ (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]') || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: read
       deployments: write
     environment:
-      name: ${{ github.event_name == 'push' && 'production' || 'preview' }}
+      name: preview
       url: ${{ steps.deploy.outputs.pages-deployment-alias-url || steps.deploy.outputs.deployment-url }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - name: Deploy landing page
+      - name: Deploy preview only
         id: deploy
         uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0 # v4
         with:
@@ -81,15 +89,16 @@ jobs:
           wranglerVersion: "4.114.0"
           preCommands: |
             npx wrangler pages project list --json | grep -Eq '"(Project Name|name)"[[:space:]]*:[[:space:]]*"store-operating-system"' || npx wrangler pages project create store-operating-system --production-branch=main
-          command: pages deploy apps/marketing-web/src --project-name=store-operating-system --branch=${{ github.event.pull_request.head.ref || github.ref_name }}
+          command: pages deploy apps/marketing-web/src --project-name=store-operating-system --branch=${{ github.event.pull_request.head.ref || 'manual-preview' }}
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Publish deployment links
+      - name: Publish preview links
         env:
           DEPLOYMENT_URL: ${{ steps.deploy.outputs.deployment-url }}
           ALIAS_URL: ${{ steps.deploy.outputs.pages-deployment-alias-url }}
         run: |
-          echo "## Cloudflare Pages deployment" >> "$GITHUB_STEP_SUMMARY"
+          echo "## Cloudflare Pages preview" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "- Deployment: ${DEPLOYMENT_URL}" >> "$GITHUB_STEP_SUMMARY"
           echo "- Branch alias: ${ALIAS_URL}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Production publishing remains disabled pending launch approvals." >> "$GITHUB_STEP_SUMMARY"
