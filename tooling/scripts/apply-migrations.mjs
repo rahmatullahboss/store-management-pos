@@ -26,6 +26,8 @@ const availableModules = [
   { name: "MOD-D-POS", manifest: "database/modules/pos/manifest.json", migrations: "database/modules/pos/migrations" },
   { name: "MOD-D-CASH", manifest: "database/modules/cash/manifest.json", migrations: "database/modules/cash/migrations" },
   { name: "MOD-F-LOCALIZATION", manifest: "database/modules/localization/manifest.json", migrations: "database/modules/localization/migrations" },
+  { name: "MOD-G-REPORTING", manifest: "database/modules/reporting/manifest.json", migrations: "database/modules/reporting/migrations" },
+  { name: "MOD-G-INTEGRATION", manifest: "database/modules/integrations/manifest.json", migrations: "database/modules/integrations/migrations" },
 ];
 
 const dependencies = new Map([
@@ -43,6 +45,8 @@ const dependencies = new Map([
   ["MOD-D-POS", ["FOUNDATION"]],
   ["MOD-D-CASH", ["FOUNDATION", "MOD-D-POS"]],
   ["MOD-F-LOCALIZATION", ["FOUNDATION", "MOD-A-TAX", "MOD-C-SALES", "MOD-D-POS", "MOD-E-ACCOUNTING"]],
+  ["MOD-G-REPORTING", ["FOUNDATION", "MOD-A-CATALOG", "MOD-B-INVENTORY", "MOD-C-SALES", "MOD-D-POS", "MOD-E-ACCOUNTING", "MOD-F-LOCALIZATION"]],
+  ["MOD-G-INTEGRATION", ["FOUNDATION", "MOD-G-REPORTING"]],
 ]);
 
 const requested = new Set((process.env.MIGRATION_MODULES ?? availableModules.map((item) => item.name).join(",")).split(",").map((item) => item.trim()).filter(Boolean));
