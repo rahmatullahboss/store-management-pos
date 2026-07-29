@@ -40,7 +40,7 @@ test("device-scoped replay is idempotent and changed content is rejected", async
 
   const secondDevice = await engine.commit(operation({ deviceId: "device-2" }), "2026-07-29T08:00:03.000Z");
   assert.equal(secondDevice.record.sequence, 2n);
-  assert.throws(() => engine.commit(operation({ requestHash: "changed" }), "2026-07-29T08:00:04.000Z"), /different content/i);
+  await assert.rejects(() => engine.commit(operation({ requestHash: "changed" }), "2026-07-29T08:00:04.000Z"), /different content/i);
 });
 
 test("out-of-order outcomes preserve deterministic pending upload order", async () => {
