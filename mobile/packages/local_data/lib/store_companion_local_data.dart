@@ -22,7 +22,9 @@ class LocalDataSecurityException implements Exception {
 final class LocalCipherUnavailableException extends LocalDataSecurityException {
   /// Creates a fail-closed cipher availability error.
   const LocalCipherUnavailableException()
-    : super('Encrypted SQLite support is unavailable in this application build.');
+    : super(
+        'Encrypted SQLite support is unavailable in this application build.',
+      );
 }
 
 /// Thrown when secure key material is missing, malformed or cannot be persisted.
@@ -68,7 +70,8 @@ final class LocalEncryptionKey {
     database.execute('PRAGMA secure_delete = ON;');
 
     final foreignKeys = database.select('PRAGMA foreign_keys;');
-    final enabled = foreignKeys.isNotEmpty && foreignKeys.first.values.first == 1;
+    final enabled =
+        foreignKeys.isNotEmpty && foreignKeys.first.values.first == 1;
     if (!enabled) {
       throw const LocalDataSecurityException(
         'SQLite foreign-key enforcement could not be enabled.',
