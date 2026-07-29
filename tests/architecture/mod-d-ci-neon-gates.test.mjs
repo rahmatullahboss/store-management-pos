@@ -8,18 +8,18 @@ async function workflow() {
   return await readFile(workflowUrl, "utf8");
 }
 
+function jobSection(source, name, nextName) {
+  const start = source.indexOf(`  ${name}:`);
+  const end = nextName === undefined ? source.length : source.indexOf(`  ${nextName}:`);
+  assert.ok(start >= 0, `${name} job is required`);
+  assert.ok(end > start, `${name} job boundary is invalid`);
+  return source.slice(start, end);
+}
+
 test("MOD-D PRs use the assigned Neon branch rehearsal instead of an ephemeral preview branch", async () => {
   const source = await workflow();
-  const previewStart = source.indexOf("  neon-preview:");
-  const recoveryStart = source.indexOf("  neon-recovery:");
-  const modDStart = source.indexOf("  mod-d-neon-rehearsal:");
-  const cloudflareStart = source.indexOf("  cloudflare-preview:");
-
-  assert.ok(previewStart >= 0 && recoveryStart > previewStart);
-  assert.ok(modDStart > recoveryStart && cloudflareStart > modDStart);
-
-  const previewJob = source.slice(previewStart, recoveryStart);
-  const modDJob = source.slice(modDStart, cloudflareStart);
+  const previewJob = jobSection(source, "neon-preview", "neon-recovery");
+  const modDJob = jobSection(source, "mod-d-neon-rehearsal", "mod-f-neon-rehearsal");
 
   assert.match(previewJob, /github\.event\.pull_request\.head\.ref != 'module\/pos-cash-offline-v1'/u);
   assert.match(modDJob, /github\.event\.pull_request\.head\.ref == 'module\/pos-cash-offline-v1'/u);
@@ -28,11 +28,24 @@ test("MOD-D PRs use the assigned Neon branch rehearsal instead of an ephemeral p
   assert.match(modDJob, /if-no-files-found: error/u);
 });
 
-test("generic Neon preview remains active for integration and main pushes", async () => {
+test("quota-safe MOD-G releases use the assigned branch and retain recovery evidence", async () => {
   const source = await workflow();
-  const previewJob = source.slice(source.indexOf("  neon-preview:"), source.indexOf("  neon-recovery:"));
+  const previewJob = jobSection(source, "neon-preview", "neon-recovery");
+  const recoveryJob = jobSection(source, "neon-recovery", "mod-d-neon-rehearsal");
+  const modGJob = jobSection(source, "mod-g-neon-rehearsal", "cloudflare-preview");
+  const finalJob = jobSection(source, "mod-g-final-readiness");
 
-  assert.match(previewJob, /github\.event_name != 'pull_request'/u);
+  assert.match(previewJob, /github\.event\.pull_request\.head\.ref != 'program\/integration-v1'/u);
+  assert.match(previewJob, /github\.event_name == 'workflow_dispatch'/u);
   assert.match(previewJob, /npm run ci:neon-preview/u);
   assert.match(previewJob, /NEON_PARENT_BRANCH_ID: br-spring-grass-ax3ptydv/u);
+
+  assert.match(recoveryJob, /npm run ci:neon-recovery/u);
+  assert.match(modGJob, /github\.event\.pull_request\.head\.ref == 'program\/integration-v1'/u);
+  assert.match(modGJob, /github\.event\.pull_request\.base\.ref == 'main'/u);
+  assert.match(modGJob, /MOD_G_NEON_BRANCH_ID: br-mute-band-axbhmsky/u);
+  assert.match(modGJob, /npm run ci:neon-mod-g/u);
+  assert.match(finalJob, /needs\['mod-g-neon-rehearsal'\]\.result == 'success'/u);
+  assert.match(finalJob, /needs\['neon-recovery'\]\.result == 'success'/u);
+  assert.match(finalJob, /needs\['cloudflare-preview'\]\.result == 'success'/u);
 });
