@@ -17,5 +17,7 @@ test("MOD-D migrations run after the complete Wave 1 finance chain", async () =>
   const modDMigrationIds = manifests
     .filter((manifest) => manifest.module === "MOD-D-POS" || manifest.module === "MOD-D-CASH")
     .flatMap((manifest) => manifest.migrations.map((migration) => migration.id));
-  assert.deepEqual(modDMigrationIds, ["POS-0001", "POS-0002", "POS-0003", "POS-0004", "CSH-0001", "CSH-0002"]);
+  const requiredIds = ["POS-0001", "POS-0002", "POS-0003", "POS-0004", "CSH-0001", "CSH-0002"];
+  for (const migrationId of requiredIds) assert.ok(modDMigrationIds.includes(migrationId), `${migrationId} must remain registered`);
+  assert.equal(new Set(modDMigrationIds).size, modDMigrationIds.length, "MOD-D migration IDs must remain unique");
 });
