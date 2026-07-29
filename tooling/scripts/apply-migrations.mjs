@@ -25,6 +25,7 @@ const availableModules = [
   { name: "MOD-E-BANKING", manifest: "database/modules/banking/manifest.json", migrations: "database/modules/banking/migrations" },
   { name: "MOD-D-POS", manifest: "database/modules/pos/manifest.json", migrations: "database/modules/pos/migrations" },
   { name: "MOD-D-CASH", manifest: "database/modules/cash/manifest.json", migrations: "database/modules/cash/migrations" },
+  { name: "MOD-F-LOCALIZATION", manifest: "database/modules/localization/manifest.json", migrations: "database/modules/localization/migrations" },
 ];
 
 const dependencies = new Map([
@@ -41,6 +42,7 @@ const dependencies = new Map([
   ["MOD-E-BANKING", ["FOUNDATION", "MOD-E-PAYMENT", "MOD-E-ACCOUNTING"]],
   ["MOD-D-POS", ["FOUNDATION"]],
   ["MOD-D-CASH", ["FOUNDATION", "MOD-D-POS"]],
+  ["MOD-F-LOCALIZATION", ["FOUNDATION", "MOD-A-TAX", "MOD-C-SALES", "MOD-D-POS", "MOD-E-ACCOUNTING"]],
 ]);
 
 const requested = new Set((process.env.MIGRATION_MODULES ?? availableModules.map((item) => item.name).join(",")).split(",").map((item) => item.trim()).filter(Boolean));
