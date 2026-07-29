@@ -212,8 +212,17 @@ export class DurableOfflineEngine {
     await this.store.transaction((transaction) => {
       const currentCursor = transaction.uploadCursor();
       if (sequence < currentCursor) throw new RangeError("upload cursor cannot move backwards");
-      const maxSequence = transaction.list().at(-1)?.sequence ?? 0n;
+      const operations = transaction.list();
+      const maxSequence = operations.at(-1)?.sequence ?? 0n;
       if (sequence > maxSequence) throw new RangeError("upload cursor cannot exceed the durable operation log");
+      const pendingBeforeCursor = operations.find((operation) => (
+        operation.sequence > currentCursor
+        && operation.sequence <= sequence
+        && operation.state === "pending"
+      ));
+      if (pendingBeforeCursor) {
+        throw new RangeError(`upload cursor cannot skip pending operation ${operationKey(pendingBeforeCursor.deviceId, pendingBeforeCursor.operationId)}`);
+      }
       transaction.setUploadCursor(sequence);
     });
   }
