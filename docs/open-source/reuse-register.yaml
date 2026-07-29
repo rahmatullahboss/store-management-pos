@@ -191,6 +191,60 @@ entries:
     tests: ["npm run design:evidence", "npm run design:verify"]
     notes: "MPL-covered package remains unmodified and development-only; this engineering record is not a substitute for commercial legal advice."
 
+  - id: OSS-0006
+    status: approved_adaptation
+    purpose: Selectively adapt the reviewed Cloudflare/Astro buyer-storefront presentation, theme, cache, SEO, media and test patterns for MOD-H while retaining the existing Ozzyl Neon commerce backend as the sole authority.
+    reuse_mode: adapted_component
+    project: Storefront commerce source adaptation
+    repository: https://github.com/scaliuslabs/scalius-commerce-lite
+    exact_commit_or_tag: 4cb83aecb6d27483951618dcf8398592e662f241
+    version: reviewed-mono-repo-baseline-2026-07-30
+    files_or_packages:
+      - docs/architecture/storefront/upstream-file-manifest.yaml
+      - planned:apps/storefront/src/layouts/**
+      - planned:apps/storefront/src/components/**
+      - planned:apps/storefront/src/pages/**
+      - planned:apps/storefront/src/lib/edge-cache.ts_and_related_helpers
+      - planned:packages/shared/src/storefront-theme.ts
+    declared_license: AGPL-3.0-public-repository-with-separately-recorded-owner-authorised-use
+    file_level_licenses_checked: true
+    notice_files:
+      - upstream:LICENSE
+      - third_party/storefront-adaptation/NOTICE.md
+      - docs/architecture/storefront/upstream-file-manifest.yaml
+    copyright_holders:
+      - Scalius Labs and contributors as recorded by the public source
+      - additional source-rights basis asserted by the product owner for this adaptation workstream
+    modifications: Product-facing branding, domains, assets and demo copy are excluded; D1, Drizzle, upstream API/core services and upstream commerce authority are rejected; selected storefront files are adapted to Ozzyl contracts, exact money, multi-tenant hostname resolution, Neon persistence, Operations Ledger admin controls, RTL/accessibility and tenant-scoped cache rules.
+    product_locations:
+      - apps/storefront-web
+      - packages/storefront-contracts
+      - packages/storefront-client
+      - packages/storefront-theme
+      - docs/architecture/storefront
+    distributed_to_customers: true
+    network_service_use: true
+    compatible_with_product_model: approved_scoped_storefront_only
+    legal_review:
+      required: true
+      reviewer: product_owner
+      decision: owner_authorised_separate_rights_and_selective_adaptation; public-brand removal does not remove internal provenance or notice handling
+      date: 2026-07-30
+    security_review:
+      owner: MOD-H
+      result: initial_architecture_review_complete; every import batch requires secret, dependency, cache-isolation and exact-money review
+    update_owner: MOD-H-storefront-commerce
+    upstream_tracking: Pin exact reviewed commit for each batch; upgrades require a fresh audit, manifest diff and full storefront verification.
+    sbom_component: pkg:github/scaliuslabs/scalius-commerce-lite@4cb83aecb6d27483951618dcf8398592e662f241
+    third_party_notice_entry: third_party/storefront-adaptation/NOTICE.md
+    tests:
+      - npm run check:licenses
+      - npm run check:boundaries
+      - MOD-H exact-money tests
+      - MOD-H tenant/hostname/cache-isolation tests
+      - MOD-H accessibility/RTL/browser evidence
+    notes: Approval is restricted to the storefront boundary recorded in MOD-H. No wholesale repository import, upstream branding, D1 schema, upstream API worker or upstream business-authority code is approved.
+
 entry_template:
   id: OSS-0000
   status: proposed
@@ -243,3 +297,6 @@ known_projects:
   impeccable:
     observed_license: Apache-2.0
     default_decision: approved_project_local_development_tooling_when_pinned_and_reviewed
+  scalius_commerce_lite:
+    observed_license: AGPL-3.0_public_repository
+    default_decision: selective_adaptation_only_under_OSS_0006_owner_authorised_scope
