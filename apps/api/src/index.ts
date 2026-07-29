@@ -15,6 +15,7 @@ import { handlePosRequest } from "./modules/pos/handler.js";
 import { handlePosReceiptRequest } from "./modules/pos/receipt-handler.js";
 import { handleProcurementRequest } from "./modules/procurement/handler.js";
 import { handlePublicStorefrontRequest } from "./modules/storefront/public-handler.js";
+import { handleStorefrontRequest } from "./modules/storefront/handler.js";
 import { handleCreatePaymentIntent, handleCreateRefund, handleImportSettlement, handlePaymentAction } from "./payment-handler.js";
 import { buildRequestContext } from "./request-context.js";
 import { handleCreateReference } from "./reference-handler.js";
@@ -61,6 +62,8 @@ export default {
       if (localizationResponse) return localizationResponse;
       const complianceResponse = await handleComplianceRequest(request, url, context, database, env.FISCAL_PROVIDERS);
       if (complianceResponse) return complianceResponse;
+      const storefrontResponse = await handleStorefrontRequest(request, url, context, database);
+      if (storefrontResponse) return storefrontResponse;
 
       if (request.method === "POST" && url.pathname === "/v1/payments/intents") return await observeFinance("payment", "intent.create", async () => await handleCreatePaymentIntent(request, context, database, env));
       const paymentAction = url.pathname.match(/^\/v1\/payments\/intents\/([^/]+)\/(authorize|capture|void|recover)$/u);
