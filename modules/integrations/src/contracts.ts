@@ -73,6 +73,7 @@ export interface ConnectorConnectionV1 {
   readonly connectorType: string;
   readonly providerKey: string;
   readonly credentialReference: string;
+  readonly configuration?: Readonly<Record<string, unknown>>;
   readonly status: "draft" | "active" | "degraded" | "paused" | "revoked";
   readonly createdAt: string;
   readonly lastHealthyAt?: string;
