@@ -134,16 +134,16 @@ BEGIN
 
   IF EXISTS (
     SELECT 1
-    FROM pos.offline_authorizations AS authorization
+    FROM pos.offline_authorizations AS authz
     JOIN pos.devices AS device
-      ON device.tenant_id = authorization.tenant_id
-     AND device.id = authorization.device_id
+      ON device.tenant_id = authz.tenant_id
+     AND device.id = authz.device_id
     JOIN platform.stores AS store
-      ON store.tenant_id = authorization.tenant_id
-     AND store.id = authorization.store_id
-    WHERE device.store_id IS DISTINCT FROM authorization.store_id
-       OR device.register_id IS DISTINCT FROM authorization.register_id
-       OR store.legal_entity_id IS DISTINCT FROM authorization.legal_entity_id
+      ON store.tenant_id = authz.tenant_id
+     AND store.id = authz.store_id
+    WHERE device.store_id IS DISTINCT FROM authz.store_id
+       OR device.register_id IS DISTINCT FROM authz.register_id
+       OR store.legal_entity_id IS DISTINCT FROM authz.legal_entity_id
   ) THEN
     RAISE EXCEPTION 'existing offline authorization store scope is invalid';
   END IF;
