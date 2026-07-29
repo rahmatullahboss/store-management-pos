@@ -42,6 +42,16 @@ export function storefrontHealthResponse(): Response {
   );
 }
 
+function unavailableHeaders(): HeadersInit {
+  return {
+    "Cache-Control": "private, no-cache, no-store, must-revalidate",
+    "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
+    "Referrer-Policy": "no-referrer",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+  };
+}
+
 export function storefrontUnavailableResponse(): Response {
   return Response.json(
     {
@@ -52,12 +62,24 @@ export function storefrontUnavailableResponse(): Response {
     },
     {
       status: 404,
+      headers: unavailableHeaders(),
+    },
+  );
+}
+
+export function storefrontServiceUnavailableResponse(): Response {
+  return Response.json(
+    {
+      error: {
+        code: "STOREFRONT_TEMPORARILY_UNAVAILABLE",
+        message: "This storefront is temporarily unavailable.",
+      },
+    },
+    {
+      status: 503,
       headers: {
-        "Cache-Control": "private, no-cache, no-store, must-revalidate",
-        "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
-        "Referrer-Policy": "no-referrer",
-        "X-Content-Type-Options": "nosniff",
-        "X-Frame-Options": "DENY",
+        ...unavailableHeaders(),
+        "Retry-After": "30",
       },
     },
   );
