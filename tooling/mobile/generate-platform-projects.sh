@@ -169,6 +169,12 @@ project.write_text(
     project_text.replace(old_bundle_prefix, "com.ozzyl.storecompanion")
 )
 
+launch_readme = (
+    app_dir
+    / "ios/Runner/Assets.xcassets/LaunchImage.imageset/README.md"
+)
+launch_readme.write_text(launch_readme.read_text().rstrip("\n") + "\n")
+
 (app_dir / "android/APP-IDENTITY.md").write_text(
     "# Android application identity\n\n"
     "- development: `com.ozzyl.storecompanion.dev`\n"
