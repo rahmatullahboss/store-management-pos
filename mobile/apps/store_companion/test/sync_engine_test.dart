@@ -17,13 +17,14 @@ void main() {
     baseVersion: '1',
   );
 
-  LocalOperationRecord uploadingRecord() => LocalOperationRecord(
-    operation: operation(),
-    state: LocalOperationState.uploading,
-    attemptCount: 0,
-    nextRetryAt: null,
-    traceId: null,
-  );
+  LocalOperationRecord uploadingRecord({int attemptCount = 0}) =>
+      LocalOperationRecord(
+        operation: operation(),
+        state: LocalOperationState.uploading,
+        attemptCount: attemptCount,
+        nextRetryAt: null,
+        traceId: null,
+      );
 
   test('accepted replay becomes terminal without retry', () {
     final reduction = OperationResultReducer.apply(
@@ -37,8 +38,6 @@ void main() {
         error: null,
         adjustments: const <Map<String, Object?>>[],
       ),
-      now: DateTime.utc(2026, 7, 29, 12, 1),
-      maximumAutomaticAttempts: 3,
     );
 
     expect(reduction.record.state, LocalOperationState.duplicateReplay);
@@ -67,8 +66,6 @@ void main() {
         ),
         adjustments: const <Map<String, Object?>>[],
       ),
-      now: DateTime.utc(2026, 7, 29, 12, 1),
-      maximumAutomaticAttempts: 3,
     );
 
     expect(
@@ -79,27 +76,46 @@ void main() {
     expect(reduction.record.nextRetryAt, isNull);
   });
 
-  test('retryable transient result receives bounded backoff', () {
-    final reduction = OperationResultReducer.apply(
+  test('transport failure receives bounded retry without server result', () {
+    final now = DateTime.utc(2026, 7, 29, 12);
+    final reduction = OperationResultReducer.transportFailure(
       current: uploadingRecord(),
-      result: MobileOperationResultContract(
-        operationId: '0198-operation-1',
-        status: 'temporary_provider_failure',
-        serverReference: null,
-        serverVersion: null,
-        traceId: 'trace-retry',
-        error: MobileApiError(
-          code: 'provider.temporary_unavailable',
-          message: 'Try again later.',
-          traceId: 'trace-retry',
-          retryable: true,
-          recovery: 'retry',
-          details: const <String, Object?>{},
-        ),
-        adjustments: const <Map<String, Object?>>[],
-      ),
+      now: now,
+      maximumAutomaticAttempts: 3,
+      connectivityAvailable: true,
+    );
+
+    expect(reduction.record.state, LocalOperationState.waitingForRetry);
+    expect(reduction.retryDisposition, RetryDisposition.retryLater);
+    expect(reduction.record.attemptCount, 1);
+    expect(reduction.record.nextRetryAt, now.add(const Duration(seconds: 2)));
+  });
+
+  test('missing connectivity waits without blind service retry', () {
+    final reduction = OperationResultReducer.transportFailure(
+      current: uploadingRecord(),
       now: DateTime.utc(2026, 7, 29, 12),
       maximumAutomaticAttempts: 3,
+      connectivityAvailable: false,
+    );
+
+    expect(
+      reduction.record.state,
+      LocalOperationState.waitingForConnectivity,
+    );
+    expect(
+      reduction.retryDisposition,
+      RetryDisposition.waitForConnectivity,
+    );
+    expect(reduction.record.nextRetryAt, isNull);
+  });
+
+  test('retry ceiling requires reconciliation', () {
+    final reduction = OperationResultReducer.transportFailure(
+      current: uploadingRecord(attemptCount: 3),
+      now: DateTime.utc(2026, 7, 29, 12),
+      maximumAutomaticAttempts: 3,
+      connectivityAvailable: true,
     );
 
     expect(reduction.record.state, LocalOperationState.conflict);
