@@ -15,7 +15,7 @@ const modules = [
     identity: "MOD-G-INTEGRATION",
     manifestPath: new URL("../../database/modules/integrations/manifest.json", import.meta.url),
     migrationsDirectory: new URL("../../database/modules/integrations/migrations/", import.meta.url),
-    expectedIds: ["INT-0001", "INT-0002", "INT-0003"],
+    expectedIds: ["INT-0001", "INT-0002", "INT-0003", "INT-0004"],
   },
 ];
 
@@ -99,7 +99,7 @@ test("reporting migration preserves exact, rebuildable and auditable projection 
   assert.doesNotMatch(sql, /CURRENT_DATE/u);
 });
 
-test("integration migration preserves credential, webhook replay and connector ownership evidence", async () => {
+test("integration migration preserves credential, public directory, webhook replay and connector ownership evidence", async () => {
   const { migrations } = await loadModule(modules[1]);
   const sql = migrations.map((migration) => migration.sql).join("\n");
   for (const table of [
@@ -117,6 +117,9 @@ test("integration migration preserves credential, webhook replay and connector o
   assert.match(sql, /connector_sync_outcomes_append_only/u);
   assert.match(sql, /credential_reference/u);
   assert.match(sql, /credential_reference ~ '\^\(secret\|vault\|kms\|provider\):\/\//u);
+  assert.match(sql, /service_user_id uuid/u);
+  assert.match(sql, /resolve_api_client_authentication/u);
+  assert.match(sql, /REVOKE ALL ON FUNCTION integration\.resolve_api_client_authentication/u);
   assert.doesNotMatch(sql, /credential_(?:secret|value)|api_key_value|access_token_value/u);
   for (const command of [
     "register_api_client",
