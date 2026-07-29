@@ -10,9 +10,9 @@ const hardeningMigrations = [
     schema: "pos",
   },
   {
-    id: "CSH-0004",
+    id: "CSH-0003",
     manifest: new URL("../../database/modules/cash/manifest.json", import.meta.url),
-    migration: new URL("../../database/modules/cash/migrations/CSH-0004-function-privilege-hardening.sql", import.meta.url),
+    migration: new URL("../../database/modules/cash/migrations/CSH-0003-function-privilege-hardening.sql", import.meta.url),
     schema: "cash",
   },
 ];
