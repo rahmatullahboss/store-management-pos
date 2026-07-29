@@ -54,6 +54,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: verify
+    concurrency:
+      group: neon-preview-lifecycle-${{ github.repository }}
+      cancel-in-progress: false
     env:
       NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
       NEON_PROJECT_ID: twilight-boat-26805962
@@ -83,6 +86,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: verify
+    concurrency:
+      group: neon-preview-lifecycle-${{ github.repository }}
+      cancel-in-progress: false
     env:
       NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
     steps:
@@ -108,6 +114,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: verify
+    concurrency:
+      group: mod-d-neon-rehearsal-${{ github.repository }}
+      cancel-in-progress: false
     env:
       NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
       NEON_PROJECT_ID: twilight-boat-26805962
