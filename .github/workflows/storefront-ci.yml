@@ -9,8 +9,11 @@ on:
       - "packages/storefront-client/**"
       - "packages/storefront-contracts/**"
       - "packages/storefront-theme/**"
+      - "database/modules/storefront/**"
       - "tests/unit/storefront-*.test.mjs"
       - "tooling/scripts/storefront-design-evidence.mjs"
+      - "tooling/scripts/validate-module-migrations.mjs"
+      - "tooling/scripts/apply-migrations.mjs"
       - "docs/architecture/storefront/**"
       - "package.json"
       - "package-lock.json"
@@ -23,8 +26,11 @@ on:
       - "packages/storefront-client/**"
       - "packages/storefront-contracts/**"
       - "packages/storefront-theme/**"
+      - "database/modules/storefront/**"
       - "tests/unit/storefront-*.test.mjs"
       - "tooling/scripts/storefront-design-evidence.mjs"
+      - "tooling/scripts/validate-module-migrations.mjs"
+      - "tooling/scripts/apply-migrations.mjs"
       - "docs/architecture/storefront/**"
       - "package.json"
       - "package-lock.json"
@@ -56,6 +62,7 @@ jobs:
           npm run lint
           npm run check:boundaries
           npm run typecheck
+          npm run db:validate
           npm test
       - name: Astro Cloudflare build
         run: npm run storefront:build
