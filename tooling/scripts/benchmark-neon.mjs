@@ -9,15 +9,20 @@ if (!connectionString) throw new Error("DATABASE_URL is required");
 
 const iterations = Number(process.env.BENCHMARK_ITERATIONS ?? 30);
 const concurrency = Number(process.env.BENCHMARK_CONCURRENCY ?? 20);
+const websocketRetryLimit = Number(process.env.BENCHMARK_WEBSOCKET_RETRIES ?? 2);
 if (!Number.isInteger(iterations) || iterations < 10 || iterations > 200) {
   throw new Error("BENCHMARK_ITERATIONS must be an integer from 10 to 200");
 }
 if (!Number.isInteger(concurrency) || concurrency < 2 || concurrency > 50) {
   throw new Error("BENCHMARK_CONCURRENCY must be an integer from 2 to 50");
 }
+if (!Number.isInteger(websocketRetryLimit) || websocketRetryLimit < 0 || websocketRetryLimit > 5) {
+  throw new Error("BENCHMARK_WEBSOCKET_RETRIES must be an integer from 0 to 5");
+}
 
 const root = fileURLToPath(new URL("../..", import.meta.url));
 const reportPath = process.env.BENCHMARK_REPORT_PATH || path.join(root, "artifacts", "foundation", "neon-benchmark-report.json");
+let websocketRetryCount = 0;
 
 function percentile(values, fraction) {
   const sorted = [...values].sort((left, right) => left - right);
@@ -43,19 +48,37 @@ async function measure(work) {
   return performance.now() - started;
 }
 
+async function sleep(milliseconds) {
+  await new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+function isTransientConnectionError(error) {
+  const message = error instanceof Error ? error.message : String(error);
+  return /connection terminated unexpectedly|econnreset|socket hang up|websocket.*closed|fetch failed/i.test(message);
+}
+
 async function websocketTransaction() {
-  const client = new Client({ connectionString });
-  await client.connect();
-  try {
-    await client.query("BEGIN");
-    await client.query("SELECT 1");
-    await client.query("COMMIT");
-  } catch (error) {
-    await client.query("ROLLBACK").catch(() => undefined);
-    throw error;
-  } finally {
-    await client.end();
+  let lastError = null;
+  for (let attempt = 0; attempt <= websocketRetryLimit; attempt += 1) {
+    const client = new Client({ connectionString });
+    try {
+      await client.connect();
+      await client.query("BEGIN");
+      await client.query("SELECT 1");
+      await client.query("COMMIT");
+      return;
+    } catch (error) {
+      lastError = error;
+      await client.query("ROLLBACK").catch(() => undefined);
+      if (!isTransientConnectionError(error) || attempt === websocketRetryLimit) throw error;
+      websocketRetryCount += 1;
+      console.warn(`retrying transient Neon websocket benchmark failure (${attempt + 1}/${websocketRetryLimit})`);
+      await sleep(250 * (attempt + 1));
+    } finally {
+      await client.end().catch(() => undefined);
+    }
   }
+  throw lastError || new Error("Neon websocket transaction failed without an error");
 }
 
 const sql = neon(connectionString);
@@ -119,6 +142,10 @@ const result = {
     kind: "scale-to-zero",
     firstQueryMs: Number(coldWakeMs.toFixed(2))
   } : null,
+  websocketResilience: {
+    retryLimit: websocketRetryLimit,
+    retriesUsed: websocketRetryCount
+  },
   sequential: {
     httpOneShot: summary(httpOneShot),
     httpBatch: summary(httpBatch),
