@@ -94,7 +94,7 @@ test("offline checkout explains durable queue state and unsupported actions", ()
   assert.match(html, /committed/u);
   assert.match(html, /External card payments are unavailable offline\./u);
   assert.match(html, /modd-tender-state--warn">unknown/u);
-  assert.match(html, /Complete checkout" type="button" disabled/u);
+  assert.match(html, /class="modd-complete" type="button" disabled>Complete checkout/u);
 });
 
 test("error and conflict states expose assertive status without removing confirmed values", () => {
