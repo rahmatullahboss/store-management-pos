@@ -17,6 +17,9 @@ import {
 } from "../../build/apps/storefront-web/src/index.js";
 import {
   DEFAULT_STOREFRONT_THEME_V1,
+  buildStorefrontThemeTokensV1,
+  isSafeStorefrontThemeColorValueV1,
+  listInvalidStorefrontThemeColorEntriesV1,
   sanitizeStorefrontThemeV1,
 } from "../../build/packages/storefront-theme/src/index.js";
 
@@ -39,20 +42,33 @@ const bootstrapPayload = {
 };
 
 test("storefront money accepts integer minor units only", () => {
-  assert.deepEqual(parseStorefrontMoneyV1({ currency: "pkr", minor: "125050", scale: 2 }), {
-    currency: "PKR",
-    minor: "125050",
-    scale: 2,
-  });
+  assert.deepEqual(
+    parseStorefrontMoneyV1({ currency: "pkr", minor: "125050", scale: 2 }),
+    {
+      currency: "PKR",
+      minor: "125050",
+      scale: 2,
+    },
+  );
   assert.throws(
-    () => parseStorefrontMoneyV1({ currency: "PKR", minor: "1250.50", scale: 2 }),
+    () =>
+      parseStorefrontMoneyV1({
+        currency: "PKR",
+        minor: "1250.50",
+        scale: 2,
+      }),
     StorefrontContractError,
   );
 });
 
 test("storefront hostname normalization rejects URLs and ports", () => {
-  assert.equal(normalizeStorefrontHostname("Shop.Example.COM."), "shop.example.com");
-  assert.throws(() => normalizeStorefrontHostname("https://shop.example.com"));
+  assert.equal(
+    normalizeStorefrontHostname("Shop.Example.COM."),
+    "shop.example.com",
+  );
+  assert.throws(() =>
+    normalizeStorefrontHostname("https://shop.example.com"),
+  );
   assert.throws(() => normalizeStorefrontHostname("shop.example.com:443"));
   assert.throws(() => normalizeStorefrontHostname("localhost"));
 });
@@ -62,7 +78,10 @@ test("bootstrap parsing is strict and removes duplicate capabilities", () => {
   assert.equal(bootstrap.context.currency, "PKR");
   assert.deepEqual(bootstrap.capabilities, ["catalog.read", "checkout.quote"]);
   assert.throws(() =>
-    parseStorefrontBootstrapV1({ ...bootstrapPayload, contractVersion: "storefront-bootstrap.v2" }),
+    parseStorefrontBootstrapV1({
+      ...bootstrapPayload,
+      contractVersion: "storefront-bootstrap.v2",
+    }),
   );
 });
 
@@ -105,7 +124,7 @@ test("storefront client returns a safe error without exposing response bodies", 
   );
 });
 
-test("storefront runtime uses URL hostname and fail-closed response headers", async () => {
+test("storefront runtime uses URL hostname and fail-closed response headers", () => {
   const request = new Request("https://shop.example.com/products/item");
   assert.equal(storefrontRequestHostname(request), "shop.example.com");
 
@@ -119,20 +138,45 @@ test("storefront runtime uses URL hostname and fail-closed response headers", as
   assert.equal(health.headers.get("cache-control"), "no-store");
 });
 
-test("theme sanitization retains safe values and rejects CSS injection", () => {
+test("adapted theme sanitization retains safe values and rejects CSS injection", () => {
   const theme = sanitizeStorefrontThemeV1({
     colors: {
       primary: "#123ABC",
+      foreground: "oklch(0.21 0.006 285.885)",
+      focus: "var(--storefront-focus)",
       background: "url(https://attacker.invalid)",
+      border: "#fff; background:red",
+      unknown: "#ffffff",
     },
     density: "airy",
     corner: "rounded",
     container: "focused",
   });
 
-  assert.equal(theme.colors.primary, "#123abc");
-  assert.equal(theme.colors.background, DEFAULT_STOREFRONT_THEME_V1.colors.background);
+  assert.equal(theme.colors.primary, "#123ABC");
+  assert.equal(theme.colors.foreground, "oklch(0.21 0.006 285.885)");
+  assert.equal(theme.colors.focus, "var(--storefront-focus)");
+  assert.equal(
+    theme.colors.background,
+    DEFAULT_STOREFRONT_THEME_V1.colors.background,
+  );
+  assert.equal(theme.colors.border, DEFAULT_STOREFRONT_THEME_V1.colors.border);
   assert.equal(theme.density, "airy");
   assert.equal(theme.corner, "rounded");
   assert.equal(theme.container, "focused");
+
+  assert.deepEqual(
+    listInvalidStorefrontThemeColorEntriesV1({
+      primary: "#123ABC",
+      background: "javascript:alert(1)",
+      unknown: "#ffffff",
+    }),
+    ["background", "unknown"],
+  );
+  assert.equal(isSafeStorefrontThemeColorValueV1("rgba(1, 2, 3, 0.5)"), true);
+  assert.equal(isSafeStorefrontThemeColorValueV1("@import 'bad.css'"), false);
+
+  const tokens = buildStorefrontThemeTokensV1(theme);
+  assert.equal(tokens["--storefront-primary"], "#123ABC");
+  assert.equal(tokens["--storefront-radius"], "0.8rem");
 });
