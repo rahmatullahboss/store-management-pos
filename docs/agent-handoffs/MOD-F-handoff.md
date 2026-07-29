@@ -16,42 +16,55 @@
 ## Activation and sync evidence
 
 - The original empty remote branch was fast-forwarded without force to the secured Wave 1 baseline.
-- MOD-D is now serially integrated; MOD-F was synchronized through a two-parent merge commit without reset, rebase, force push or loss of its 17 existing commits.
+- MOD-D is serially integrated; MOD-F was synchronized through a two-parent merge commit without reset, rebase, force push or loss of its existing commits.
 - The synchronized branch is ahead of and no longer behind `program/integration-v1`.
-- The programme board and shared CI/tooling come from the latest integration tree; only MOD-F-owned domain, test and checkpoint files were replayed.
-- The assigned Neon branch is an isolated, non-default development branch; production credentials and production data remain prohibited.
+- The programme board and shared CI/tooling come from the latest integration tree; only MOD-F-owned source, tests and checkpoint documents were replayed.
+- The assigned Neon branch is isolated and non-production; production credentials and production data remain prohibited.
 - The complete MOD-F workpack remains under one owner without subtask agents.
 
 ## Completed checkpoint: localization and compliance domain foundation
 
 - Published BCP 47 locale, fallback, directionality, currency metadata, cash-rounding and business-day contracts.
-- Implemented canonical locale fallback chains including Bengali/English behavior and Unicode-script RTL detection.
+- Implemented canonical Bengali/English fallback chains and Unicode-script RTL detection.
 - Implemented exact cash rounding using integer minor units and effective-dated currency metadata.
-- Implemented IANA-timezone local business-day boundaries without rewriting historical instants.
+- Implemented IANA-timezone business-day boundaries without rewriting historical instants.
 - Published signed/versioned country-pack manifests, support levels, capabilities, templates and activation contracts.
 - Implemented manifest validation, effective-version selection and forward-only upgrade rules.
 - Published legal document, fiscal/e-invoice, legal numbering, privacy, retention and data-residency contracts.
-- Implemented immutable collision-free legal-number allocation with operation replay behavior and explicit offline restrictions.
-- Implemented retention-safe privacy disposition where legal evidence is preserved and erasure becomes anonymization when allowed.
-- Added unit coverage for Bengali/English fallback, Arabic RTL, CJK, BDT cash rounding, Dhaka business-day boundaries, effective-date overlap, primary/synthetic country packs, legal numbering and privacy retention.
+- Implemented collision-free idempotent legal-number allocation with explicit offline restrictions.
+- Implemented retention-safe privacy disposition that preserves immutable legal evidence.
+
+## Completed checkpoint: deterministic localization database
+
+- Added `LOC-0001` with twelve tenant-scoped localization/compliance tables for pack versions, locale/currency/time metadata, activations, numbering, immutable legal documents, fiscal state and privacy workflows.
+- Added `LOC-0002` security-definer commands for idempotent pack activation, legal-number allocation and fiscal-state transitions.
+- Enforced forced RLS on every MOD-F table and revoked direct runtime table writes.
+- Preserved legal-document, legal-number allocation, fiscal-event and retention-policy evidence through append-only triggers.
+- Used explicit business-date inputs and row/advisory locking for deterministic activation and numbering behavior.
+- Registered deterministic migration order `50`, after integrated MOD-D.
+- Added a Bangladesh `limited` pack fixture with explicit no-production-compliance claim and disabled unsupported fiscal/offline-legal behavior.
+- Added a synthetic `XZ` pack proving RTL/CJK and three-decimal currency extensibility without core-schema changes.
 
 ## Integrated dependencies
 
 - MOD-A catalog/pricing/tax contracts are integrated.
 - MOD-C customer/sales/fulfillment contracts are integrated.
-- MOD-D POS/offline/hardware/receipt contracts are integrated and may now replace frozen simulators at owned adapter boundaries.
+- MOD-D POS/offline/hardware/receipt contracts are integrated and available to owned adapters.
 - MOD-E payment/accounting/banking contracts are integrated.
 
-## Current verification
+## Verification evidence
 
-- Draft PR #29 remains the active review surface.
-- Branch ancestry is clean: synchronized MOD-F is ahead of and not behind `program/integration-v1`.
-- A fresh full GitHub gate is triggered by the synchronization and documentation checkpoints.
+- Draft PR #29 remains the active review surface and is mergeable.
+- Foundation CI run `30446259720` passed format, lint, boundaries, strict TypeScript, migration validation, build/tests, secret scan, licence register, SBOM and dependency audit.
+- Foundation Design CI run `30446259711` passed.
+- Neon preview job `90557509368` passed the complete Foundation → Wave 1 → MOD-D → MOD-F migration/integration/cold-wake chain and cleanup.
+- Neon recovery job `90557379985` passed.
+- Cloudflare preview/runtime/cleanup job `90557379753` passed.
 
 ## Next coherent checkpoint
 
-1. Add deterministic `LOC-0001` migrations for pack versions, activations, locale/currency metadata, numbering scopes, immutable legal-document references, fiscal submissions, privacy operations and forced RLS.
-2. Add PostgreSQL command functions for idempotent activation, legal-number allocation, document snapshot publication and fiscal-status transitions.
-3. Add Bangladesh primary pack fixtures and a synthetic secondary pack with no core-schema changes.
-4. Add isolated PostgreSQL/Neon tests for tenant isolation, concurrent numbering, immutable documents, effective-date transitions and replay.
-5. Continue with APIs, admin/POS localization UI, fiscal provider simulation, privacy workflows, observability and runbooks.
+1. Add application repositories and services for pack activation, effective configuration reads, legal numbering, immutable document publication, fiscal transitions and privacy requests.
+2. Add authenticated MOD-F API handlers and worker-job adapters with idempotency and observability.
+3. Add admin localization/country-pack/compliance UI and POS locale/offline-capability integration using the shared Operations Ledger design system.
+4. Add fiscal provider simulation, privacy workflow orchestration, audit/events, performance/recovery evidence and runbooks.
+5. Complete final validation, legal/accounting limitation documentation and integration handoff.
