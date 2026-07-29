@@ -36,6 +36,10 @@ function assertRequired(value: string, field: string): void {
   if (value.trim().length === 0) throw new TypeError(`${field} is required`);
 }
 
+function operationKey(input: Pick<OfflineOperationInput, "deviceId" | "operationId">): string {
+  return `${input.deviceId}:${input.operationId}`;
+}
+
 function sameInput(left: OfflineOperationRecord, right: OfflineOperationInput): boolean {
   return left.operationId === right.operationId
     && left.deviceId === right.deviceId
@@ -66,10 +70,11 @@ export class OfflineOperationLog {
     assertRequired(input.occurredAt, "occurredAt");
     assertRequired(committedAt, "committedAt");
 
-    const existing = this.#byId.get(input.operationId);
+    const key = operationKey(input);
+    const existing = this.#byId.get(key);
     if (existing) {
       if (!sameInput(existing, input)) {
-        throw new TypeError(`Offline operation ${input.operationId} was replayed with different content`);
+        throw new TypeError(`Offline operation ${key} was replayed with different content`);
       }
       return Object.freeze({ record: existing, replayed: true });
     }
@@ -80,17 +85,36 @@ export class OfflineOperationLog {
       state: "pending",
       committedAt,
     });
-    this.#byId.set(record.operationId, record);
+    this.#byId.set(key, record);
     this.#ordered.push(record);
     return Object.freeze({ record, replayed: false });
   }
 
+  recordDeviceOutcome(deviceId: string, operationId: string, outcome: OfflineOperationOutcome): OfflineOperationRecord {
+    assertRequired(deviceId, "deviceId");
+    assertRequired(operationId, "operationId");
+    const key = operationKey({ deviceId, operationId });
+    const existing = this.#byId.get(key);
+    if (!existing) throw new TypeError(`Offline operation ${key} does not exist`);
+    return this.#recordOutcome(existing, key, outcome);
+  }
+
   recordOutcome(operationId: string, outcome: OfflineOperationOutcome): OfflineOperationRecord {
-    const existing = this.#byId.get(operationId);
+    assertRequired(operationId, "operationId");
+    const matches = this.#ordered.filter((record) => record.operationId === operationId);
+    if (matches.length === 0) throw new TypeError(`Offline operation ${operationId} does not exist`);
+    if (matches.length > 1) {
+      throw new TypeError(`Offline operation ${operationId} is ambiguous across devices; use recordDeviceOutcome`);
+    }
+    const existing = matches[0];
     if (!existing) throw new TypeError(`Offline operation ${operationId} does not exist`);
+    return this.#recordOutcome(existing, operationKey(existing), outcome);
+  }
+
+  #recordOutcome(existing: OfflineOperationRecord, key: string, outcome: OfflineOperationOutcome): OfflineOperationRecord {
     if (existing.state !== "pending") {
       if (sameOutcome(existing, outcome)) return existing;
-      throw new TypeError(`Offline operation ${operationId} already has an immutable outcome`);
+      throw new TypeError(`Offline operation ${key} already has an immutable outcome`);
     }
 
     const updated: OfflineOperationRecord = Object.freeze({
@@ -99,10 +123,10 @@ export class OfflineOperationLog {
       ...(outcome.serverReference === undefined ? {} : { serverReference: outcome.serverReference }),
       ...(outcome.rejectionReason === undefined ? {} : { rejectionReason: outcome.rejectionReason }),
     });
-    const index = this.#ordered.findIndex((record) => record.operationId === operationId);
-    if (index < 0) throw new TypeError(`Offline operation ${operationId} is missing from the ordered log`);
+    const index = this.#ordered.findIndex((record) => operationKey(record) === key);
+    if (index < 0) throw new TypeError(`Offline operation ${key} is missing from the ordered log`);
     this.#ordered[index] = updated;
-    this.#byId.set(operationId, updated);
+    this.#byId.set(key, updated);
     return updated;
   }
 
