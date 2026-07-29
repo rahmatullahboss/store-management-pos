@@ -56,6 +56,7 @@ CREATE TABLE pos.offline_operation_outcomes (
   id uuid PRIMARY KEY,
   tenant_id uuid NOT NULL,
   offline_operation_id uuid NOT NULL,
+  outcome_sequence bigint GENERATED ALWAYS AS IDENTITY,
   status text NOT NULL CHECK (status IN ('applied','duplicate','rejected','review_required','deferred')),
   server_sequence bigint NULL CHECK (server_sequence IS NULL OR server_sequence > 0),
   business_effect_ids text[] NOT NULL DEFAULT '{}',
@@ -66,11 +67,42 @@ CREATE TABLE pos.offline_operation_outcomes (
   request_id text NOT NULL,
   trace_id text NOT NULL,
   UNIQUE (tenant_id, id),
-  UNIQUE (tenant_id, offline_operation_id),
+  UNIQUE (tenant_id, offline_operation_id, outcome_sequence),
   FOREIGN KEY (tenant_id, offline_operation_id) REFERENCES pos.offline_operations(tenant_id, id)
 );
 CREATE INDEX offline_operation_outcomes_status_idx
   ON pos.offline_operation_outcomes(tenant_id, status, observed_at, id);
+CREATE UNIQUE INDEX offline_operation_terminal_outcome_unique
+  ON pos.offline_operation_outcomes(tenant_id, offline_operation_id)
+  WHERE status IN ('applied','duplicate','rejected','review_required');
+
+CREATE OR REPLACE FUNCTION pos.validate_offline_operation_outcome_insert() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  PERFORM 1
+  FROM pos.offline_operations
+  WHERE tenant_id = NEW.tenant_id
+    AND id = NEW.offline_operation_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'offline operation does not exist' USING ERRCODE = '23503';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM pos.offline_operation_outcomes
+    WHERE tenant_id = NEW.tenant_id
+      AND offline_operation_id = NEW.offline_operation_id
+      AND status IN ('applied','duplicate','rejected','review_required')
+  ) THEN
+    RAISE EXCEPTION 'terminal offline outcome is immutable' USING ERRCODE = '55000';
+  END IF;
+
+  RETURN NEW;
+END $$;
+CREATE TRIGGER offline_operation_outcome_insert_guard
+  BEFORE INSERT ON pos.offline_operation_outcomes
+  FOR EACH ROW EXECUTE FUNCTION pos.validate_offline_operation_outcome_insert();
 
 CREATE TABLE pos.receipt_delivery_requests (
   id uuid PRIMARY KEY,
