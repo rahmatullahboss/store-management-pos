@@ -1,6 +1,6 @@
 import { PlatformError } from "../../../packages/foundation/src/errors.js";
 
-export type OfflineOperationStatus = "pending" | "uploading" | "accepted" | "rejected" | "review";
+export type OfflineOperationStatus = "pending" | "uploading" | "accepted" | "rejected" | "review_required";
 
 export interface OfflineOperation {
   readonly deviceId: string;
@@ -21,7 +21,7 @@ export interface RegisterOperationResult {
 }
 
 export interface SyncOutcome {
-  readonly status: "accepted" | "rejected" | "review";
+  readonly status: "accepted" | "rejected" | "review_required";
   readonly serverReference: string | null;
   readonly rejectionCode: string | null;
 }
@@ -74,7 +74,7 @@ export function applySyncOutcome(
       if (outcome.status === "accepted" && operation.serverReference === outcome.serverReference) return operation;
       throw new PlatformError("CONFLICT", "Accepted offline operation is terminal and cannot be rewritten", 409, { deviceId, operationId });
     }
-    if (operation.status === "rejected" || operation.status === "review") {
+    if (operation.status === "rejected" || operation.status === "review_required") {
       if (
         operation.status === outcome.status
         && operation.serverReference === outcome.serverReference
