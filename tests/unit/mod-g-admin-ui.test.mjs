@@ -210,14 +210,14 @@ test("SaaS console exposes data-preserving lifecycle, usage, incidents and appro
 
 test("admin shell composes and permission-filters MOD-G navigation", () => {
   const reporting = renderReportingAdminPage(shell, reportingPage);
-  assert.match(reporting, /aria-current="page"[^>]*>Reporting|>Reporting<\/a>/u);
-  assert.match(reporting, /Integrations/u);
-  assert.match(reporting, /SaaS administration/u);
+  assert.match(reporting, /<a href="\/reporting" aria-current="page">[\s\S]*?<span>Reporting<\/span><\/a>/u);
+  assert.match(reporting, /<span>Integrations<\/span>/u);
+  assert.match(reporting, /<span>SaaS administration<\/span>/u);
 
   const restricted = renderReportingAdminPage({ ...shell, permissions: new Set(["reporting.metric.read"]) }, reportingPage);
-  assert.match(restricted, />Reporting<\/a>/u);
-  assert.doesNotMatch(restricted, />Integrations<\/a>/u);
-  assert.doesNotMatch(restricted, />SaaS administration<\/a>/u);
+  assert.match(restricted, /<span>Reporting<\/span>/u);
+  assert.doesNotMatch(restricted, /<span>Integrations<\/span>/u);
+  assert.doesNotMatch(restricted, /<span>SaaS administration<\/span>/u);
 
   assert.match(renderIntegrationsAdminPage(shell, integrationsPage), /data-state="ready"/u);
   assert.match(renderSaasOperationsAdminPage({ ...shell, direction: "rtl" }, saasPage), /dir="rtl"/u);
