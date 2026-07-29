@@ -37,18 +37,7 @@ const dependencies = new Map([
   ["MOD-E-PAYMENT", ["FOUNDATION", "MOD-C-SALES"]],
   ["MOD-E-ACCOUNTING", ["FOUNDATION", "MOD-C-SALES", "MOD-E-PAYMENT"]],
   ["MOD-E-BANKING", ["FOUNDATION", "MOD-E-PAYMENT", "MOD-E-ACCOUNTING"]],
-  ["MOD-D-POS", [
-    "FOUNDATION",
-    "MOD-A-CATALOG",
-    "MOD-A-PRICING",
-    "MOD-A-TAX",
-    "MOD-B-INVENTORY",
-    "MOD-C-CUSTOMER",
-    "MOD-C-SALES",
-    "MOD-C-FULFILLMENT",
-    "MOD-E-PAYMENT",
-    "MOD-E-ACCOUNTING",
-  ]],
+  ["MOD-D-POS", ["FOUNDATION"]],
   ["MOD-D-CASH", ["FOUNDATION", "MOD-D-POS"]],
 ]);
 
