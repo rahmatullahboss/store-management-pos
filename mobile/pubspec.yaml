@@ -6,5 +6,6 @@ environment:
 
 workspace:
   - apps/store_companion
+  - packages/api_client
   - packages/app_core
   - packages/design_system
