@@ -86,3 +86,28 @@ export interface SupportImpersonationGrantV1 {
   readonly expiresAt: string;
   readonly revokedAt?: string;
 }
+
+export interface FeatureRolloutV1 {
+  readonly schemaVersion: "1.0";
+  readonly rolloutId: string;
+  readonly tenantId: string;
+  readonly featureCode: string;
+  readonly status: "planned" | "enabled" | "paused" | "disabled";
+  readonly rolloutPercentage: number;
+  readonly reason: string;
+  readonly updatedAt: string;
+  readonly version: string;
+}
+
+export interface SupportIncidentV1 {
+  readonly schemaVersion: "1.0";
+  readonly incidentId: string;
+  readonly tenantId: string;
+  readonly incidentCode: string;
+  readonly severity: "low" | "medium" | "high" | "critical";
+  readonly status: "open" | "investigating" | "monitoring" | "resolved" | "closed";
+  readonly summary: string;
+  readonly openedAt: string;
+  readonly resolvedAt?: string;
+  readonly version: string;
+}
