@@ -6,60 +6,72 @@
 **Assigned worktree:** `.worktrees/localization-compliance`  
 **Original secured Wave 1 baseline:** `6badafe06a9e0013d12ba036160c915b48fe1c13`  
 **Integrated MOD-D sync commit:** `17d32e1e4d09106de896904f16d46eeebe418f73`  
-**Current integration baseline:** `f6a04b7fea55e40fa9cc050759f622404ab5a195`  
+**Latest integration ancestry sync:** `9de20b36bdbf1cab1478da8d4c871b4ec94b230a`  
 **Neon project:** `twilight-boat-26805962`  
 **Neon branch:** `dev/module-localization-compliance` (`br-polished-flower-ax2ph8wp`)  
-**Draft pull request:** `#29`  
-**Workpack state:** `active`
+**Pull request:** `#29`  
+**Engineering workpack state:** `handoff_ready`
 
-## Activation and sync evidence
+## Safety and ownership
 
-- MOD-F was synchronized to the integrated MOD-D baseline through a two-parent merge without reset, rebase, force push or loss of prior commits.
-- The programme board and shared CI/tooling are inherited from the integration tree; module work remains in MOD-F-owned paths and approved additive composition points.
-- The assigned Neon branch is isolated and non-production.
-- One owner retains the complete workpack; no small implementation agents were created.
+- MOD-F remains one complete-workpack assignment; no small implementation agents were created.
+- The branch was synchronized to MOD-D and the latest integration ancestry through non-destructive two-parent merges. No reset, rebase, force push or unrelated overwrite was used.
+- The assigned Neon branch is isolated, non-default and non-production.
+- Module implementation stays in MOD-F-owned paths and approved additive composition points.
 
-## Completed: domain and country-pack foundation
+## Completed domain and country-pack platform
 
-- BCP 47 locale fallback, Bengali/English resolution, Unicode-script RTL detection, exact cash rounding and IANA-timezone business-day boundaries.
-- Signed/versioned country-pack manifests, effective-version selection, support levels, capabilities and forward-only activation rules.
-- Legal document, numbering, fiscal/e-invoice, privacy, retention and data-residency contracts.
-- Bangladesh `limited` fixture with unsupported fiscal/e-invoice/offline-legal capabilities explicitly disabled and no production compliance claim.
-- Synthetic `XZ` fixture proving RTL, CJK and three-decimal currency extensibility without country-specific core schema changes.
+- BCP 47 fallback, Bengali/English resolution, Unicode-script RTL detection, mixed-script handling, exact currency/cash rounding and IANA-timezone business-day boundaries.
+- Signed/versioned country-pack manifests, effective-version selection, support levels, capabilities, deprecation and forward-only activation rules.
+- Flexible country-pack contracts for locale, currency, time, tax/document configuration, accounting mappings, offline capability, privacy, retention and data residency.
+- Bangladesh `bd-primary@1.0.0` fixture with explicit `limited` support and unsupported fiscal, e-invoice and offline-legal paths disabled/fail-closed.
+- Synthetic `xz-synthetic` fixture proving RTL, CJK, three-decimal currency and second-pack extensibility without country-specific core-schema changes.
 
-## Completed: deterministic localization database
+## Completed database and command platform
 
-- `LOC-0001` creates twelve tenant-scoped tables for pack versions, locale/currency/time metadata, activations, numbering, immutable legal documents, fiscal state and privacy workflows.
-- `LOC-0002` provides security-definer commands for idempotent pack activation, collision-free legal-number allocation and fiscal-state transitions.
-- `LOC-0003` provides controlled commands for immutable legal-document publication, fiscal submission creation and privacy workflow transitions.
-- Every MOD-F table has forced tenant RLS; runtime direct table writes and `PUBLIC` function execution are revoked.
-- Legal documents, number allocations, fiscal events and retention policies retain append-only evidence.
-- Explicit business dates, row locks and advisory locks remove process-clock and concurrency ambiguity.
+- `LOC-0001` creates tenant-scoped localization, pack activation, numbering, immutable legal-document, fiscal-state, retention and privacy tables.
+- `LOC-0002` provides idempotent pack activation, collision-free legal-number allocation and fiscal-state transitions with advisory/row locks.
+- `LOC-0003` provides immutable legal-document publication, fiscal-submission creation and retention-aware privacy transitions.
+- `LOC-0004` separates narrow read permissions from privileged command permissions.
+- `LOC-0005` publishes safe transactional `platform.audit_events` and `platform.outbox_events` for pack publication/activation, numbering, legal documents, fiscal lifecycle, retention policies and privacy lifecycle.
+- Every MOD-F table has forced tenant RLS; direct runtime writes and `PUBLIC` command-function execution are revoked.
+- Legal documents, number allocations, fiscal events and evidence records remain append-only; unknown fiscal status blocks blind provider retry.
 
-## Completed: application, API and operations checkpoint
+## Completed application surfaces and operations
 
-- Permission-scoped localization service and Neon repository for country-pack activation, effective configuration reads and legal-number allocation.
-- Compliance service and Neon repository for legal-document publication, fiscal submission/state and privacy requests/transitions.
-- Deterministic fiscal provider abstraction and simulator covering accepted, rejected, unknown and lost-response-after-effect outcomes.
-- Unknown provider results are recorded as `unknown`; blind provider retries are not issued on an idempotent database replay.
-- Authenticated localization and compliance API routes are composed into the Worker API.
-- Fiscal providers are injected; the default registry is empty and fails closed rather than enabling a simulator in production.
-- Compliance worker-job adapters classify accepted work as complete, rejected work as failed, and unknown or replayed-pending fiscal work as explicit review instead of automatic resubmission.
-- Metrics `mod_f.compliance.job` and `mod_f.compliance.job.duration_ms` contain only safe type/status attributes.
-- `docs/modules/localization-compliance/README.md` documents activation, legal numbering, immutable evidence, fiscal unknown-state recovery, privacy retention, monitoring, rollback and security procedures.
+- Permission-scoped localization and compliance services with Neon repositories.
+- Authenticated Worker API routes for activation, effective configuration, legal-number allocation, legal documents, fiscal submissions and privacy workflows.
+- Injected provider registry with deterministic accepted/rejected/unknown/lost-response simulator; production default registry is empty and fails closed.
+- Compliance worker jobs with explicit complete, failed and review outcomes; ambiguous provider state is never silently retried.
+- Admin country-pack/compliance control surfaces with Operations Ledger design, permission states, exception queues and capability limitations.
+- POS localization adapter for locale, currency, business-date and offline legal capability.
+- Responsive Bengali/English, Arabic RTL tablet and CJK evidence; the RTL active-pack grid no longer overflows inside the admin rail.
+- Safe observability metrics, monitoring guidance, recovery procedures, rollback/forward-fix process, permissions guide and operational runbook.
 
 ## Verification evidence
 
-- PR #29 remains open, draft and mergeable.
-- Foundation CI run `30448200829`, verify job `90563643542`, passed format, lint, architecture boundaries, strict TypeScript, migration validation, build/tests, secret scan, licence register, SBOM and dependency audit.
-- Foundation Design CI run `30448201861`, evidence job `90563649585`, passed Foundation context loading and browser/accessibility/design evidence.
-- Dedicated MOD-F Neon rehearsal job `90563760527` passed the complete migration chain, runtime integration workflow and deterministic replay on `dev/module-localization-compliance`.
-- Neon recovery job `90563760781` passed.
-- Cloudflare preview/runtime/cleanup job `90563760351` passed.
-- The Neon rehearsal seeds synthetic Foundation scope inside a transaction and rolls it back, so persistent branch data is not polluted.
+- Core verification passes format, lint, architecture boundaries, strict TypeScript, deterministic migration/checksum validation, build/tests, secret scan, licence register, SBOM and dependency audit.
+- Design verification passes deterministic detector, browser scenarios and Axe accessibility checks, including Arabic RTL tablet after the responsive fix.
+- Dedicated MOD-F Neon rehearsal applies the complete chain through `LOC-0005`, verifies deterministic replay, tenant isolation, command permissions, fiscal-state controls and transactional audit/outbox event counts.
+- Neon recovery and Cloudflare preview/runtime/cleanup gates pass on reviewed checkpoints.
+- Synthetic Foundation scope is created inside rehearsal transactions and rolled back; persistent branch data is not polluted.
 
-## Remaining work
+## Country-pack validation boundary
 
-1. Admin country-pack/compliance control UI and POS locale/offline-capability integration using the existing Operations Ledger design system.
-2. Audit/outbox event publication and final performance/recovery evidence.
-3. Final country-pack limitation documentation, complete handoff, review-ready transition and controlled serial integration after MOD-D.
+The MOD-F engineering platform is ready for serial integration, but `bd-primary@1.0.0` must remain `limited` and must not be marketed or activated as production-validated compliance until all external evidence is attached:
+
+1. named local legal, tax and accounting review with version/date;
+2. reviewed golden receipt, invoice, credit/debit correction and return examples;
+3. approved MOD-A tax and MOD-E accounting mappings;
+4. fiscal/e-invoice certification or explicit not-required evidence;
+5. MOD-D offline/contingency legal review;
+6. complete privacy, retention and provider data-residency matrix.
+
+These are country-pack promotion controls, not permission to weaken fail-closed behavior or fabricate compliance claims.
+
+## Integration handoff
+
+- Review PR `#29` against this handoff and the exact CI head.
+- Preserve Bangladesh support level `limited` during integration.
+- Integrate serially after MOD-D; do not merge in parallel with another module.
+- After integration, update the programme board with the integration SHA and keep MOD-G blocked until MOD-F contracts are stable.
