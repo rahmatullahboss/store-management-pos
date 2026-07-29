@@ -1,0 +1,56 @@
+name: Storefront Integration Sync
+
+on:
+  push:
+    branches:
+      - module/storefront-commerce-v1
+    paths:
+      - .github/workflows/storefront-integration-sync.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: storefront-integration-sync
+  cancel-in-progress: false
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout complete storefront history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: module/storefront-commerce-v1
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Fetch current integration baseline
+        run: git fetch --no-tags origin program/integration-v1
+      - name: Attempt non-destructive merge and report conflicts
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "Storefront Integration Bot"
+          git config user.email "storefront-integration-bot@users.noreply.github.com"
+          set +e
+          git merge --no-commit --no-ff origin/program/integration-v1
+          merge_status=$?
+          set -e
+          echo "feature_head=$(git rev-parse HEAD)"
+          echo "integration_head=$(git rev-parse origin/program/integration-v1)"
+          if [ "$merge_status" -eq 0 ]; then
+            echo "MERGE_STATUS=clean"
+            git diff --stat --cached
+            git merge --abort || true
+            exit 0
+          fi
+          echo "MERGE_STATUS=conflicted"
+          echo "CONFLICT_FILES_BEGIN"
+          git diff --name-only --diff-filter=U | sort
+          echo "CONFLICT_FILES_END"
+          echo "UNMERGED_INDEX_BEGIN"
+          git ls-files -u
+          echo "UNMERGED_INDEX_END"
+          git merge --abort || true
+          exit 1
