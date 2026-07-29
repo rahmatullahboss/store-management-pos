@@ -1,6 +1,6 @@
 # MOD-E Payments, Accounting and Banking Handoff
 
-**Status:** active
+**Status:** implementation complete; connected deployment evidence pending
 **Owner:** `rahmatullahboss`
 **Checkpoint date:** 2026-07-29
 **Approved Foundation SHA:** `57f21e8c14e27ce3ad96a862cf6de82c2c6cd27c`
@@ -21,7 +21,7 @@
 
 ## Current checkpoint
 
-Activation, exact-domain/provider-contract, canonical database, payment lifecycle, accounting command kernel, banking reconciliation and API/UI/jobs checkpoints are complete. Readiness, observability and final deployment evidence are the current E7 checkpoint.
+E0 through E7 implementation is complete. Payments, accounting, banking, APIs, admin operations pages, worker recovery controls, observability, readiness checks, database drills and the operations runbook are present on the module branch. The remaining release blocker is connected deployment evidence for PAY-0002, ACC-0002 and BNK-0002 on the assigned Neon branch, followed by the final repository verification rerun in that connected workspace.
 
 ## Rolling checkpoint evidence
 
@@ -34,18 +34,35 @@ Activation, exact-domain/provider-contract, canonical database, payment lifecycl
 | E4 accounting | implementation complete | ACC-0002 command kernel for balanced journal posting, exact reversal, AR/AP open items and allocations, period close/reopen, idempotency, approval binding, audit/outbox and runtime-only grants; service and PostgreSQL lifecycle evidence |
 | E5 banking | implementation complete | BNK-0002 statement import dedupe, exact signed reconciliation, settlement candidate locking, append-only reversal/rematch, reconciliation-run controls, audit/outbox and runtime-only grants; service and PostgreSQL lifecycle evidence |
 | E6 API/UI/jobs | implementation complete | Neon accounting/banking stores; authenticated exact-money API routes for journals, open items, period controls, reports, statement import, reconciliation and control runs; permission-scoped payment/accounting/banking admin pages; payment recovery and reconciliation-control worker jobs; 15 focused API/UI/job tests |
-| E7 readiness | active | observability controls, operating runbook, final verification and deployment evidence remain |
+| E7 readiness | implementation complete | `GET /v1/finance/readiness`; release-blocking and warning controls for migrations, unknown payments, idempotency, journal balance, reconciliation, outbox and dead letters; low-cardinality API/job metrics; readiness admin page; rollback-only PostgreSQL readiness drill; operations runbook |
 
 ## Verification evidence
 
-- `npm run verify`: passed; format, lint, boundaries, typecheck, 59/59 tests, secret scan, license check and SBOM.
-- `npm run test:database:mod-e`: passed against an isolated fresh local PostgreSQL cluster after applying FND-0001→FND-0005, PAY-0001→PAY-0002, ACC-0001→ACC-0002 and BNK-0001→BNK-0002.
-- Database drills are rollback-only and cover core invariants, payment lifecycle, accounting lifecycle and banking lifecycle.
+- E6 repository verification: `npm run verify` passed with format, lint, boundaries, typecheck, 59/59 tests, secret scan, license check and SBOM.
+- E7 worktree verification: `npm run typecheck` passed and `npm run test:unit` passed 63/63 tests.
+- `npm run test:database:mod-e` passed against an isolated fresh local PostgreSQL cluster after applying FND-0001→FND-0005, PAY-0001→PAY-0002, ACC-0001→ACC-0002 and BNK-0001→BNK-0002.
+- Database drills are rollback-only and cover core invariants, payment lifecycle, accounting lifecycle, banking lifecycle and finance readiness.
 - Accounting lifecycle: invoice→AR open item→receipt→allocation→journal/allocation reversal→period close/reopen.
 - Banking lifecycle: statement import/replay/source dedupe→settlement match/replay→reversal/replay→corrected rematch→reconciliation run.
+- Readiness lifecycle: runtime-role checks confirm all three command migrations are present and a fresh tenant has no integrity, recovery, reconciliation, outbox or dead-letter backlog.
+
+## Operations and observability
+
+- Runbook: `docs/modules/payments-accounting-banking/operations-runbook.md`.
+- API metrics: `mod_e.finance.operation` and `mod_e.finance.operation.duration_ms` with only module, operation and outcome attributes.
+- Worker metrics: `mod_e.finance.job` and `mod_e.finance.job.duration_ms` with only job type and status attributes.
+- Finance IDs, tenant IDs, provider references and customer data are deliberately excluded from metric attributes.
+- Readiness states are `ready`, `degraded` and `blocked`; failed integrity/delivery controls block release.
+
+## Remaining release blockers
+
+- Apply PAY-0002, ACC-0002 and BNK-0002 to `dev/module-payments-accounting-banking` through the connected Neon execution path.
+- Run the complete `npm run verify` suite after the E7 files are present in the connected workspace and retain the resulting evidence.
+- Run `npm run test:database:mod-e` against the connected preview/Neon branch and confirm `GET /v1/finance/readiness` reports `ready` or an explicitly approved degraded state.
+- Bind production queue/scheduler execution, metric sink and live provider adapters through approved deployment configuration.
 
 ## Known limitations
 
-- PAY-0002, ACC-0002 and BNK-0002 are fresh-rebuild and lifecycle-drill verified but are not yet applied to the isolated Neon branch because a connected Neon execution path was unavailable in this checkpoint.
 - No provider credential or live provider adapter is configured; production payment commands fail closed while the deterministic simulator remains restricted to local/development/preview/test.
-- Finance API, admin render surfaces and worker job executors are implemented; production queue/scheduler bindings, live-provider operations and observability dashboards remain E7 deployment work.
+- The finance API, admin render surfaces, worker job executors and observability hooks are implemented, but production queue/scheduler bindings and dashboard backend bindings remain deployment configuration work.
+- No destructive rollback is defined for financial migrations. Corrections use forward migrations and append-only reversal evidence.
