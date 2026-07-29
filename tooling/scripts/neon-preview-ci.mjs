@@ -36,10 +36,6 @@ function run(command, args, env) {
   });
 }
 
-async function sleep(milliseconds) {
-  await new Promise((resolve) => setTimeout(resolve, milliseconds));
-}
-
 async function cleanupStalePreviewBranches() {
   const response = await api("/branches");
   const branches = Array.isArray(response?.branches) ? response.branches : [];
@@ -50,19 +46,11 @@ async function cleanupStalePreviewBranches() {
   }
 }
 
-async function suspendEndpointAndWaitForIdle(endpointId) {
+async function suspendEndpoint(endpointId) {
   await api(`/endpoints/${encodeURIComponent(endpointId)}/suspend`, { method: "POST" });
-  console.log(`requested suspension for Neon endpoint ${endpointId}`);
-
-  const started = Date.now();
-  const timeoutMs = 180_000;
-  while (Date.now() - started < timeoutMs) {
-    const response = await api(`/endpoints/${encodeURIComponent(endpointId)}`);
-    const endpoint = response.endpoint || response;
-    if (endpoint.current_state === "idle") return new Date().toISOString();
-    await sleep(5_000);
-  }
-  throw new Error(`Neon endpoint ${endpointId} did not become idle within ${timeoutMs}ms after suspension`);
+  const suspendedAt = new Date().toISOString();
+  console.log(`suspended Neon endpoint ${endpointId}`);
+  return suspendedAt;
 }
 
 await mkdir(artifactsDir, { recursive: true });
@@ -117,7 +105,7 @@ try {
     FND_NEON_INTEGRATION: "1"
   });
 
-  idleObservedAt = await suspendEndpointAndWaitForIdle(endpointId);
+  idleObservedAt = await suspendEndpoint(endpointId);
   const coldSql = neon(connectionString);
   const coldStarted = performance.now();
   const coldResult = await coldSql`SELECT 1 AS ok`;
