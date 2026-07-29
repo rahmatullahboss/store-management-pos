@@ -15,6 +15,7 @@ const sources = [
   { module: "MOD-E", manifest: "database/modules/banking/manifest.json", directory: "database/modules/banking/migrations" },
   { module: "MOD-D", manifest: "database/modules/pos/manifest.json", directory: "database/modules/pos/migrations" },
   { module: "MOD-D", manifest: "database/modules/cash/manifest.json", directory: "database/modules/cash/migrations" },
+  { module: "MOD-F", manifest: "database/modules/localization/manifest.json", directory: "database/modules/localization/migrations" },
 ];
 const ids = new Set();
 const databaseMarkers = new Map();
@@ -66,4 +67,19 @@ if (!/cash_events_one_reversal_idx/u.test(cashControls)) throw new Error("Cash r
 if (!/cash reversal must exactly offset the original event/u.test(cashControls)) throw new Error("Cash exact reversal guard is missing");
 if (!/cash events require an open or explicitly reopened shift/u.test(cashControls)) throw new Error("Closed-shift cash event guard is missing");
 if (!/CREATE VIEW cash\.shift_expected_cash/u.test(cashControls)) throw new Error("Cash expected-balance reconstruction view is missing");
+const localizationCore = await readFile(path.join(root, "database/modules/localization/migrations/LOC-0001-localization-core.sql"), "utf8");
+if (!/legal_documents_append_only/u.test(localizationCore)) throw new Error("Legal-document immutability guard is missing");
+if (!/legal_number_allocations_append_only/u.test(localizationCore)) throw new Error("Legal-number allocation immutability guard is missing");
+if (!/country_pack_active_scope_unique/u.test(localizationCore)) throw new Error("Active country-pack scope uniqueness is missing");
+if (!/REVOKE INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA localization FROM store_app_runtime/u.test(localizationCore)) {
+  throw new Error("Localization runtime direct writes must be revoked");
+}
+const localizationCommands = await readFile(path.join(root, "database/modules/localization/migrations/LOC-0002-localization-commands.sql"), "utf8");
+if (!/pg_advisory_xact_lock/u.test(localizationCommands)) throw new Error("Country-pack activation serialization is missing");
+if (!/allocate_legal_number/u.test(localizationCommands) || !/record_fiscal_transition/u.test(localizationCommands)) {
+  throw new Error("Localization command boundary is incomplete");
+}
+if (!/REVOKE ALL ON FUNCTION/u.test(localizationCommands) || !/GRANT EXECUTE ON FUNCTION/u.test(localizationCommands)) {
+  throw new Error("Localization command privileges are not hardened");
+}
 console.log(`validated ${ids.size} module migrations (${[...counts].map(([module, count]) => `${module}:${count}`).join(", ")})`);

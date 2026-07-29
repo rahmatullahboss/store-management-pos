@@ -34,6 +34,7 @@
     "design:evidence": "npm run build && node tooling/scripts/foundation-design-evidence.mjs",
     "design:verify": "npm run design:detect && npm run design:evidence",
     "mod-a:design:verify": "npm run build && node tooling/scripts/mod-a-design-evidence.mjs",
+    "mod-f:design:verify": "npm run build && node tooling/scripts/mod-f-design-evidence.mjs",
     "mod-a:benchmark:local": "node tooling/scripts/mod-a-250k-local-postgres-benchmark.mjs",
     "mod-a:benchmark:neon": "node tooling/scripts/mod-a-250k-benchmark.mjs",
     "mod-a:migrations:verify": "node tooling/scripts/mod-a-local-migration-validation.mjs",

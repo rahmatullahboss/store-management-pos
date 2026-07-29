@@ -1,0 +1,32 @@
+{
+  "module": "MOD-F-LOCALIZATION",
+  "version": 1,
+  "order": 50,
+  "migrations": [
+    {
+      "id": "LOC-0001",
+      "file": "LOC-0001-localization-core.sql",
+      "sha256": "ad869cf3de59f814a7c562eb8f5ed72f58530de33437c8c46e1881f813b8d221"
+    },
+    {
+      "id": "LOC-0002",
+      "file": "LOC-0002-localization-commands.sql",
+      "sha256": "2fb4d647953e26461b0640291cdab7c049b325bc68ccb0c7a1fb4fea3e5709ac"
+    },
+    {
+      "id": "LOC-0003",
+      "file": "LOC-0003-compliance-commands.sql",
+      "sha256": "6c892a141a2c6fcfb266de2a72000bf9b2b418877b6e75a2302b5eeed02c84d5"
+    },
+    {
+      "id": "LOC-0004",
+      "file": "LOC-0004-read-permissions.sql",
+      "sha256": "b4e277150e27e4d1955546f88c7d137f698defa4195c7e93f0b9ceebbe6fc160"
+    },
+    {
+      "id": "LOC-0005",
+      "file": "LOC-0005-audit-outbox-evidence.sql",
+      "sha256": "2794b0f3b75433039c766e4dffb70775b58c25d7d364677362844a0c9d4408ec"
+    }
+  ]
+}
