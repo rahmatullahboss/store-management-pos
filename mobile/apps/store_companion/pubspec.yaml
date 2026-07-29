@@ -1,0 +1,26 @@
+name: store_companion
+description: Native operational companion for the Ozzyl store platform.
+publish_to: none
+version: 0.1.0+1
+resolution: workspace
+
+environment:
+  sdk: ^3.12.0
+  flutter: ">=3.44.8"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  store_companion_app_core:
+    path: ../../packages/app_core
+  store_companion_design_system:
+    path: ../../packages/design_system
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
