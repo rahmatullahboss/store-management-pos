@@ -1,7 +1,11 @@
 import { renderAppShell } from "../../../../packages/ui/src/app-shell.js";
 import { directionSupportStyles } from "../../../../packages/ui/src/direction-support.js";
 import { renderAdminFoundationReference, type FoundationReferenceOptions } from "../../../../packages/ui/src/foundation-reference.js";
-import { adminRoutes } from "./routes.js";
+import { CATALOG_ADMIN_ROUTES } from "../modules/catalog/routes.js";
+import { PRICING_TAX_ADMIN_ROUTES } from "../modules/pricing/routes.js";
+import { composeAdminRoutes } from "./routes.js";
+
+const integratedAdminRoutes = composeAdminRoutes([CATALOG_ADMIN_ROUTES, PRICING_TAX_ADMIN_ROUTES]);
 
 export interface AdminShellInput {
   readonly displayName: string;
@@ -20,7 +24,7 @@ export function renderAdminShell(input: AdminShellInput): string {
   return renderAppShell({
     title: "Store Management Admin",
     identity: { displayName: input.displayName, tenantName: input.tenantName, permissions: input.permissions },
-    routes: adminRoutes,
+    routes: integratedAdminRoutes,
     currentPath: input.currentPath,
     content: `${directionSupportStyles}${input.content}`,
     variant: "admin",
