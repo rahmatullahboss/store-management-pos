@@ -54,6 +54,31 @@ const integratedAdminRoutes = composeAdminRoutes([
   MOD_G_ADMIN_ROUTES,
 ]);
 
+const MOD_G_EMBEDDED_STYLES = `<style>
+  .modg-page,.modg-int,.modg-saas{background:#0b1217;padding:1rem;border-radius:1rem;color:#e8edf2}
+  .modg-page h1,.modg-page h2,.modg-int h1,.modg-int h2,.modg-saas h1,.modg-saas h2{color:#f2f5f7}
+  .modg-page .modg-tabs a{color:#d6dfe5}
+  .modg-page .modg-eyebrow,.modg-int .modg-int-eyebrow,.modg-int .modg-int-heading p,.modg-saas .modg-saas-eyebrow{color:#9ce5d6!important}
+  .modg-page .modg-section-heading>p,.modg-page .modg-state p,.modg-int .modg-int-state p,.modg-saas .modg-saas-state p{color:#c1ccd3}
+  .modg-page th,.modg-int th,.modg-saas th{background:#131f26!important;color:#dce4e9!important}
+  .modg-page td,.modg-int td,.modg-saas td{background:#111a20;color:#e8edf2}
+  .modg-page .modg-badge,.modg-int .modg-int-badge,.modg-saas .modg-saas-badge{color:#e3eaee}
+  .modg-page .modg-badge--fresh,.modg-page .modg-badge--success,.modg-page .modg-badge--completed,.modg-page .modg-badge--low,
+  .modg-int .modg-int-badge--active,.modg-int .modg-int-badge--clear,
+  .modg-saas .modg-saas-badge--active,.modg-saas .modg-saas-badge--completed,.modg-saas .modg-saas-badge--enabled,.modg-saas .modg-saas-badge--resolved,.modg-saas .modg-saas-badge--low{color:#b6f4e7}
+  .modg-page .modg-badge--stale,.modg-page .modg-badge--attention,.modg-page .modg-badge--review,.modg-page .modg-badge--medium,.modg-page .modg-badge--queued,
+  .modg-int .modg-int-badge--degraded,.modg-int .modg-int-badge--review,.modg-int .modg-int-badge--paused,
+  .modg-saas .modg-saas-badge--trial,.modg-saas .modg-saas-badge--past_due,.modg-saas .modg-saas-badge--queued,.modg-saas .modg-saas-badge--review,.modg-saas .modg-saas-badge--monitoring,.modg-saas .modg-saas-badge--medium,.modg-saas .modg-saas-badge--soft,.modg-saas .modg-saas-badge--observe{color:#ffe79a}
+  .modg-page .modg-badge--failed,.modg-page .modg-badge--critical,.modg-page .modg-badge--high,
+  .modg-int .modg-int-badge--revoked,
+  .modg-saas .modg-saas-badge--suspended,.modg-saas .modg-saas-badge--cancelled,.modg-saas .modg-saas-badge--failed,.modg-saas .modg-saas-badge--critical,.modg-saas .modg-saas-badge--high,.modg-saas .modg-saas-badge--revoked{color:#ffc0c6}
+  .modg-page .modg-badge--running,.modg-page .modg-badge--rebuilding,.modg-saas .modg-saas-badge--running,.modg-saas .modg-saas-badge--investigating{color:#b9e3ff}
+  .modg-page .modg-list span.modg-badge,.modg-saas .modg-saas-list span.modg-saas-badge{display:inline-flex}
+  .modg-page .modg-context{grid-template-columns:repeat(2,minmax(0,1fr));min-width:0;flex:0 1 30rem}
+  .modg-page .modg-context div,.modg-page .modg-context dd{min-width:0;overflow-wrap:anywhere}
+  .modg-page .modg-hero>div:first-child{min-width:0;flex:1}
+</style>`;
+
 export interface AdminShellInput {
   readonly displayName: string;
   readonly tenantName: string;
@@ -72,7 +97,8 @@ function embedPageRoot(rendered: string, rootClass: string, label: string): stri
   const openingIndex = rendered.indexOf(opening);
   const closingIndex = rendered.lastIndexOf("</main>");
   if (openingIndex < 0 || closingIndex < openingIndex) throw new Error(`${label} page root contract is invalid`);
-  return `${rendered.slice(0, openingIndex)}<section class="${rootClass}"${rendered.slice(openingIndex + opening.length, closingIndex)}</section>${rendered.slice(closingIndex + 7)}`;
+  const embedded = `${rendered.slice(0, openingIndex)}<section class="${rootClass}"${rendered.slice(openingIndex + opening.length, closingIndex)}</section>${rendered.slice(closingIndex + 7)}`;
+  return `${MOD_G_EMBEDDED_STYLES}${embedded}`;
 }
 
 function renderEmbeddedLocalizationControlPage(page: LocalizationControlPage): string {
@@ -82,19 +108,9 @@ function renderEmbeddedLocalizationControlPage(page: LocalizationControlPage): s
   const closingIndex = rendered.lastIndexOf("</main>");
   if (openingIndex < 0 || closingIndex < openingIndex) throw new Error("Localization control page root contract is invalid");
   let embedded = `${rendered.slice(0, openingIndex)}<section class="modf-control"${rendered.slice(openingIndex + opening.length, closingIndex)}</section>${rendered.slice(closingIndex + 7)}`;
-  embedded = embedded.replace(
-    '<div class="modf-table-wrap">',
-    '<div class="modf-table-wrap" tabindex="0" role="region" aria-label="Country-pack versions table">',
-  );
-  embedded = embedded.replace(
-    '<div class="modf-table-wrap">',
-    '<div class="modf-table-wrap" tabindex="0" role="region" aria-label="Compliance evidence table">',
-  );
-  return `<style>
-    .modf-active .modf-badge--attention{color:#f0d36d}
-    .modf-table-wrap:focus-visible{outline:3px solid #276e8f;outline-offset:-3px}
-    @media(max-width:1100px){.modf-active{grid-template-columns:1fr 1fr!important}.modf-active dl{grid-column:1/-1!important}}
-  </style>${embedded}`;
+  embedded = embedded.replace('<div class="modf-table-wrap">', '<div class="modf-table-wrap" tabindex="0" role="region" aria-label="Country-pack versions table">');
+  embedded = embedded.replace('<div class="modf-table-wrap">', '<div class="modf-table-wrap" tabindex="0" role="region" aria-label="Compliance evidence table">');
+  return `<style>.modf-active .modf-badge--attention{color:#f0d36d}.modf-table-wrap:focus-visible{outline:3px solid #276e8f;outline-offset:-3px}@media(max-width:1100px){.modf-active{grid-template-columns:1fr 1fr!important}.modf-active dl{grid-column:1/-1!important}}</style>${embedded}`;
 }
 
 export function renderAdminShell(input: AdminShellInput): string {
@@ -105,77 +121,25 @@ export function renderAdminShell(input: AdminShellInput): string {
     currentPath: input.currentPath,
     content: `${directionSupportStyles}${input.content}`,
     variant: "admin",
-    context: {
-      workspace: "Operations admin",
-      location: input.location ?? "All locations",
-      businessDate: input.businessDate ?? "Business date · 28 Jul 2026",
-      locale: input.locale ?? "en",
-    },
+    context: { workspace: "Operations admin", location: input.location ?? "All locations", businessDate: input.businessDate ?? "Business date · 28 Jul 2026", locale: input.locale ?? "en" },
     offline: input.offline ?? false,
     ...(input.direction ? { direction: input.direction } : {}),
   });
 }
 
-export function renderAdminFoundationPreview(input: Omit<AdminShellInput, "content" | "currentPath">, reference: FoundationReferenceOptions = {}): string {
-  return renderAdminShell({ ...input, currentPath: "/", content: renderAdminFoundationReference(reference), offline: reference.state === "offline" || input.offline === true });
-}
-
-export function renderInventoryAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, fixture?: InventoryDashboardFixture): string {
-  return renderAdminShell({ ...input, currentPath: "/inventory", content: renderInventoryOperationsPage(fixture) });
-}
-
-export function renderProcurementAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, fixture?: ProcurementDashboardFixture): string {
-  return renderAdminShell({ ...input, currentPath: "/procurement", content: renderProcurementOperationsPage(fixture) });
-}
-
-export function renderCustomerAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, workspace: CustomerWorkspaceInput): string {
-  return renderAdminShell({ ...input, currentPath: "/customers", content: renderCustomerWorkspace(workspace) });
-}
-
-export function renderSalesAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, workspace: SalesWorkspaceInput): string {
-  return renderAdminShell({ ...input, currentPath: "/sales", content: renderSalesWorkspace(workspace) });
-}
-
-export function renderFulfillmentAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, workspace: FulfillmentWorkspaceInput): string {
-  return renderAdminShell({ ...input, currentPath: "/fulfillment", content: renderFulfillmentWorkspace(workspace) });
-}
-
-export function renderPaymentsAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page: PaymentOperationsPage): string {
-  return renderAdminShell({ ...input, currentPath: "/finance/payments", content: renderPaymentOperationsPage(page, input.locale ?? "en-US") });
-}
-
-export function renderAccountingAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page: AccountingControlPage): string {
-  return renderAdminShell({ ...input, currentPath: "/finance/accounting", content: renderAccountingControlPage(page, input.locale ?? "en-US") });
-}
-
-export function renderBankingAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page: BankReconciliationPage): string {
-  return renderAdminShell({ ...input, currentPath: "/finance/banking", content: renderBankReconciliationPage(page, input.locale ?? "en-US") });
-}
-
-export function renderFinanceReadinessAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page: FinanceReadinessPage): string {
-  return renderAdminShell({ ...input, currentPath: "/finance/readiness", content: renderFinanceReadinessPage(page) });
-}
-
-export function renderPosReconciliationAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page: PosReconciliationPage): string {
-  return renderAdminShell({ ...input, currentPath: "/pos/reconciliation", content: renderPosReconciliationPage(page) });
-}
-
-export function renderLocalizationAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page: LocalizationControlPage): string {
-  return renderAdminShell({ ...input, currentPath: "/localization", content: renderEmbeddedLocalizationControlPage({ ...page, focus: "country_packs" }) });
-}
-
-export function renderComplianceAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page: LocalizationControlPage): string {
-  return renderAdminShell({ ...input, currentPath: "/compliance", content: renderEmbeddedLocalizationControlPage({ ...page, focus: "compliance" }) });
-}
-
-export function renderReportingAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page: ReportingOperationsPage): string {
-  return renderAdminShell({ ...input, currentPath: "/reporting", content: embedPageRoot(renderReportingOperationsPage(page), "modg-page", "Reporting operations") });
-}
-
-export function renderIntegrationsAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page: IntegrationConsolePage): string {
-  return renderAdminShell({ ...input, currentPath: "/integrations", content: embedPageRoot(renderIntegrationConsolePage(page), "modg-int", "Integration console") });
-}
-
-export function renderSaasOperationsAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page: SaasAdminPage): string {
-  return renderAdminShell({ ...input, currentPath: "/platform/saas", content: embedPageRoot(renderSaasAdminPage(page), "modg-saas", "SaaS administration") });
-}
+export function renderAdminFoundationPreview(input: Omit<AdminShellInput, "content" | "currentPath">, reference: FoundationReferenceOptions = {}): string { return renderAdminShell({ ...input, currentPath: "/", content: renderAdminFoundationReference(reference), offline: reference.state === "offline" || input.offline === true }); }
+export function renderInventoryAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, fixture?: InventoryDashboardFixture): string { return renderAdminShell({ ...input, currentPath: "/inventory", content: renderInventoryOperationsPage(fixture) }); }
+export function renderProcurementAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, fixture?: ProcurementDashboardFixture): string { return renderAdminShell({ ...input, currentPath: "/procurement", content: renderProcurementOperationsPage(fixture) }); }
+export function renderCustomerAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, workspace: CustomerWorkspaceInput): string { return renderAdminShell({ ...input, currentPath: "/customers", content: renderCustomerWorkspace(workspace) }); }
+export function renderSalesAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, workspace: SalesWorkspaceInput): string { return renderAdminShell({ ...input, currentPath: "/sales", content: renderSalesWorkspace(workspace) }); }
+export function renderFulfillmentAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, workspace: FulfillmentWorkspaceInput): string { return renderAdminShell({ ...input, currentPath: "/fulfillment", content: renderFulfillmentWorkspace(workspace) }); }
+export function renderPaymentsAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page: PaymentOperationsPage): string { return renderAdminShell({ ...input, currentPath: "/finance/payments", content: renderPaymentOperationsPage(page, input.locale ?? "en-US") }); }
+export function renderAccountingAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page: AccountingControlPage): string { return renderAdminShell({ ...input, currentPath: "/finance/accounting", content: renderAccountingControlPage(page, input.locale ?? "en-US") }); }
+export function renderBankingAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page: BankReconciliationPage): string { return renderAdminShell({ ...input, currentPath: "/finance/banking", content: renderBankReconciliationPage(page, input.locale ?? "en-US") }); }
+export function renderFinanceReadinessAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page: FinanceReadinessPage): string { return renderAdminShell({ ...input, currentPath: "/finance/readiness", content: renderFinanceReadinessPage(page) }); }
+export function renderPosReconciliationAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page: PosReconciliationPage): string { return renderAdminShell({ ...input, currentPath: "/pos/reconciliation", content: renderPosReconciliationPage(page) }); }
+export function renderLocalizationAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page: LocalizationControlPage): string { return renderAdminShell({ ...input, currentPath: "/localization", content: renderEmbeddedLocalizationControlPage({ ...page, focus: "country_packs" }) }); }
+export function renderComplianceAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page: LocalizationControlPage): string { return renderAdminShell({ ...input, currentPath: "/compliance", content: renderEmbeddedLocalizationControlPage({ ...page, focus: "compliance" }) }); }
+export function renderReportingAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page: ReportingOperationsPage): string { return renderAdminShell({ ...input, currentPath: "/reporting", content: embedPageRoot(renderReportingOperationsPage(page), "modg-page", "Reporting operations") }); }
+export function renderIntegrationsAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page: IntegrationConsolePage): string { return renderAdminShell({ ...input, currentPath: "/integrations", content: embedPageRoot(renderIntegrationConsolePage(page), "modg-int", "Integration console") }); }
+export function renderSaasOperationsAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page: SaasAdminPage): string { return renderAdminShell({ ...input, currentPath: "/platform/saas", content: embedPageRoot(renderSaasAdminPage(page), "modg-saas", "SaaS administration") }); }
