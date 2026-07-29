@@ -14,6 +14,7 @@ import { handleLocalizationRequest } from "./modules/localization/handler.js";
 import { handlePosRequest } from "./modules/pos/handler.js";
 import { handlePosReceiptRequest } from "./modules/pos/receipt-handler.js";
 import { handleProcurementRequest } from "./modules/procurement/handler.js";
+import { handlePublicStorefrontRequest } from "./modules/storefront/public-handler.js";
 import { handleCreatePaymentIntent, handleCreateRefund, handleImportSettlement, handlePaymentAction } from "./payment-handler.js";
 import { buildRequestContext } from "./request-context.js";
 import { handleCreateReference } from "./reference-handler.js";
@@ -38,6 +39,8 @@ export default {
       const url = new URL(request.url);
       if (request.method === "GET" && url.pathname === "/health") return Response.json({ status: "healthy", service: "api", databaseMode: "direct-neon", region: env.REGION });
       const database = new NeonDatabase({ connectionString: env.DATABASE_URL });
+      const publicStorefrontResponse = await handlePublicStorefrontRequest(request, url, database);
+      if (publicStorefrontResponse) return publicStorefrontResponse;
       const verifier = createTokenVerifier(env, database);
       const context = await buildRequestContext(new Request(request, { headers: new Headers([...request.headers, ["x-request-id", requestId]]) }), verifier, env.REGION);
       const financeObserver = env.FINANCE_METRICS ? { metrics: env.FINANCE_METRICS } : {};
