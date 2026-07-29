@@ -21,7 +21,10 @@
     {
       "id": "CSH-0004",
       "file": "CSH-0004-runtime-commands.sql",
-      "sha256": "8a82d7ca92d730d2bb7ae414ad07bfb850bdfa5fdc15f93cd172c5656b3e9884"
+      "sha256": "8a82d7ca92d730d2bb7ae414ad07bfb850bdfa5fdc15f93cd172c5656b3e9884",
+      "legacyMarkers": [
+        "manifest:CSH-0003-runtime-commands.sql"
+      ]
     },
     {
       "id": "CSH-0005",
