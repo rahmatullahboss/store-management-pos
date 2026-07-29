@@ -22,6 +22,11 @@
       "id": "LOC-0004",
       "file": "LOC-0004-read-permissions.sql",
       "sha256": "b4e277150e27e4d1955546f88c7d137f698defa4195c7e93f0b9ceebbe6fc160"
+    },
+    {
+      "id": "LOC-0005",
+      "file": "LOC-0005-audit-outbox-evidence.sql",
+      "sha256": "2794b0f3b75433039c766e4dffb70775b58c25d7d364677362844a0c9d4408ec"
     }
   ]
 }
