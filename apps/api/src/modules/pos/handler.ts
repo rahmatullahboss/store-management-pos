@@ -2,6 +2,11 @@ import type { RequestContext } from "../../../../../packages/foundation/src/cont
 import type { NeonDatabase } from "../../../../../packages/foundation/src/db.js";
 import { PlatformError } from "../../../../../packages/foundation/src/errors.js";
 import {
+  PosReceiptDeliverySqlRepository,
+  type PosReceiptDeliveryChannel,
+  type PosReceiptDeliveryInput,
+} from "../../../../../modules/pos/src/receipt-delivery-sql-repository.js";
+import {
   PosSqlRepository,
   type OfflineOperationUploadInput,
   type PosCartInput,
@@ -33,6 +38,8 @@ const OFFLINE_OPERATION_TYPES = new Set<OfflineOperationUploadInput["operationTy
   "receipt_delivery",
   "device_health",
 ]);
+const RECEIPT_DELIVERY_CHANNELS = new Set<PosReceiptDeliveryChannel>(["print", "email", "sms"]);
+const RECEIPT_DELIVERY_PATH = /^\/v1\/pos\/receipts\/([^/]+)\/deliveries$/u;
 
 function exactString(value: unknown, field: string, maximumLength = 80): string {
   return requireString(value, field, maximumLength);
@@ -120,6 +127,21 @@ function checkoutInput(body: Record<string, unknown>): PosCheckoutInput {
   };
 }
 
+function receiptDeliveryInput(receiptSnapshotId: string, body: Record<string, unknown>): PosReceiptDeliveryInput {
+  const channel = requireString(body.channel, "channel", 16) as PosReceiptDeliveryChannel;
+  if (!RECEIPT_DELIVERY_CHANNELS.has(channel)) {
+    throw new PlatformError("VALIDATION_FAILED", "Unsupported receipt delivery channel", 400);
+  }
+  const destinationMasked = optionalString(body.destinationMasked, "destinationMasked", 200);
+  return {
+    ...(body.id === undefined ? {} : { id: requireUuid(body.id, "id") }),
+    receiptSnapshotId,
+    channel,
+    ...(destinationMasked === undefined ? {} : { destinationMasked }),
+    reason: requireString(body.reason, "reason", 500),
+  };
+}
+
 function offlineOperation(value: unknown, index: number): OfflineOperationUploadInput {
   const operation = requireRecord(value, `operations[${index}]`);
   const operationType = requireString(operation.operationType, `operations[${index}].operationType`, 32) as OfflineOperationUploadInput["operationType"];
@@ -148,6 +170,7 @@ export async function handlePosRequest(
   context: RequestContext,
   database: NeonDatabase,
   repository = new PosSqlRepository(),
+  receiptRepository = new PosReceiptDeliverySqlRepository(),
 ): Promise<Response | undefined> {
   if (request.method === "POST" && url.pathname === "/v1/pos/devices") {
     requirePermission(context, "pos.device.manage");
@@ -172,6 +195,21 @@ export async function handlePosRequest(
     const input = checkoutInput(body);
     requirePermission(context, input.mode === "offline" ? "pos.checkout.offline" : "pos.checkout.execute");
     return jsonResponse(await database.withClientTransaction(context, async (client) => await repository.recordCheckout(client, context, input)), { status: 202 });
+  }
+
+  const receiptDeliveryMatch = RECEIPT_DELIVERY_PATH.exec(url.pathname);
+  if (request.method === "POST" && receiptDeliveryMatch) {
+    requirePermission(context, "pos.receipt.deliver");
+    const receiptSnapshotId = requireUuid(receiptDeliveryMatch[1], "receiptSnapshotId");
+    const body = await jsonBody(request);
+    const input = receiptDeliveryInput(receiptSnapshotId, body);
+    return jsonResponse(
+      await database.withClientTransaction(
+        context,
+        async (client) => await receiptRepository.requestDelivery(client, context, input),
+      ),
+      { status: 202 },
+    );
   }
 
   if (request.method === "POST" && url.pathname === "/v1/pos/offline/operations") {
