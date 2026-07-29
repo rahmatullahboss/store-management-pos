@@ -17,6 +17,11 @@
       "id": "INT-0003",
       "file": "INT-0003-api-client-credentials.sql",
       "sha256": "afdaf636330e13c828970731dfb84df5fcc454841dacade8a21aa7cf30fd5c38"
+    },
+    {
+      "id": "INT-0004",
+      "file": "INT-0004-public-api-directory.sql",
+      "sha256": "822474d28a6ef3d7e57e0d26923b2b9804b353e72e6a1eb3af328187203a763a"
     }
   ]
 }
