@@ -7,6 +7,11 @@
       "id": "POS-0001",
       "file": "POS-0001-store-edge.sql",
       "sha256": "56679d223afa39538337313425df5a04db6b6e257b9a6a5cbe61fa66b8e07a61"
+    },
+    {
+      "id": "POS-0002",
+      "file": "POS-0002-carts.sql",
+      "sha256": "726e6f283a742235d5c5827a147dd255f05b381e7cc316a37d3a573e08ecea54"
     }
   ]
 }
