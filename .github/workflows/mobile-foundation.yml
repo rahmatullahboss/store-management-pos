@@ -82,9 +82,9 @@ jobs:
           flutter pub get
           dart pub workspace list
 
-      - name: Format
+      - name: Format working tree
         working-directory: mobile
-        run: dart format --output=none --set-exit-if-changed .
+        run: dart format .
 
       - name: Analyze
         working-directory: mobile
@@ -93,6 +93,18 @@ jobs:
       - name: Unit and widget tests
         working-directory: mobile/apps/store_companion
         run: flutter test --coverage
+
+      - name: Verify formatted source is committed
+        run: git diff --exit-code -- mobile
+
+      - name: Upload formatted source evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mobile-formatted-source-${{ github.run_id }}
+          path: mobile/**/*.dart
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Upload non-production coverage evidence
         if: always()
