@@ -67,8 +67,15 @@ jobs:
           path: |
             mobile/apps/store_companion/.metadata
             mobile/apps/store_companion/android
+            !mobile/apps/store_companion/android/local.properties
+            !mobile/apps/store_companion/android/.gradle/**
             mobile/apps/store_companion/ios
+            !mobile/apps/store_companion/ios/Flutter/Generated.xcconfig
+            !mobile/apps/store_companion/ios/Flutter/flutter_export_environment.sh
+            !mobile/apps/store_companion/ios/Flutter/ephemeral/**
+            !mobile/apps/store_companion/ios/.symlinks/**
             mobile/pubspec.lock
+          include-hidden-files: true
           if-no-files-found: warn
           retention-days: 14
       - name: Upload Android development APK
@@ -172,8 +179,15 @@ jobs:
           path: |
             mobile/apps/store_companion/.metadata
             mobile/apps/store_companion/android
+            !mobile/apps/store_companion/android/local.properties
+            !mobile/apps/store_companion/android/.gradle/**
             mobile/apps/store_companion/ios
+            !mobile/apps/store_companion/ios/Flutter/Generated.xcconfig
+            !mobile/apps/store_companion/ios/Flutter/flutter_export_environment.sh
+            !mobile/apps/store_companion/ios/Flutter/ephemeral/**
+            !mobile/apps/store_companion/ios/.symlinks/**
             mobile/pubspec.lock
+          include-hidden-files: true
           if-no-files-found: warn
           retention-days: 14
       - name: Upload Android development APK
