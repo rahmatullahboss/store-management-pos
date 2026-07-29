@@ -86,7 +86,7 @@ export function allocateLegalNumber(
     throw new PlatformError("IDEMPOTENCY_CONFLICT", "Legal number allocation ID already exists for another operation", 409);
   }
   if (command.allocationMode === "offline_block" && !scope.offlineAllocationAllowed) {
-    throw new PlatformError("FORBIDDEN", "Offline legal number allocation is not supported for this scope", 403);
+    throw new PlatformError("PERMISSION_DENIED", "Offline legal number allocation is not supported for this scope", 403);
   }
   if (command.allocationMode === "offline_block" && !command.deviceId) {
     throw new PlatformError("VALIDATION_FAILED", "Offline legal number allocation requires a device ID", 400);
