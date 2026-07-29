@@ -2,7 +2,9 @@ name: Foundation Design CI
 
 on:
   pull_request:
-    branches: [main]
+    branches:
+      - main
+      - program/integration-v1
     paths:
       - "apps/admin-web/**"
       - "apps/pos-web/**"
