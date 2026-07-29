@@ -2,7 +2,7 @@
 
 ## Status
 
-MOD-D POS, Cash, Offline and Hardware has been serially merged into `program/integration-v1` after Wave 1 and before MOD-F. This checkpoint records the integrated composition and provides a clean PR gate over the resulting tree.
+MOD-D POS, Cash, Offline and Hardware is integrated on `program/integration-v1` after Wave 1 and before MOD-F. The serial merge and the dedicated integrated-tree checkpoint both passed the required repository gates.
 
 ## Git evidence
 
@@ -12,6 +12,8 @@ MOD-D POS, Cash, Offline and Hardware has been serially merged into `program/int
 - Serial integration merge: `3410e4f60b9ed0d4218dd4c1690730e3040afaef`
 - Module pull request: `#27`
 - Integration checkpoint branch: `integration/mod-d-v1`
+- Integration checkpoint pull request: `#34`
+- Green checkpoint head before final board update: `605cdbfbf038c9a8272124d7b6196142e18b0b39`
 
 ## Contract decision
 
@@ -36,10 +38,14 @@ MOD-D POS, Cash, Offline and Hardware has been serially merged into `program/int
 - Cloudflare preview/runtime/cleanup job `90550495914` passed.
 - No unresolved PR review threads remained before merge.
 
-## Integration checkpoint gate
+## Integrated-tree checkpoint verification
 
-The `integration/mod-d-v1` pull request must pass core, design, Neon preview/recovery and Cloudflare preview/runtime checks over the exact integrated tree. MOD-D may be marked `integrated` on the programme board only after that checkpoint is green.
+- Foundation CI run `30444498285` passed the complete core verification suite.
+- Foundation Design CI run `30444498257` passed over the integrated POS tree.
+- Neon recovery job `90551554112` passed.
+- Generic Neon preview job `90551671702` passed migrations, integration checks, cold-wake and cleanup.
+- Cloudflare preview/runtime/cleanup job `90551553907` passed.
 
 ## Next phase
 
-After the integration checkpoint passes, MOD-F remains the next serial integration target. MOD-G remains blocked until MOD-D and MOD-F cross-module reporting and integration contracts are stable.
+MOD-F is the next serial integration target and may consume the now-integrated MOD-D contracts. MOD-G remains blocked until MOD-F is integrated and the cross-module reporting/integration contracts are stable.
