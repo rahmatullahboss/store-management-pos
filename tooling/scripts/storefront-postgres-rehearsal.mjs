@@ -16,6 +16,14 @@ const sources = [
     directory: "database/foundation/migrations",
   },
   {
+    manifest: "database/migrations/catalog/manifest.json",
+    directory: "database/migrations/catalog",
+  },
+  {
+    manifest: "database/migrations/pricing/manifest.json",
+    directory: "database/migrations/pricing",
+  },
+  {
     manifest: "database/modules/storefront/manifest.json",
     directory: "database/modules/storefront/migrations",
   },
@@ -80,8 +88,8 @@ const { stdout } = await execFileAsync(
   { cwd: root, maxBuffer: 1024 * 1024 },
 );
 const summary = JSON.parse(stdout.trim());
-if (summary.migrations !== 2) throw new Error("Storefront migration count is invalid");
-if (summary.tables < 15) throw new Error("Storefront table count is incomplete");
+if (summary.migrations !== 3) throw new Error("Storefront migration count is invalid");
+if (summary.tables < 16) throw new Error("Storefront table count is incomplete");
 if (summary.forcedRlsTables !== summary.tables) {
   throw new Error("Not every storefront table has forced RLS");
 }
