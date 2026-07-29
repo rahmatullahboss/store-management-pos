@@ -66,6 +66,51 @@ batches:
       - Foundation CI typecheck build tests secret licence SBOM dependency audit
     local_owner: MOD-H-storefront-commerce
 
+  - id: SF-UP-002
+    status: adapted
+    purpose: Establish a minimal Astro SSR and Cloudflare Worker build shell using reviewed compatible versions and adapter configuration patterns.
+    upstream_paths:
+      - apps/storefront/package.json
+      - apps/storefront/astro.config.mjs
+      - apps/storefront/tsconfig.json
+      - apps/storefront/wrangler.jsonc
+    upstream_blob_shas:
+      apps/storefront/package.json: db48596a12ca021c75b288515e4e6f46eab7b0dd
+      apps/storefront/astro.config.mjs: 8a5f077777db692a84e60dfaf6d6942f470f0f7d
+      apps/storefront/tsconfig.json: def4c62c6c6bb2ed6a1bcc3e7fa9631e5707649e
+      apps/storefront/wrangler.jsonc: 347ce17df20f284e0ff24c3a22898bb4c0624b5e
+    mode: adapt
+    local_paths:
+      - apps/storefront-web/package.json
+      - apps/storefront-web/astro.config.mjs
+      - apps/storefront-web/tsconfig.json
+      - apps/storefront-web/wrangler.jsonc
+      - apps/storefront-web/.dev.vars.example
+      - apps/storefront-web/src/pages/[...path].ts
+      - package-lock.json
+      - .github/workflows/storefront-lockfile.yml
+    modifications:
+      - renamed every package, worker and runtime identity to the local Ozzyl-owned storefront workstream
+      - pinned only Astro 7.1.3, Cloudflare adapter 14.1.4, Astro check 0.9.9, TypeScript 6.0.3 and Wrangler 4.113.0
+      - omitted React, Tailwind, Radix, analytics, media, cart state, upstream API clients and admin dependencies
+      - removed all upstream account IDs, KV IDs, service names, domains, URLs and environment constants
+      - authored a local Wrangler configuration with no external resource identifiers or production routing
+      - bridged Astro catch-all routing to the local fail-closed Worker runtime and owning-module bootstrap contract
+      - generated the npm lockfile in trusted same-repository CI and verified reproducible install, root build and Astro Cloudflare build before commit
+    authority_boundary:
+      - build_and_public_runtime_shell_only
+      - no_D1_or_Drizzle
+      - no_upstream_API_client_or_business_service
+      - no_price_stock_order_payment_or_accounting_logic
+      - no_product_facing_upstream_branding
+    tests:
+      - Storefront Lockfile run 30488126211
+      - reproducible npm ci
+      - root TypeScript build
+      - Astro check and Cloudflare adapter build
+      - tests/unit/storefront-worker-shell.test.mjs
+    local_owner: MOD-H-storefront-commerce
+
 planned_candidates:
   - upstream_glob: apps/storefront/src/layouts/**
     proposed_mode: adapt
@@ -99,5 +144,5 @@ rejected_families:
     reason: Upstream business API and queue consumer are not used.
   - path: apps/admin-v2/**
     reason: Do not introduce a parallel admin design system; selected workflow concepts may be independently implemented.
-  - path: apps/storefront/wrangler.jsonc
-    reason: Fixed IDs, service names and domains must not be copied; local config is authored separately.
+  - path: apps/storefront/wrangler.jsonc fixed resources
+    reason: Upstream IDs, service names, domains and URLs were rejected; only generic adapter, assets and observability structure was adapted in SF-UP-002.
