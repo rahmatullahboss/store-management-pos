@@ -110,28 +110,47 @@ export function transitionSubscription(
   });
 }
 
-export function applyUsageEvent(counter: UsageCounterV1 | undefined, event: UsageEventV1, periodStart: string, periodEnd: string): UsageCounterV1 {
+export interface ApplyUsageResult {
+  readonly disposition: "applied" | "duplicate";
+  readonly counter: UsageCounterV1;
+}
+
+export function applyUsageEvent(counter: UsageCounterV1 | undefined, event: UsageEventV1): ApplyUsageResult {
   assertIdentifier(event.meterCode, "meterCode");
   if (!POSITIVE_INTEGER_PATTERN.test(event.quantity)) throw new TypeError("Usage quantity must be a non-negative integer string");
-  if (Date.parse(periodEnd) <= Date.parse(periodStart)) throw new TypeError("Usage period end must follow start");
+  if (event.idempotencyKey.trim().length === 0 || event.requestHash.trim().length === 0) throw new TypeError("Usage idempotency metadata is required");
   if (counter !== undefined) {
     if (counter.tenantId !== event.tenantId || counter.subscriptionId !== event.subscriptionId || counter.meterCode !== event.meterCode) {
-      throw new TypeError("Usage counter scope does not match event");
+      throw new TypeError("Usage event does not match counter scope");
     }
-    if (counter.periodStart !== periodStart || counter.periodEnd !== periodEnd) throw new TypeError("Usage event period does not match counter period");
-    if (counter.lastUsageEventId === event.usageEventId) return counter;
+    if (counter.lastUsageEventId === event.usageEventId) return Object.freeze({ disposition: "duplicate", counter });
   }
+  const quantity = BigInt(counter?.quantity ?? "0") + BigInt(event.quantity);
   return Object.freeze({
-    schemaVersion: "1.0",
-    tenantId: event.tenantId,
-    subscriptionId: event.subscriptionId,
-    meterCode: event.meterCode,
-    periodStart,
-    periodEnd,
-    quantity: (BigInt(counter?.quantity ?? "0") + BigInt(event.quantity)).toString(),
-    lastUsageEventId: event.usageEventId,
-    updatedAt: event.occurredAt,
+    disposition: "applied",
+    counter: Object.freeze({
+      schemaVersion: "1.0",
+      tenantId: event.tenantId,
+      subscriptionId: event.subscriptionId,
+      meterCode: event.meterCode,
+      periodStart: counter?.periodStart ?? event.businessDate,
+      periodEnd: counter?.periodEnd ?? event.businessDate,
+      quantity: quantity.toString(),
+      lastUsageEventId: event.usageEventId,
+      updatedAt: event.occurredAt,
+    }),
   });
+}
+
+export function assertImpersonationGrantActive(grant: SupportImpersonationGrantV1, at: string): void {
+  if (grant.supportActorId === grant.approvedBy) throw new TypeError("Support impersonation requires independent approval");
+  if (grant.reason.trim().length === 0 || grant.scopes.length === 0) throw new TypeError("Support impersonation reason and scopes are required");
+  if (new Set(grant.scopes).size !== grant.scopes.length) throw new TypeError("Support impersonation scopes must be unique");
+  const observed = Date.parse(at);
+  if (!Number.isFinite(observed) || observed < Date.parse(grant.issuedAt) || observed >= Date.parse(grant.expiresAt)) {
+    throw new TypeError("Support impersonation grant is outside its approved window");
+  }
+  if (grant.revokedAt !== undefined && observed >= Date.parse(grant.revokedAt)) throw new TypeError("Support impersonation grant is revoked");
 }
 
 export function assertSupportImpersonationActive(
@@ -140,12 +159,7 @@ export function assertSupportImpersonationActive(
   scope: string,
   observedAt: string,
 ): void {
+  assertImpersonationGrantActive(grant, observedAt);
   if (grant.supportActorId !== actorId) throw new TypeError("Support actor does not match impersonation grant");
-  if (grant.approvedBy === grant.supportActorId) throw new TypeError("Support impersonation requires independent approval");
-  if (grant.revokedAt !== undefined) throw new TypeError("Support impersonation grant is revoked");
-  const timestamp = Date.parse(observedAt);
-  if (timestamp < Date.parse(grant.issuedAt) || timestamp >= Date.parse(grant.expiresAt)) throw new TypeError("Support impersonation grant is outside its approval window");
   if (!grant.scopes.includes(scope)) throw new TypeError("Support impersonation scope is not approved");
 }
-
-export const assertImpersonationGrantActive = assertSupportImpersonationActive;
