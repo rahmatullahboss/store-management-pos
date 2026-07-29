@@ -10,15 +10,15 @@
 
 The dependency remains governed by its upstream license and copyright notices.
 
-## TypeScript 5.8.3
+## TypeScript 7.0.2
 
 - Project: TypeScript
 - Source: https://github.com/microsoft/TypeScript
 - License: Apache-2.0
-- Use: Development-only compiler for reproducible type checking and builds.
-- Modification: None. The package is consumed as a pinned npm development dependency and is excluded from runtime deployment.
+- Use: Development-only native compiler for reproducible strict type checking and JavaScript builds.
+- Modification: None. The exact-pinned npm package and its platform-specific native compiler package are consumed unmodified and excluded from runtime deployment.
 
-The dependency remains governed by its upstream licence and copyright notices.
+The dependency remains governed by its upstream Apache-2.0 licence, third-party notices and platform-package notices.
 
 ## Impeccable 4.0.3
 

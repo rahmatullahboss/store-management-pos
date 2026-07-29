@@ -1,0 +1,41 @@
+entry:
+  id: OSS-0008
+  status: approved_dependency
+  purpose: Native development compiler for reproducible strict type checking and JavaScript builds.
+  reuse_mode: dependency
+  project: "typescript"
+  repository: "https://github.com/microsoft/TypeScript"
+  exact_commit_or_tag: "7.0.2"
+  files_or_packages: ["typescript"]
+  declared_license: Apache-2.0
+  file_level_licenses_checked: true
+  notice_files: ["LICENSE.txt", "ThirdPartyNoticeText.txt"]
+  copyright_holders: ["Microsoft Corporation and contributors"]
+  modifications: "No upstream source copied or modified; the exact-pinned native compiler is consumed as development-only tooling."
+  product_locations:
+    - package.json
+    - package-lock.json
+    - tsconfig.json
+    - tsconfig.build.json
+  distributed_to_customers: false
+  network_service_use: false
+  compatible_with_product_model: approved_development_tooling
+  legal_review:
+    required: true
+    reviewer: engineering_policy
+    decision: approved_unmodified_development_dependency
+    date: 2026-07-30
+  security_review:
+    owner: foundation-platform
+    result: native_compiler_binary_and_transitive_package_inventory_must_pass_lock_sbom_and_audit_gates
+  update_owner: foundation-platform
+  upstream_tracking: "npm exact version; major migrations require compiler, emit, tests, native-package inventory and SBOM review"
+  sbom_component: "pkg:npm/typescript@7.0.2"
+  third_party_notice_entry: "docs/THIRD_PARTY_NOTICES.md"
+  tests:
+    - npm run typecheck
+    - npm test
+    - npm run design:verify
+    - npm run mod-f:design:verify
+    - npm run mod-g:design:verify
+  notes: "TypeScript 7 replaces the JavaScript compiler implementation with a native compiler distribution. Exact platform packages and generated output remain CI-reviewed before merge."
