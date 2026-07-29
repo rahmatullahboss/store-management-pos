@@ -1,7 +1,7 @@
 ---
 import ProductCard from "../../components/ProductCard.astro";
-import { parseStorefrontProductCardV1 } from "../../../../packages/storefront-contracts/src/index.js";
-import { buildStorefrontThemeTokensV1 } from "../../../../packages/storefront-theme/src/index.js";
+import { parseStorefrontProductCardV1 } from "../../../../../packages/storefront-contracts/src/index.js";
+import { buildStorefrontThemeTokensV1 } from "../../../../../packages/storefront-theme/src/index.js";
 
 if (import.meta.env.STOREFRONT_EVIDENCE_MODE !== "1") {
   return new Response(null, {
