@@ -32,6 +32,7 @@ permissions:
 env:
   FLUTTER_VERSION: 3.44.8
   FLUTTER_COMMIT: 058e0af2c2b57e369d905a03ac9748b0ebf543c6
+  DART_VERSION: 3.12.2
 
 jobs:
   verify:
@@ -63,8 +64,17 @@ jobs:
           set -euo pipefail
           flutter --version --machine > "${RUNNER_TEMP}/flutter-version.json"
           dart --version
-          grep -F '"frameworkVersion":"3.44.8"' "${RUNNER_TEMP}/flutter-version.json"
-          grep -F '"dartSdkVersion":"3.12.2"' "${RUNNER_TEMP}/flutter-version.json"
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          data = json.loads(
+              (Path(os.environ["RUNNER_TEMP"]) / "flutter-version.json").read_text()
+          )
+          assert data["frameworkVersion"] == os.environ["FLUTTER_VERSION"], data
+          assert data["dartSdkVersion"].startswith(os.environ["DART_VERSION"]), data
+          PY
 
       - name: Resolve workspace
         working-directory: mobile
