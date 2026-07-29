@@ -6,6 +6,7 @@ import { renderBankReconciliationPage, type BankReconciliationPage } from "../mo
 import { CATALOG_ADMIN_ROUTES } from "../modules/catalog/routes.js";
 import { renderCustomerWorkspace, type CustomerWorkspaceInput } from "../modules/customer/surface.js";
 import { renderFulfillmentWorkspace, type FulfillmentWorkspaceInput } from "../modules/fulfillment/surface.js";
+import { renderIntegrationConsolePage, type IntegrationConsolePage } from "../modules/integrations/page.js";
 import { renderInventoryOperationsPage, type InventoryDashboardFixture } from "../modules/inventory/index.js";
 import { renderLocalizationControlPage, type LocalizationControlPage } from "../modules/localization/page.js";
 import { LOCALIZATION_COMPLIANCE_ADMIN_ROUTES } from "../modules/localization/routes.js";
@@ -14,6 +15,9 @@ import { renderPosReconciliationPage, type PosReconciliationPage } from "../modu
 import { PRICING_TAX_ADMIN_ROUTES } from "../modules/pricing/routes.js";
 import { renderProcurementOperationsPage, type ProcurementDashboardFixture } from "../modules/procurement/index.js";
 import { renderFinanceReadinessPage, type FinanceReadinessPage } from "../modules/reporting/finance-readiness-page.js";
+import { renderReportingOperationsPage, type ReportingOperationsPage } from "../modules/reporting/operations-page.js";
+import { MOD_G_ADMIN_ROUTES } from "../modules/reporting/routes.js";
+import { renderSaasAdminPage, type SaasAdminPage } from "../modules/saas-admin/page.js";
 import { renderSalesWorkspace, type SalesWorkspaceInput } from "../modules/sales/surface.js";
 import { composeAdminRoutes, type AdminRouteDescriptor } from "./routes.js";
 
@@ -47,6 +51,7 @@ const integratedAdminRoutes = composeAdminRoutes([
   MOD_E_ADMIN_ROUTES,
   MOD_D_ADMIN_ROUTES,
   LOCALIZATION_COMPLIANCE_ADMIN_ROUTES,
+  MOD_G_ADMIN_ROUTES,
 ]);
 
 export interface AdminShellInput {
@@ -163,4 +168,16 @@ export function renderComplianceAdminPage(input: Omit<AdminShellInput, "content"
     currentPath: "/compliance",
     content: renderEmbeddedLocalizationControlPage({ ...page, focus: "compliance" }),
   });
+}
+
+export function renderReportingAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page: ReportingOperationsPage): string {
+  return renderAdminShell({ ...input, currentPath: "/reporting", content: renderReportingOperationsPage(page) });
+}
+
+export function renderIntegrationsAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page: IntegrationConsolePage): string {
+  return renderAdminShell({ ...input, currentPath: "/integrations", content: renderIntegrationConsolePage(page) });
+}
+
+export function renderSaasOperationsAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page: SaasAdminPage): string {
+  return renderAdminShell({ ...input, currentPath: "/platform/saas", content: renderSaasAdminPage(page) });
 }
