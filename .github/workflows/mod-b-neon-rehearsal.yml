@@ -31,7 +31,7 @@ jobs:
       NEON_BRANCH_NAME: dev/module-inventory-procurement
       MIGRATION_MODULES: FOUNDATION,MOD-B-INVENTORY,MOD-B-PROCUREMENT
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: 22
