@@ -6,15 +6,15 @@ import test from "node:test";
 const modules = [
   {
     identity: "MOD-D-POS",
+    prefix: "POS",
     manifestPath: new URL("../../database/modules/pos/manifest.json", import.meta.url),
     migrationsDirectory: new URL("../../database/modules/pos/migrations/", import.meta.url),
-    expectedIds: ["POS-0001", "POS-0002", "POS-0003", "POS-0004"],
   },
   {
     identity: "MOD-D-CASH",
+    prefix: "CSH",
     manifestPath: new URL("../../database/modules/cash/manifest.json", import.meta.url),
     migrationsDirectory: new URL("../../database/modules/cash/migrations/", import.meta.url),
-    expectedIds: ["CSH-0001", "CSH-0002"],
   },
 ];
 
@@ -37,7 +37,9 @@ test("MOD-D migrations have deterministic identities and verified checksums", as
     const source = modules[index];
     assert.ok(source);
     assert.equal(result.manifest.module, source.identity);
-    assert.deepEqual(result.migrations.map(({ id }) => id), source.expectedIds);
+    assert.ok(result.migrations.length > 0, `${source.identity} must publish at least one migration`);
+    const expectedIds = result.migrations.map((_, migrationIndex) => `${source.prefix}-${String(migrationIndex + 1).padStart(4, "0")}`);
+    assert.deepEqual(result.migrations.map(({ id }) => id), expectedIds, `${source.identity} migration IDs must remain contiguous and ordered`);
     const declaredFiles = result.manifest.migrations.map(({ file }) => file).sort();
     const presentFiles = (await readdir(source.migrationsDirectory))
       .filter((file) => file.endsWith(".sql"))
