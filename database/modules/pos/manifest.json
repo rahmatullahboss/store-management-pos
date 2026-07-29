@@ -1,6 +1,6 @@
 {
   "module": "MOD-D-POS",
-  "version": 1,
+  "version": 5,
   "order": 40,
   "migrations": [
     {
@@ -22,6 +22,11 @@
       "id": "POS-0004",
       "file": "POS-0004-device-register-scope.sql",
       "sha256": "635918728282602ebd869f301497ded90fab142a16929e1b681311edffd973cd"
+    },
+    {
+      "id": "POS-0005",
+      "file": "POS-0005-store-scope-controls.sql",
+      "sha256": "7613feec97353d530689925dbfbbf632126b9d60539e521786367252cf7eddba"
     }
   ]
 }
