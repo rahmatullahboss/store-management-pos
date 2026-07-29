@@ -8,6 +8,7 @@
 **Worktree:** `.worktrees/payments-accounting-banking`
 **Neon project:** `store-management-pos-nonprod` (`twilight-boat-26805962`)
 **Neon branch:** `dev/module-payments-accounting-banking` (`br-rapid-fog-ax8tutgm`)
+**Draft integration PR:** `#8` into `program/integration-v1`
 
 ## Safety and activation evidence
 
@@ -21,7 +22,7 @@
 
 ## Current checkpoint
 
-E0 through E7 are implementation complete and connected Neon evidence is complete. Payments, accounting, banking, APIs, admin operations pages, worker recovery controls, observability, readiness checks, database drills and operations documentation are present on the module branch. The workpack is ready for programme integration review; it is not yet merged into `program/integration-v1` or configured for production providers and schedulers.
+E0 through E7 are implementation complete and connected Neon evidence is complete. Payments, accounting, banking, APIs, admin operations pages, worker recovery controls, observability, readiness checks, database drills and operations documentation are present on the module branch. Draft PR `#8` is open for programme integration review. The PR is currently non-mergeable because `program/integration-v1` advanced by ten commits after the approved Foundation baseline; the serial programme integrator must resolve and review those cross-module changes rather than importing them into the isolated module branch.
 
 ## Rolling checkpoint evidence
 
@@ -42,7 +43,7 @@ E0 through E7 are implementation complete and connected Neon evidence is complet
 - E7 `npm run typecheck` passed and `npm run test:unit` passed 63/63 tests in the implementation worktree.
 - `npm run test:database:mod-e` passed against an isolated fresh PostgreSQL chain after FND-0001→FND-0005, PAY-0001→PAY-0002, ACC-0001→ACC-0002 and BNK-0001→BNK-0002.
 - Database drills are rollback-only and cover invariants, payment lifecycle, accounting lifecycle, banking lifecycle and finance readiness.
-- A final full `npm run verify` rerun after E7 could not be reproduced from the connector-only session because no executable checkout or GitHub workflow dispatch was available. E7 typecheck, 63 unit tests and both local and connected database drills are retained as the final module evidence.
+- A final full `npm run verify` rerun after E7 could not be reproduced from the connector-only session because no executable checkout or GitHub workflow dispatch was available. Draft PR `#8` also produced no workflow run or commit status check. E7 typecheck, 63 unit tests and both local and connected database drills are retained as the final module evidence.
 
 ## Connected Neon evidence
 
@@ -65,8 +66,8 @@ E0 through E7 are implementation complete and connected Neon evidence is complet
 
 ## Programme integration actions
 
-- Review and merge the module branch serially according to the programme integration order.
-- Run the integration branch's complete repository verification and cross-module contract suite after merge.
+- Resolve draft PR `#8` against the ten newer integration-branch commits under the serial programme integration process.
+- Run the integration branch's complete repository verification and cross-module contract suite after conflict resolution and merge.
 - Preserve frozen MOD-B/MOD-C simulator contracts until their reviewed integrations are available.
 - Configure production queue/scheduler execution, metric sink/dashboard bindings and approved live provider adapters through deployment configuration.
 
