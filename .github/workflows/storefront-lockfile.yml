@@ -1,0 +1,57 @@
+name: Storefront Lockfile
+
+on:
+  pull_request:
+    branches:
+      - program/integration-v1
+    paths:
+      - apps/storefront-web/package.json
+      - packages/storefront-client/package.json
+      - packages/storefront-contracts/package.json
+      - packages/storefront-theme/package.json
+      - package-lock.json
+      - .github/workflows/storefront-lockfile.yml
+
+concurrency:
+  group: storefront-lockfile-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'module/storefront-commerce-v1' && github.actor != 'dependabot[bot]' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      HEAD_REF: ${{ github.event.pull_request.head.ref }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - name: Generate exact workspace lockfile
+        run: npm install --package-lock-only --ignore-scripts
+      - name: Verify reproducible install
+        run: npm ci --ignore-scripts
+      - name: Verify root TypeScript build
+        run: npm run build
+      - name: Verify Astro Cloudflare build
+        run: npm --workspace @ozzyl/storefront-web run build
+      - name: Commit generated lockfile
+        shell: bash
+        run: |
+          if git diff --quiet -- package-lock.json; then
+            echo "package-lock.json is already current"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          git commit -m "chore(storefront): reconcile exact workspace lockfile"
+          git push origin "HEAD:${HEAD_REF}"
