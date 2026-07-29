@@ -27,8 +27,8 @@ upstream:
   product_branding_reuse: prohibited
   provenance_recording: required
   wholesale_import: prohibited
-  imported_source_batches: 1
-  latest_import_batch: SF-UP-001
+  imported_source_batches: 2
+  latest_import_batch: SF-UP-002
 
 checkpoints:
   H0:
@@ -51,12 +51,9 @@ checkpoints:
       - internal_source_adaptation_notice_created
       - upstream_file_manifest_baseline_created
       - module_boundary_registered
-      - first_file_level_adaptation_manifest_SF_UP_001
-      - foundation_design_ci_passed_for_pre_final_H1_head
-      - foundation_verify_passed_for_pre_final_H1_head
+      - file_level_adaptation_manifests_SF_UP_001_and_SF_UP_002
     remaining:
       - create_or_verify_dev_module_storefront_commerce_when_neon_branch_slot_available
-      - record_final_exact_head_cloudflare_and_neon_recovery_results_in_PR_body
     blockers:
       - neon_nonproduction_project_has_10_branches_and_limit_is_10
     safety_decision:
@@ -75,15 +72,23 @@ checkpoints:
       - runtime_environment_schema_and_safe_origin_validation
       - tenant_storefront_host_locale_currency_price_revision_publication_build_cache_scope
       - fail_closed_request_runtime
-      - health_and_unavailable_responses
-      - storefront_foundation_and_runtime_boundary_tests
-      - root_format_lint_boundary_typecheck_build_test_secret_licence_sbom_audit_pass
+      - health_not_found_and_temporary_outage_responses
+      - host_resolution_service_binding_and_HTTP_adapter
+      - canonical_hostname_redirect
+      - secure_accessible_Worker_rendered_synthetic_storefront_shell
+      - tenant_scoped_hashed_ETag_and_cache_policy
+      - GET_HEAD_only_public_runtime
+      - storefront_foundation_runtime_and_worker_tests
+      - exact_Astro_Cloudflare_package_versions
+      - exact_npm_workspace_lockfile
+      - Astro_SSR_Cloudflare_adapter_configuration
+      - Astro_catch_all_bridge_to_local_Worker_runtime
+      - safe_Wrangler_config_without_upstream_IDs_domains_or_service_names
+      - Storefront_Lockfile_run_30488126211_reproducible_install_root_build_Astro_build_pass
     remaining:
-      - add_package_manifests_and_exact_dependency_pins
-      - add_astro_cloudflare_worker_shell
-      - add_host_resolution_service_binding_adapter
-      - add_storefront_specific_ci_path_and_browser_evidence
-      - execute_first_reviewed_upstream_UI_component_adaptation_batch_with_file_provenance
+      - add_storefront_specific_CI_path_and_browser_accessibility_evidence
+      - execute_first_reviewed_upstream_product_card_UI_adaptation_batch_with_file_provenance
+      - complete_H1_exact_head_foundation_design_cloudflare_and_neon_recovery_evidence
   H2:
     title: Storefront domain and publishing
     status: blocked_by_H1
@@ -113,35 +118,30 @@ module_authority:
   storefront_publication_presentation_domains: MOD-H
 
 next_action:
-  id: H1-WORKER-03
-  description: Pin Astro and Cloudflare dependencies with an exact lockfile, create the first Worker-rendered synthetic storefront shell, and adapt the first reviewed public UI component without importing upstream D1 or commerce authority.
+  id: H1-UI-04
+  description: Adapt the reviewed public product-card presentation to local exact-money and publication contracts, then add storefront-specific Astro build and browser accessibility evidence without importing upstream API or commerce authority.
 
 last_commits:
-  - sha: 79088da15ab8524ff090ba10a2d2157729a55f33
-    purpose: scoped source adaptation register
-  - sha: a6f3ebbd93f639f70ec8b2a6556e12e6fc883d03
-    purpose: storefront product truth
-  - sha: 7f4a5d3196bbc563230e3237cb4e9742b0923ca1
-    purpose: H1 contracts client runtime theme and tests
-  - sha: 40c1c6b25c9d2150758bbd9839914ea02afaaf71
-    purpose: runtime environment and cache isolation tests
-  - sha: d1b5d5b5808b44213e62c18e8dd331e8da5998e6
-    purpose: adapted reviewed theme sanitisation
-  - sha: 6d2c5ed649ed765a334df9bd91f08edb3331a45d
-    purpose: SF-UP-001 file-level provenance
-  - sha: fa874500f8a1a479cbf95f6d6d673aba985940b8
-    purpose: adapted theme security tests
+  - sha: d339573024c94e5db32739888469f89d04f8efa9
+    purpose: Worker shell and host isolation tests
+  - sha: 9708cdf44f5b3801d282b4f600e8f8a3e0bfa15e
+    purpose: lockfile reconciliation workflow
+  - sha: 2fa53d30558241a401d5fca5ed9abfca7e330511
+    purpose: CI generated exact package lockfile after root and Astro build verification
+  - sha: de87422284a7a0e4aa500991f9bb3d7abb0bc285
+    purpose: SF-UP-002 Astro Cloudflare provenance
 
 evidence:
   github:
     pr: 48
     base_sha: 7c552a6c55844c6437ed4cc60ab85db3d8f8bb76
-    pre_final_verified_head: fa874500f8a1a479cbf95f6d6d673aba985940b8
-    pre_final_foundation_ci_run: 30484046471
-    pre_final_foundation_verify_job: 90685139686
-    pre_final_foundation_design_run: 30484046472
-    pre_final_foundation_design_job: 90685139493
-    final_exact_head_ci: pending_after_this_tracker_commit
+    worker_shell_verified_head: d339573024c94e5db32739888469f89d04f8efa9
+    worker_shell_foundation_ci_run: 30487642640
+    worker_shell_foundation_verify_job: 90697289708
+    lockfile_generation_run: 30488126211
+    lockfile_generation_job: 90698848850
+    lockfile_generated_head: 2fa53d30558241a401d5fca5ed9abfca7e330511
+    current_exact_head_ci: pending_after_tracker_commit
   neon:
     project_id: twilight-boat-26805962
     postgres_version: 17
@@ -150,21 +150,21 @@ evidence:
     requested_branch: dev/module-storefront-commerce
     result: not_created_to_preserve_existing_work
   adaptation:
-    batch: SF-UP-001
-    upstream_path: packages/shared/src/storefront-theme.ts
-    upstream_blob_sha: ccdd95740666f411f944fe47747e7f857321c5e1
-    local_path: packages/storefront-theme/src/index.ts
+    latest_batch: SF-UP-002
+    upstream_paths:
+      - apps/storefront/package.json
+      - apps/storefront/astro.config.mjs
+      - apps/storefront/tsconfig.json
+      - apps/storefront/wrangler.jsonc
+    local_paths:
+      - apps/storefront-web/package.json
+      - apps/storefront-web/astro.config.mjs
+      - apps/storefront-web/tsconfig.json
+      - apps/storefront-web/wrangler.jsonc
+      - apps/storefront-web/src/pages/[...path].ts
+      - package-lock.json
     product_facing_upstream_branding: none
     upstream_business_authority_imported: false
-  audit_sources:
-    - upstream README and architecture
-    - upstream storefront README
-    - upstream API client
-    - upstream product types and cart store
-    - upstream cache middleware and edge cache
-    - upstream theme model
-    - upstream product public eligibility
-    - local PRODUCT.md, DESIGN.md and programme policies
   known_risks:
     - multi_tenant_domain_control_plane_not_present_upstream
     - sales_channel_publication_model_not_present_upstream
