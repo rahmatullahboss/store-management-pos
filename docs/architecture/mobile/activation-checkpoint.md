@@ -1,175 +1,164 @@
-# MOB-01 — Store Companion Mobile Activation and Foundation Checkpoint
+# MOB-01 — Store Companion Mobile Activation and Engineering Checkpoint
 
 - **Checkpoint date:** 2026-07-29
 - **Repository:** `rahmatullahboss/store-management-pos`
 - **Workpack:** `MOB-01 — Store Companion Mobile`
 - **Git branch:** `module/store-companion-mobile-v1`
+- **Current verified source head:** `0303cb88b27b8bdc96497808d12b883ede74b123`
 - **Draft pull request:** `#40` into `program/integration-v1`
 - **Assigned worktree:** `.worktrees/store-companion-mobile`
 - **Neon branch:** `dev/module-store-companion-mobile` (`br-cool-mode-axxzm8to`)
 - **Neon parent:** `dev/module-pos-cash-offline` (`br-rapid-river-axoz0rfs`)
 - **Starting reviewed base:** `47129e25191d1b1c8a8523dcd8f83c2a0b0edf55`
-- **Non-destructive integration sync:** `d3d75da3324fd9ad6015b707d27d1806bdaf8242` through PR `#39`
-- **Status:** M0 complete; M1 Flutter foundation code/CI complete; M2 OAuth/session/workspace security boundary complete; platform-generation gate remains
+- **Status:** M0 complete; M1 Android/Flutter foundation complete; M2 platform-neutral identity/workspace security foundation complete; MOD-F effective-localisation client checkpoint complete; iOS compile, native identity adapters and M3 local data remain open.
 
-## Base decision
+## Baseline and safety
 
-The branch starts from the validated post-MOD-D integration head and was then non-destructively synchronized with the newer reviewed `program/integration-v1` state. The baseline includes Foundation and integrated MOD-A, MOD-B, MOD-C, MOD-D and MOD-E contracts. MOD-F remains active and MOD-G remains dependency-gated.
+The branch retains the reviewed integration ancestry without reset, destructive rebase, force update or replacement of module-owned implementation. It consumes integrated Foundation through MOD-F contracts while MOD-G remains dependency-gated.
 
-MOB-01 proceeds in parallel for Flutter foundation and reviewed integrated-contract workflows. Final MOD-F and MOD-G dependent behaviour remains gated, and final programme integration remains serial after MOD-G by default.
+Safety boundaries remain unchanged:
 
-## Safety evidence
+- no production data, credentials, database or deployment;
+- no app-store publication or release signing authority;
+- no direct mobile connection to Neon or canonical module tables;
+- no native POS, cash-shift, card-terminal or hardware authority;
+- no client-authoritative price, tax, stock, payment or accounting result;
+- no existing module branch or persistent Neon module branch deleted for CI capacity.
 
-- The mobile branch was created from the exact reviewed commit recorded above.
-- PR `#39` merged the newer reviewed integration state into MOB-01 without reset, destructive rebase or force update.
-- No production database, production data, app-store publication or production feature activation is authorised or used.
-- No existing module branch, dirty worktree or module-owned path was reset, overwritten or force-updated.
-- Mobile owns no PostgreSQL business schema and does not connect directly to Neon.
-- The dedicated Neon branch is retained only for synthetic contract/E2E evidence.
-- Native POS/cash/hardware remains owned by MOD-D and is excluded.
-- The Flutter shell is explicitly labelled synthetic and does not claim deployed mobile backend contracts.
-- The session package stores no access token, refresh credential, PKCE verifier, password, provider secret or database credential.
-
-## Documentation and governance checkpoint
-
-Completed authorities:
-
-- `docs/adr/ADR-007-STORE-COMPANION-MOBILE.md`;
-- `docs/mobile/README.md` and `00` through `08` product/architecture/API/offline/security/design/testing documents;
-- `docs/agent-workpacks/MOB-01-STORE-COMPANION.md`;
-- `docs/contracts/change-requests/CCR-0003-MOBILE-FIRST-PARTY-CONTRACTS.md`;
-- `docs/17A-STORE-COMPANION-PARALLEL-EXECUTION.md`;
-- `docs/open-source/mobile-reuse-register.yaml`;
-- programme board, activation policy, workpack index and repository README registration.
-
-CCR-0003 is accepted as a non-breaking additive client contract family. Foundation and each domain module retain ownership of shared persistence, authorization and module adapters; MOB-01 owns client contracts, local sync and native UI only.
-
-## Flutter foundation implemented
+## Implemented foundation
 
 ### Toolchain and workspace
 
-- Flutter `3.44.8` stable pinned to exact commit `058e0af2c2b57e369d905a03ac9748b0ebf543c6`;
+- Flutter `3.44.8` pinned to commit `058e0af2c2b57e369d905a03ac9748b0ebf543c6`;
 - Dart `3.12.2`;
-- Dart pub workspace under `mobile/`;
-- CI-generated and committed `mobile/pubspec.lock`;
-- strict Dart analysis policy;
-- SDK provenance manifest and exact-version CI checks.
+- pub workspace under `mobile/` with committed lockfile;
+- strict analysis, canonical formatting and exact official Flutter checkout in CI;
+- Operations Ledger design tokens and adaptive phone/tablet shell;
+- synthetic bootstrap and explicit non-production boundary.
 
-### Packages
+### Android platform
 
-- `store_companion_app_core` — workspace/capability/sync state and exact integer-minor-unit money;
-- `store_companion_design_system` — Operations Ledger Flutter tokens/theme;
-- `store_companion_api_client` — strict versioned bootstrap/workspace/localisation/compatibility/operation/result/error contracts;
-- `store_companion_sync_engine` — pure local operation transitions, authoritative result reduction and bounded transport retry separation;
-- `store_companion_session_core` — dependency-free OAuth request/callback validation, credential-free session lifecycle and workspace cache-partition invariants.
+Generated Android source is reviewed and reproducible from the pinned Flutter template. The build uses AGP 9-compatible Kotlin DSL, Java/Kotlin 17 and explicit resource-value support.
 
-### Application shell
+Application identities:
 
-- synthetic bootstrap fixture;
-- active workspace switcher;
-- capability-driven phone NavigationBar and adaptive tablet NavigationRail;
-- Operations Ledger context band and explicit current/stale/offline/blocked state vocabulary;
-- synthetic/production-boundary warning;
-- Home, Work, Approvals and Finance foundation surfaces;
-- English/Bengali/Arabic/Japanese locale registration;
-- accessibility semantics and 44px minimum control foundation.
+- development: `com.ozzyl.storecompanion.dev`;
+- staging: `com.ozzyl.storecompanion.staging`;
+- production identity: `com.ozzyl.storecompanion`.
 
-### Contract and sync invariants
+No release signing material is committed. Generated launcher artwork remains placeholder-only and blocks signed pilot/production release.
 
-- unknown additive operation statuses are preserved instead of crashing the client;
-- unknown external state blocks blind retry;
-- authoritative server outcomes are never converted into transport retry;
-- only no-result transport failures receive bounded retry/backoff;
-- terminal operations cannot transition back to upload;
-- exact money uses `BigInt` minor units and rejects cross-currency arithmetic.
+### iOS platform
 
-### OAuth, session and workspace invariants
+The generated base project uses bundle identifier `com.ozzyl.storecompanion`. Development/staging schemes, bundle suffixes, signing configuration and macOS simulator compile evidence remain open checkpoints.
 
-- authorization requests require a clean HTTPS provider endpoint, exact reviewed redirect URI, unique scopes including `openid`, state/nonce minimum entropy length and an S256-format PKCE challenge;
-- the PKCE verifier is intentionally excluded from the public model;
-- callbacks require exact scheme/user-info/host/port/path matching, one expected state, no fragment and one authorization code;
-- session state contains only opaque references and expiry/assurance metadata, never credentials;
-- remote/self revocation immediately stops sync and requires restricted cache purge or locking;
-- privileged attempts require active AAL2 metadata and current reauthentication window, while the server remains authoritative;
-- workspace cache/operation partitions include user, tenant and opaque workspace context;
-- scope-changing selection requires sync stop, presentation clearing, restricted-cache purge/lock and a fresh server-validated bootstrap.
+### Identity, session and workspace
 
-## CI and verification evidence
+- dependency-free OAuth authorization-request and callback validation;
+- exact redirect matching, state/nonce checks and S256 PKCE challenge validation;
+- credential-free session model using opaque references only;
+- step-up/reauthentication metadata and fail-closed privileged-action checks;
+- remote/self revocation stops synchronisation and requires restricted-cache purge or lock;
+- user/tenant/workspace partition keys prevent cross-context cache reuse;
+- workspace changes require sync stop, presentation clear and fresh server bootstrap.
+
+### Runtime environments
+
+Development, staging and production identities have explicit API/OIDC/redirect configuration. Production startup fails before the application shell if endpoints are missing, non-HTTPS, localhost or placeholder values.
+
+### MOD-F effective localisation
+
+The mobile client now strictly consumes the integrated `GET /v1/localization/effective-configuration` contract:
+
+- country-pack activation/version/support metadata;
+- effective date window and default locale;
+- exact currency metadata using `BigInt` cash increments;
+- accounting scale and nearest/up/down cash-rounding metadata;
+- exact timezone/business-day boundary and metadata version;
+- signed country capability map;
+- duplicate currency/timezone rejection;
+- bootstrap currency-version, timezone and business-date consistency checks;
+- unknown future support levels preserved but regulated presentation remains fail-closed;
+- only explicit `validated` support permits client-side regulated presentation, while server authorization remains authoritative.
+
+Coverage includes limited/unknown support, duplicate metadata, stale version, missing boundary, invalid effective window and integers beyond JavaScript's safe range.
+
+## Current CI evidence
 
 ### Mobile Foundation CI
 
-Successful run `30459163969`, job `90600485284` at source head `91f6fb4c46b1c34224b88ce466ccfa82dffc32f3`:
+Run `30467808600`, job `90630066692`, source head `0303cb88b27b8bdc96497808d12b883ede74b123`: passed.
 
-- checked out exact official Flutter commit;
-- verified Flutter `3.44.8` and Dart `3.12.2` machine output;
-- resolved all pub workspace packages;
-- verified the committed dependency lock;
-- applied and verified canonical Dart formatting;
+Evidence:
+
+- exact Flutter/Dart toolchain verified;
+- pub workspace resolved;
+- canonical Dart formatting passed;
 - `flutter analyze` passed;
-- unit, widget, API contract, sync, OAuth callback, session revocation and workspace-isolation tests passed;
-- tracked mobile source had no formatter diff;
-- coverage, formatted-source and lockfile artifacts uploaded.
+- unit, widget, sync, session, runtime, contract and MOD-F localisation tests passed;
+- committed source matched formatter output;
+- lockfile, formatted-source and coverage artifacts uploaded.
 
-### Root platform verification
+### Android platform verification
 
-Foundation CI run `30457527955` passed after the preceding mobile foundation checkpoint, including repository formatting, lint, architecture boundaries, strict TypeScript, existing tests, secret/licence/SBOM gates and trusted Cloudflare/Neon gates. The current M2 source is also covered by the successful Mobile Foundation CI above; the branch-level root workflow is rerun on each checkpoint.
+Run `30467812100`, job `90630079997`, source head `0303cb88b27b8bdc96497808d12b883ede74b123`: passed.
 
-### Neon branch evidence
+Artifacts:
 
-Mobile Neon Evidence run `30459163616` passed for the M2 session checkpoint.
+| Evidence | Artifact ID | SHA-256 digest |
+|---|---:|---|
+| Generated platform source | `8730481454` | `59e514f87c982d0e13bdcbcbc85c4c92198dc5187feb58c80469906d560f4cce` |
+| Development debug APK | `8730484712` | `a03607b851deda3947af59e66d6c2be8cd3615d0ccb9a60dab16ecf9c620e461` |
+| Staging debug APK | `8730487839` | `ce06c07b29b66221db28bb195f0d657151fdc4cea8e07cbbe5a55acbdbf46305` |
+| Production-identity debug APK | `8730490989` | `94a485b46203e02e698fdfa68175e933bffb14040850374ef59d44873193b423` |
 
-The dedicated branch and reviewed MOD-D parent retain matching metadata fingerprints:
+The production-identity artifact is an unsigned debug build and is not a production release.
 
-- schema match: true;
-- relation match: true;
-- forced-RLS match: true;
-- migration-table match: true;
-- schemas: `19`;
-- relation groups: `21`;
-- forced-RLS tables: `184`;
-- migration table: `platform.schema_migrations`.
+### Root Foundation CI
 
-Committed evidence: `docs/architecture/mobile/neon-branch-evidence.json`.
+Run `30467810717`: passed.
 
-The evidence explicitly records:
+- verify job `90630076336`: format, lint, architecture, typecheck, build/tests, secret scan, licence register, SBOM and dependency audit passed;
+- Cloudflare preview job `90630201820`: passed and cleaned up;
+- Neon recovery job `90630201995`: passed;
+- Neon preview job `90630373709`: passed.
 
-- production data used: false;
-- business schema owned by mobile: false;
-- direct mobile database access allowed: false;
-- branch retained for synthetic evidence: true.
+### Dedicated Mobile Neon evidence
 
-## Dependency status
+Run `30467809644`, job `90630040160`: passed. The assigned mobile evidence branch exists under the reviewed MOD-D parent and remains synthetic only.
 
-### Ready for implementation
+### Neon quota-safe fallback
 
-- identity/session/tenant/permission primitives;
-- catalog/barcode/price-tax snapshot references;
-- inventory/procurement/receiving/count/transfer contracts;
-- customer/sales/fulfilment/return contracts;
-- MOD-D compatible sync/device/idempotency principles without POS authority;
-- payment/accounting/banking operational contracts;
-- Operations Ledger design system;
-- accepted first-party mobile contract family and deterministic client models;
-- platform-neutral OAuth/session/workspace isolation interfaces.
+The project branch quota is occupied by legitimate persistent programme/module branches. Foundation preview CI therefore falls back to a run-scoped disposable database on `dev/foundation-v1` instead of deleting a module branch.
 
-### Gated
+Verified run `30465971303`, artifact `8729594013` recorded:
 
-- MOD-F effective localisation, country capability, business date, privacy/retention and legal/fiscal presentation;
-- MOD-G governed dashboards, reports, notifications, entitlements and canonical public OpenAPI;
-- shared Worker/mobile BFF adapters under their Foundation/module ownership;
-- protected credential storage, external-browser OAuth and deep-link adapters until reviewed native packages/platform projects exist.
+- `isolationMode=database`;
+- disposable database `ci_preview_30465971303`;
+- Foundation migrations, integration tests and benchmark passed;
+- shared compute was not suspended;
+- `databaseCleanupDeleted=true`;
+- post-run inventory confirmed only persistent `postgres` and `neondb` databases remained.
 
-## Remaining execution gates
+## Dependency review status for M3
 
-1. Verify/create the assigned local Git worktree in an executable repository environment.
-2. Generate and review Android/iOS platform projects using the pinned Flutter SDK.
-3. Add development/staging/production bundle IDs, flavours/schemes and platform configuration.
-4. Add Android debug and iOS simulator compile evidence after platform generation.
-5. Select local SQL, secure storage, OAuth/routing/state-management and push packages only after provenance/security review.
-6. Connect the reviewed session interfaces to external-browser, secure-storage and deep-link platform adapters.
-7. Implement Foundation/module-owned server adapters for the accepted CCR-0003 contracts.
-8. Consume final MOD-F and MOD-G contracts at their dependency checkpoints.
+The next local-data checkpoint will use a separately reviewed dependency/provenance commit. Current preferred direction is Drift over `sqlite3` 3.x with SQLite3MultipleCiphers selected through workspace build hooks, and platform secure storage used only for key material. No deprecated `sqlite3_flutter_libs` or `sqlcipher_flutter_libs` dependency is permitted.
 
-## Next implementation checkpoint
+No M3 dependency is considered adopted until its exact version, transitive lockfile, licence/provenance record, encrypted-database runtime assertion and Android/iOS build evidence are committed and green.
 
-Continue M1/M2 with platform project generation, environment configuration, generated localization resources, view-model/repository boundaries and native authentication/workspace adapters. No backend business migration or production deployment is part of this checkpoint.
+## Remaining gates
+
+1. Add iOS development/staging schemes and bundle suffixes.
+2. Obtain macOS-runner iOS simulator compile and test evidence.
+3. Complete provenance and lockfile review for local SQL, encrypted SQLite build, secure storage, native OAuth and background work.
+4. Implement bounded local SQL migrations, projection cache, drafts, pending operations, results and cursor storage.
+5. Prove cipher availability at runtime and keep encryption keys outside the database and diagnostics.
+6. Add crash/restart/replay/migration/revocation/storage-pressure tests without losing pending work.
+7. Connect the reviewed session seams to external-browser OAuth, secure storage and deep-link adapters.
+8. Add generated localisation resources and Bengali/English/RTL/CJK visual/accessibility evidence.
+9. Consume MOD-G governed metrics, reporting, communication, entitlement and approved OpenAPI contracts when integrated.
+10. Produce signed internal/pilot artifacts only after separate signing, artwork, security and release authorization.
+
+## Next checkpoint
+
+Proceed with M3 dependency/provenance freeze and the encrypted local persistence boundary. Pending operations and drafts must be physically separated from rebuildable projections, exact values must remain integer/string based, and no local state may be presented as authoritative server completion.
