@@ -3,32 +3,83 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 app_dir="${repo_root}/mobile/apps/store_companion"
+temp_root="$(mktemp -d)"
+temp_app="${temp_root}/store_companion"
+
+cleanup() {
+  rm -rf "${temp_root}"
+}
+trap cleanup EXIT
 
 if ! command -v flutter >/dev/null 2>&1; then
   echo "flutter is required" >&2
   exit 1
 fi
 
-before_pubspec="$(sha256sum "${app_dir}/pubspec.yaml" | awk '{print $1}')"
-before_main="$(sha256sum "${app_dir}/lib/main.dart" | awk '{print $1}')"
+for reviewed_path in \
+  "${app_dir}/pubspec.yaml" \
+  "${app_dir}/lib/main.dart" \
+  "${app_dir}/test"; do
+  if [[ ! -e "${reviewed_path}" ]]; then
+    echo "missing reviewed application path: ${reviewed_path}" >&2
+    exit 1
+  fi
+done
+
+reviewed_tree_before="$(
+  find \
+    "${app_dir}/lib" \
+    "${app_dir}/test" \
+    "${app_dir}/pubspec.yaml" \
+    -type f -print0 \
+    | sort -z \
+    | xargs -0 sha256sum \
+    | sha256sum \
+    | awk '{print $1}'
+)"
 
 flutter create \
+  --no-pub \
   --platforms=android,ios \
   --org com.ozzyl \
   --project-name store_companion \
-  "${app_dir}"
+  "${temp_app}"
 
-after_pubspec="$(sha256sum "${app_dir}/pubspec.yaml" | awk '{print $1}')"
-after_main="$(sha256sum "${app_dir}/lib/main.dart" | awk '{print $1}')"
+rm -rf "${app_dir}/android" "${app_dir}/ios"
+cp -R "${temp_app}/android" "${app_dir}/android"
+cp -R "${temp_app}/ios" "${app_dir}/ios"
+cp "${temp_app}/.metadata" "${app_dir}/.metadata"
 
-if [[ "${before_pubspec}" != "${after_pubspec}" ]]; then
-  echo "flutter create changed the reviewed app pubspec" >&2
+reviewed_tree_after="$(
+  find \
+    "${app_dir}/lib" \
+    "${app_dir}/test" \
+    "${app_dir}/pubspec.yaml" \
+    -type f -print0 \
+    | sort -z \
+    | xargs -0 sha256sum \
+    | sha256sum \
+    | awk '{print $1}'
+)"
+if [[ "${reviewed_tree_before}" != "${reviewed_tree_after}" ]]; then
+  echo "platform generation changed reviewed Dart application source" >&2
   exit 1
 fi
-if [[ "${before_main}" != "${after_main}" ]]; then
-  echo "flutter create changed the reviewed app entry point" >&2
+
+old_activity="${app_dir}/android/app/src/main/kotlin/com/ozzyl/store_companion/MainActivity.kt"
+new_activity_dir="${app_dir}/android/app/src/main/kotlin/com/ozzyl/storecompanion"
+if [[ ! -f "${old_activity}" ]]; then
+  echo "generated Android MainActivity was not found at the reviewed template path" >&2
   exit 1
 fi
+mkdir -p "${new_activity_dir}"
+sed \
+  's/^package com\.ozzyl\.store_companion$/package com.ozzyl.storecompanion/' \
+  "${old_activity}" > "${new_activity_dir}/MainActivity.kt"
+rm "${old_activity}"
+rmdir \
+  "${app_dir}/android/app/src/main/kotlin/com/ozzyl/store_companion" \
+  2>/dev/null || true
 
 cat > "${app_dir}/android/app/build.gradle.kts" <<'GRADLE'
 plugins {
@@ -39,7 +90,7 @@ plugins {
 }
 
 android {
-    namespace = "com.ozzyl.store_companion"
+    namespace = "com.ozzyl.storecompanion"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -53,7 +104,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.ozzyl.store_companion"
+        applicationId = "com.ozzyl.storecompanion"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -80,13 +131,8 @@ android {
         }
     }
 
-    buildTypes {
-        release {
-            // Signing is intentionally not configured in source control.
-            // Production signing is supplied through the trusted release pipeline.
-            signingConfig = signingConfigs.getByName("debug")
-        }
-    }
+    // No release signing configuration is committed. Trusted release jobs must
+    // inject environment-specific signing material outside source control.
 }
 
 flutter {
@@ -95,7 +141,6 @@ flutter {
 GRADLE
 
 python3 - "${app_dir}" <<'PY'
-import json
 import sys
 from pathlib import Path
 
@@ -106,30 +151,34 @@ manifest_text = manifest_text.replace(
     'android:label="store_companion"',
     'android:label="@string/app_name"',
 )
+if 'android:label="@string/app_name"' not in manifest_text:
+    raise SystemExit("Android application label did not match the reviewed template")
 manifest.write_text(manifest_text)
 
-for density in ("mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"):
-    icon_dir = app_dir / f"android/app/src/main/res/mipmap-{density}"
-    if icon_dir.exists():
-        for child in icon_dir.iterdir():
-            child.unlink()
-        icon_dir.rmdir()
+project = app_dir / "ios/Runner.xcodeproj/project.pbxproj"
+project_text = project.read_text()
+old_bundle_prefix = "com.ozzyl.storeCompanion"
+if old_bundle_prefix not in project_text:
+    raise SystemExit("iOS bundle identifier did not match the reviewed template")
+project.write_text(
+    project_text.replace(old_bundle_prefix, "com.ozzyl.storecompanion")
+)
 
-app_icon_dir = app_dir / "ios/Runner/Assets.xcassets/AppIcon.appiconset"
-for icon in app_icon_dir.glob("*.png"):
-    icon.unlink()
-contents_path = app_icon_dir / "Contents.json"
-contents = json.loads(contents_path.read_text())
-for image in contents.get("images", []):
-    image.pop("filename", None)
-contents_path.write_text(json.dumps(contents, indent=2) + "\n")
-(app_icon_dir / "README.md").write_text(
-    "# App Icon Placeholder\n\n"
-    "The generated Flutter logo files are intentionally not committed because "
-    "the product has no approved final public logo yet. The asset catalog "
-    "remains valid for development/simulator compilation, but signed pilot or "
-    "production release is blocked until approved Store Companion icon assets "
-    "are supplied and reviewed.\n"
+(app_dir / "android/APP-IDENTITY.md").write_text(
+    "# Android application identity\n\n"
+    "- development: `com.ozzyl.storecompanion.dev`\n"
+    "- staging: `com.ozzyl.storecompanion.staging`\n"
+    "- production: `com.ozzyl.storecompanion`\n\n"
+    "Generated launcher artwork is development-only Flutter placeholder art. "
+    "Signed pilot and production release remain blocked until approved Store "
+    "Companion artwork is supplied and reviewed.\n"
+)
+(app_dir / "ios/APP-IDENTITY.md").write_text(
+    "# iOS application identity\n\n"
+    "The generated base bundle identifier is `com.ozzyl.storecompanion`. "
+    "Development/staging schemes and bundle suffixes remain an explicit macOS "
+    "platform checkpoint. Generated AppIcon artwork is development-only Flutter "
+    "placeholder art and cannot be used for signed pilot or production release.\n"
 )
 PY
 
