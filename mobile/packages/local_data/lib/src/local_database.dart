@@ -264,10 +264,7 @@ final class StoreCompanionLocalDatabase {
       FROM local_drafts
       WHERE partition_key = ? AND draft_id = ?
       ''',
-      <Object?>[
-        partitionKey,
-        _validateOpaqueValue(draftId, 'draftId'),
-      ],
+      <Object?>[partitionKey, _validateOpaqueValue(draftId, 'draftId')],
     );
     return rows.isEmpty ? null : rows.single['payload_json']! as String;
   }
@@ -277,10 +274,7 @@ final class StoreCompanionLocalDatabase {
     _ensureOpen();
     _database.execute(
       'DELETE FROM local_drafts WHERE partition_key = ? AND draft_id = ?',
-      <Object?>[
-        partitionKey,
-        _validateOpaqueValue(draftId, 'draftId'),
-      ],
+      <Object?>[partitionKey, _validateOpaqueValue(draftId, 'draftId')],
     );
     return _database.updatedRows == 1;
   }
@@ -357,10 +351,7 @@ final class StoreCompanionLocalDatabase {
       FROM pending_operations
       WHERE partition_key = ? AND operation_id = ?
       ''',
-      <Object?>[
-        partitionKey,
-        _validateOpaqueValue(operationId, 'operationId'),
-      ],
+      <Object?>[partitionKey, _validateOpaqueValue(operationId, 'operationId')],
     );
     if (rows.isEmpty) {
       return null;
@@ -474,8 +465,7 @@ final class StoreCompanionLocalDatabase {
     _ensureOpen();
     final normalizedStatus = _validateName(status, 'status');
     final normalizedResult = _validateJsonObject(resultJson, 'resultJson');
-    final normalizedTrace =
-        traceId == null ? null : _validateTraceId(traceId);
+    final normalizedTrace = traceId == null ? null : _validateTraceId(traceId);
     final normalizedReceivedAt = _timestamp(receivedAt);
 
     _transaction(() {
@@ -557,10 +547,7 @@ final class StoreCompanionLocalDatabase {
       FROM operation_results
       WHERE partition_key = ? AND operation_id = ?
       ''',
-      <Object?>[
-        partitionKey,
-        _validateOpaqueValue(operationId, 'operationId'),
-      ],
+      <Object?>[partitionKey, _validateOpaqueValue(operationId, 'operationId')],
     );
     if (rows.isEmpty) {
       return null;
@@ -612,10 +599,7 @@ final class StoreCompanionLocalDatabase {
       FROM sync_cursors
       WHERE partition_key = ? AND stream_name = ?
       ''',
-      <Object?>[
-        partitionKey,
-        _validateName(streamName, 'streamName'),
-      ],
+      <Object?>[partitionKey, _validateName(streamName, 'streamName')],
     );
     return rows.isEmpty ? null : rows.single['cursor_value']! as String;
   }
@@ -815,9 +799,7 @@ String _validateOpaqueValue(String value, String field) {
 String _validateName(String value, String field) {
   final normalized = value.trim();
   if (!_namePattern.hasMatch(normalized)) {
-    throw LocalDatabaseException(
-      '$field must use a lowercase versioned name.',
-    );
+    throw LocalDatabaseException('$field must use a lowercase versioned name.');
   }
   return normalized;
 }

@@ -85,66 +85,69 @@ void main() {
     );
   });
 
-  test('projection purge never removes drafts operations results or cursors', () {
-    final database = _open(databasePath, key);
-    database.upsertProjection(
-      projectionType: 'inventory.summary',
-      resourceId: 'warehouse-001',
-      serverVersion: 'version-001',
-      payloadJson: '{"available":"10"}',
-      observedAt: _time(0),
-    );
-    database.saveDraft(
-      draftId: 'draft-001',
-      operationType: 'inventory.adjustment.create',
-      payloadJson: '{"quantity":"1"}',
-      updatedAt: _time(1),
-    );
-    database.commitPendingOperation(
-      operationId: 'operation-001',
-      idempotencyKey: 'idempotency-001',
-      operationType: 'inventory.adjustment.create',
-      transportSchemaVersion: '1.0',
-      payloadJson: '{"quantity":"1"}',
-      committedAt: _time(2),
-    );
-    database.transitionPendingOperation(
-      operationId: 'operation-001',
-      state: LocalOperationState.uploading,
-      attemptCount: 1,
-      updatedAt: _time(3),
-      traceId: 'trace-upload-001',
-    );
-    database.recordAuthoritativeResult(
-      operationId: 'operation-001',
-      state: LocalOperationState.accepted,
-      status: 'accepted',
-      resultJson: '{"serverVersion":"version-002"}',
-      receivedAt: _time(4),
-      traceId: 'trace-result-001',
-    );
-    database.writeCursor(
-      streamName: 'inventory.summary',
-      cursor: 'cursor-002',
-      observedAt: _time(5),
-    );
+  test(
+    'projection purge never removes drafts operations results or cursors',
+    () {
+      final database = _open(databasePath, key);
+      database.upsertProjection(
+        projectionType: 'inventory.summary',
+        resourceId: 'warehouse-001',
+        serverVersion: 'version-001',
+        payloadJson: '{"available":"10"}',
+        observedAt: _time(0),
+      );
+      database.saveDraft(
+        draftId: 'draft-001',
+        operationType: 'inventory.adjustment.create',
+        payloadJson: '{"quantity":"1"}',
+        updatedAt: _time(1),
+      );
+      database.commitPendingOperation(
+        operationId: 'operation-001',
+        idempotencyKey: 'idempotency-001',
+        operationType: 'inventory.adjustment.create',
+        transportSchemaVersion: '1.0',
+        payloadJson: '{"quantity":"1"}',
+        committedAt: _time(2),
+      );
+      database.transitionPendingOperation(
+        operationId: 'operation-001',
+        state: LocalOperationState.uploading,
+        attemptCount: 1,
+        updatedAt: _time(3),
+        traceId: 'trace-upload-001',
+      );
+      database.recordAuthoritativeResult(
+        operationId: 'operation-001',
+        state: LocalOperationState.accepted,
+        status: 'accepted',
+        resultJson: '{"serverVersion":"version-002"}',
+        receivedAt: _time(4),
+        traceId: 'trace-result-001',
+      );
+      database.writeCursor(
+        streamName: 'inventory.summary',
+        cursor: 'cursor-002',
+        observedAt: _time(5),
+      );
 
-    expect(database.projectionCount(), 1);
-    expect(database.purgeRebuildableProjections(), 1);
-    expect(database.projectionCount(), 0);
-    expect(database.readDraft('draft-001'), '{"quantity":"1"}');
-    expect(database.readCursor('inventory.summary'), 'cursor-002');
-    expect(
-      database.readPendingOperation('operation-001')?.state,
-      LocalOperationState.accepted,
-    );
-    expect(
-      database.readAuthoritativeResult('operation-001')?.status,
-      'accepted',
-    );
-    expect(database.activePendingOperationCount(), 0);
-    database.close();
-  });
+      expect(database.projectionCount(), 1);
+      expect(database.purgeRebuildableProjections(), 1);
+      expect(database.projectionCount(), 0);
+      expect(database.readDraft('draft-001'), '{"quantity":"1"}');
+      expect(database.readCursor('inventory.summary'), 'cursor-002');
+      expect(
+        database.readPendingOperation('operation-001')?.state,
+        LocalOperationState.accepted,
+      );
+      expect(
+        database.readAuthoritativeResult('operation-001')?.status,
+        'accepted',
+      );
+      expect(database.activePendingOperationCount(), 0);
+      database.close();
+    },
+  );
 
   test('duplicate operation and idempotency keys are rejected', () {
     final database = _open(databasePath, key);
