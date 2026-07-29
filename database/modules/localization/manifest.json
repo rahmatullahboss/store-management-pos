@@ -12,6 +12,11 @@
       "id": "LOC-0002",
       "file": "LOC-0002-localization-commands.sql",
       "sha256": "2fb4d647953e26461b0640291cdab7c049b325bc68ccb0c7a1fb4fea3e5709ac"
+    },
+    {
+      "id": "LOC-0003",
+      "file": "LOC-0003-compliance-commands.sql",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
     }
   ]
 }
