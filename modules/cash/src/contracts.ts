@@ -13,8 +13,8 @@ export type CashEventKind =
   | "paid_in"
   | "paid_out"
   | "safe_drop"
-  | "closing_adjustment"
-  | "reversal";
+  | "adjustment_in"
+  | "adjustment_out";
 
 export interface CashEventV1 {
   readonly schemaVersion: "1.0";
