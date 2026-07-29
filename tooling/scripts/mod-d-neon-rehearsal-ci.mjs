@@ -75,6 +75,7 @@ const report = {
   migrationIds: [],
   forcedRlsTables: 0,
   runtimeWriteGrants: 0,
+  publicExecuteGrants: 0,
   failure: null,
 };
 
@@ -126,11 +127,20 @@ try {
         AND table_schema IN ('pos','cash')
         AND privilege_type IN ('INSERT','UPDATE','DELETE','TRUNCATE','TRIGGER')
     `);
+    const publicExecution = await client.query(`
+      SELECT count(*)::integer AS public_execute_grants
+      FROM pg_proc p
+      JOIN pg_namespace n ON n.oid = p.pronamespace
+      WHERE n.nspname IN ('pos','cash')
+        AND has_function_privilege('public', p.oid, 'EXECUTE')
+    `);
     report.migrationIds = appliedIds;
     report.forcedRlsTables = rls.rows[0]?.forced_rls_tables ?? 0;
     report.runtimeWriteGrants = writes.rows[0]?.runtime_write_grants ?? 0;
+    report.publicExecuteGrants = publicExecution.rows[0]?.public_execute_grants ?? 0;
     if (report.forcedRlsTables === 0) throw new Error("MOD-D rehearsal found no forced-RLS tables");
     if (report.runtimeWriteGrants !== 0) throw new Error("store_app_runtime has direct MOD-D table write grants");
+    if (report.publicExecuteGrants !== 0) throw new Error("PUBLIC execute privilege remains on a MOD-D function");
   } finally {
     await client.end();
   }
