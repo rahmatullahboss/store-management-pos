@@ -1,0 +1,12 @@
+{
+  "module": "MOD-D-CASH",
+  "version": 1,
+  "order": 21,
+  "migrations": [
+    {
+      "id": "CSH-0001",
+      "file": "CSH-0001-cash-ledger.sql",
+      "sha256": "2138826ff39268e416d67b0324d4be7b03cb8c7a63c939876e9c33cc92f49700"
+    }
+  ]
+}
