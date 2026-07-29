@@ -1,0 +1,12 @@
+{
+  "module": "MOD-D-POS",
+  "version": 1,
+  "order": 20,
+  "migrations": [
+    {
+      "id": "POS-0001",
+      "file": "POS-0001-store-edge.sql",
+      "sha256": "56679d223afa39538337313425df5a04db6b6e257b9a6a5cbe61fa66b8e07a61"
+    }
+  ]
+}
