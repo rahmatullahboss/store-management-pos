@@ -19,6 +19,20 @@ if (navToggle instanceof HTMLButtonElement && navigation instanceof HTMLElement)
 const billingButtons = [...document.querySelectorAll("[data-billing]")];
 const priceValues = [...document.querySelectorAll("[data-monthly][data-annual]")];
 const priceSuffixes = [...document.querySelectorAll("[data-monthly-suffix][data-annual-suffix]")];
+const launchPricing = [
+  { monthly: "৳899", annual: "৳8,990" },
+  { monthly: "৳2,499", annual: "৳24,990" },
+  { monthly: "৳5,999", annual: "৳59,990" },
+];
+
+for (const [index, value] of priceValues.entries()) {
+  if (!(value instanceof HTMLElement)) continue;
+  const price = launchPricing[index];
+  if (price === undefined) continue;
+  value.dataset.monthly = price.monthly;
+  value.dataset.annual = price.annual;
+  value.textContent = price.monthly;
+}
 
 for (const button of billingButtons) {
   if (!(button instanceof HTMLButtonElement)) continue;
