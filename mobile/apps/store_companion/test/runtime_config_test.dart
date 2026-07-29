@@ -2,23 +2,26 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:store_companion_runtime_config/store_companion_runtime_config.dart';
 
 void main() {
-  test('synthetic development config keeps environment boundaries explicit', () {
-    final config = MobileRuntimeConfig.syntheticDevelopment();
+  test(
+    'synthetic development config keeps environment boundaries explicit',
+    () {
+      final config = MobileRuntimeConfig.syntheticDevelopment();
 
-    expect(config.environment, MobileEnvironment.development);
-    expect(config.applicationId, 'com.ozzyl.storecompanion.dev');
-    expect(config.redirectUri.scheme, config.applicationId);
-    expect(
-      config.resolveApiPath('/mobile/bootstrap').toString(),
-      'https://api.store-companion.dev.test/v1/mobile/bootstrap',
-    );
-    expect(
-      config.acceptsDeepLink(
-        Uri.parse('https://links.store-companion.dev.test/approvals/opaque'),
-      ),
-      isTrue,
-    );
-  });
+      expect(config.environment, MobileEnvironment.development);
+      expect(config.applicationId, 'com.ozzyl.storecompanion.dev');
+      expect(config.redirectUri.scheme, config.applicationId);
+      expect(
+        config.resolveApiPath('/mobile/bootstrap').toString(),
+        'https://api.store-companion.dev.test/v1/mobile/bootstrap',
+      );
+      expect(
+        config.acceptsDeepLink(
+          Uri.parse('https://links.store-companion.dev.test/approvals/opaque'),
+        ),
+        isTrue,
+      );
+    },
+  );
 
   test('rejects insecure API endpoint', () {
     expect(
@@ -30,12 +33,8 @@ void main() {
         authorizationEndpoint: Uri.parse(
           'https://identity.store-companion.dev.test/authorize',
         ),
-        redirectUri: Uri.parse(
-          'com.ozzyl.storecompanion.dev://oauth/callback',
-        ),
-        allowedDeepLinkHosts: const <String>{
-          'links.store-companion.dev.test',
-        },
+        redirectUri: Uri.parse('com.ozzyl.storecompanion.dev://oauth/callback'),
+        allowedDeepLinkHosts: const <String>{'links.store-companion.dev.test'},
       ),
       throwsA(isA<RuntimeConfigurationException>()),
     );
@@ -51,9 +50,7 @@ void main() {
         authorizationEndpoint: Uri.parse(
           'https://identity.example.com/authorize',
         ),
-        redirectUri: Uri.parse(
-          'com.ozzyl.storecompanion://oauth/callback',
-        ),
+        redirectUri: Uri.parse('com.ozzyl.storecompanion://oauth/callback'),
         allowedDeepLinkHosts: const <String>{'links.example.com'},
       ),
       throwsA(isA<RuntimeConfigurationException>()),
@@ -70,9 +67,7 @@ void main() {
         authorizationEndpoint: Uri.parse(
           'https://identity.store-companion.staging.test/authorize',
         ),
-        redirectUri: Uri.parse(
-          'com.ozzyl.storecompanion://oauth/callback',
-        ),
+        redirectUri: Uri.parse('com.ozzyl.storecompanion://oauth/callback'),
         allowedDeepLinkHosts: const <String>{
           'links.store-companion.staging.test',
         },
