@@ -195,7 +195,7 @@ test("legal numbering is collision-free, idempotent and enforces offline capabil
     allocatedAt: "2026-07-29T09:00:00Z",
     allocationMode: "offline_block",
     deviceId: "device-1",
-  }), platformError("FORBIDDEN"));
+  }), platformError("PERMISSION_DENIED"));
 });
 
 test("privacy erasure preserves legally required evidence through anonymization", () => {
