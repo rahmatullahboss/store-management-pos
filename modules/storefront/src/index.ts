@@ -222,7 +222,7 @@ function commandEnvelope<Input extends StorefrontCommandMeta>(
   context: RequestContext,
   input: Input,
   scope: string,
-  entityId = crypto.randomUUID(),
+  entityId: string = crypto.randomUUID(),
 ): Promise<CommandEnvelope<Input>> {
   const normalizedInput = { ...input, idempotencyKey: idempotencyKey(input.idempotencyKey) };
   return requestHash(scope, normalizedInput).then((hash) => ({
