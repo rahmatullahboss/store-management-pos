@@ -32,35 +32,50 @@
 
 ### Database and persistence
 
-- Deterministic `POS-0001` through `POS-0005` and `CSH-0001` through `CSH-0002` migration chains.
+- Deterministic `POS-0001` through `POS-0007` and `CSH-0001` through `CSH-0005` migration chains.
 - Forced tenant RLS, command-only runtime access, migration checksums, transactional markers and orphan-file validation.
 - Immutable receipt, checkout identity, offline outcome, device-health, cash-event, cash-count and shift-closure evidence.
-- Scoped, expiring offline authorization, device/register/store controls and receipt-delivery evidence.
+- Scoped device/register/store/legal-entity controls, cash scope and reversal guards, expiring offline authorization and receipt-delivery evidence.
 - POS and cash SQL repositories with exact-value validation, idempotent replay, approval validation and reconciliation reads.
+- Security-definer POS/CASH runtime commands revoke `PUBLIC` execution and expose only reviewed runtime functions.
 
 ### Application surfaces
 
 - POS API routes for devices, sessions, carts, checkout, offline upload and reconciliation.
 - Cash APIs for shift open, event append/list and blind close with variance approval.
 - Keyboard-accessible POS register surface with barcode/search, cart, tender, offline-state and unknown-payment blocking cues.
+- Admin reconciliation surface for rejected, review-required and unknown store-edge outcomes.
 - Provider-neutral local hardware-agent runtime with tenant/store/register/device scope, command expiry, revocation, capability/action allowlists and concurrent idempotency.
 - Sensitive PAN/CVV/PIN/track/provider-secret fields are rejected before adapter execution and from adapter output.
 
-### Offline safety
+### Offline safety and resilience
 
 - Durable operation commit precedes local success.
 - Pending operations survive restart, projection rebuild and supported schema/application upgrades.
 - Duplicate, changed replay, out-of-order, rejected, deferred and review-required outcomes remain explicit.
 - Offline conflicts do not rewrite completed receipt evidence.
 - Unknown payment state blocks blind retry.
+- Stale price/tax/promotion projections require review; stale permission/country capability blocks checkout.
+- Final-unit stock is accepted once in deterministic server order and competing receipt evidence is preserved.
+- Receipt allocation is unique, scoped, expiring, country-capability aware and refuses exhaustion.
+- Storage-pressure refusal is atomic and preserves earlier pending operations.
 
 ## Verification evidence
 
 - Repository-wide migration validation includes MOD-D manifests and enforces contiguous IDs, checksums, transactions, forced RLS and invariant triggers.
 - Unit and architecture coverage includes exact totals, immutable replay envelopes, cash reconstruction, durable restart/rebuild, device scope, hardware failure and POS accessibility states.
-- GitHub Foundation CI run `30438276187`: format, lint, architecture boundaries, strict TypeScript, migration validation, build/tests, secret scan, licence register, SBOM and high-severity dependency audit passed.
-- GitHub Foundation Design CI run `30438276177`: browser, accessibility and deterministic design evidence passed.
+- A representative 24-hour outage test commits 1,440 operations, survives restart and uploads in bounded ordered batches without losing pending work.
+- Low-end regression tests cover a 500-line register render, 10,000 deterministic stock claims and 5,000 unique scoped receipt allocations.
+- GitHub Foundation CI run `30438276187`: format, lint, architecture boundaries, strict TypeScript, migration validation, build/tests, secret scan, licence register, SBOM and high-severity dependency audit passed on an earlier checkpoint.
+- GitHub Foundation Design CI run `30438276177`: browser, accessibility and deterministic design evidence passed on an earlier checkpoint.
+- Assigned Neon evidence has verified forced RLS on every POS/CASH table and zero direct POS/CASH table-write grants for `store_app_runtime` on the applied checkpoint.
 - Neon preview, Neon recovery, Cloudflare preview/runtime and isolated MOD-D Neon rehearsal remain required on a stable final head; superseded runs cancelled by later pushes do not count as final evidence.
+
+## Published operations documentation
+
+- `docs/modules/pos-cash-offline/README.md` — architecture, ownership, data and invariant overview.
+- `docs/modules/pos-cash-offline/permissions.md` — permission, approval and sensitive-data boundaries.
+- `docs/modules/pos-cash-offline/operations-runbook.md` — unknown payment, offline backlog, cash variance, device/hardware failure, migration and recovery procedures.
 
 ## Invariants in force
 
@@ -76,9 +91,8 @@
 
 ## Remaining completion gates
 
-1. Complete a stable-head Neon preview, Neon recovery, Cloudflare preview/runtime and isolated MOD-D Neon rehearsal.
-2. Finish the required outage-volume, final-unit stock, stale projection, receipt exhaustion, local-storage pressure and low-end performance evidence.
-3. Complete POS reconciliation/admin operational surfaces where required by the workpack.
-4. Publish operations, recovery, hardware support and local-schema upgrade runbooks under `docs/modules/pos-cash-offline/`.
-5. Record final performance, accessibility, recovery and database evidence; update the program board and this handoff.
-6. Keep PR #27 draft until every completion gate is satisfied, then perform controlled serial integration after review.
+1. Complete a stable-final-head Foundation CI, Foundation Design CI, Neon preview, Neon recovery, Cloudflare preview/runtime and isolated MOD-D Neon rehearsal.
+2. Confirm the assigned Neon branch contains the latest POS/CASH migration IDs and runtime-command privilege boundaries after deterministic replay.
+3. Record final performance, accessibility, recovery and database artifact references against one immutable head.
+4. Update the program board to handoff-ready only after all final-head evidence passes.
+5. Keep PR #27 draft until every completion gate is satisfied, then perform controlled serial integration after review.
