@@ -10,7 +10,7 @@
 - **Neon parent:** `dev/module-pos-cash-offline` (`br-rapid-river-axoz0rfs`)
 - **Starting reviewed base:** `47129e25191d1b1c8a8523dcd8f83c2a0b0edf55`
 - **Non-destructive integration sync:** `d3d75da3324fd9ad6015b707d27d1806bdaf8242` through PR `#39`
-- **Status:** M0 complete; M1 Flutter foundation code/CI complete; platform-generation gate remains
+- **Status:** M0 complete; M1 Flutter foundation code/CI complete; M2 OAuth/session/workspace security boundary complete; platform-generation gate remains
 
 ## Base decision
 
@@ -28,6 +28,7 @@ MOB-01 proceeds in parallel for Flutter foundation and reviewed integrated-contr
 - The dedicated Neon branch is retained only for synthetic contract/E2E evidence.
 - Native POS/cash/hardware remains owned by MOD-D and is excluded.
 - The Flutter shell is explicitly labelled synthetic and does not claim deployed mobile backend contracts.
+- The session package stores no access token, refresh credential, PKCE verifier, password, provider secret or database credential.
 
 ## Documentation and governance checkpoint
 
@@ -59,7 +60,8 @@ CCR-0003 is accepted as a non-breaking additive client contract family. Foundati
 - `store_companion_app_core` — workspace/capability/sync state and exact integer-minor-unit money;
 - `store_companion_design_system` — Operations Ledger Flutter tokens/theme;
 - `store_companion_api_client` — strict versioned bootstrap/workspace/localisation/compatibility/operation/result/error contracts;
-- `store_companion_sync_engine` — pure local operation transitions, authoritative result reduction and bounded transport retry separation.
+- `store_companion_sync_engine` — pure local operation transitions, authoritative result reduction and bounded transport retry separation;
+- `store_companion_session_core` — dependency-free OAuth request/callback validation, credential-free session lifecycle and workspace cache-partition invariants.
 
 ### Application shell
 
@@ -81,31 +83,42 @@ CCR-0003 is accepted as a non-breaking additive client contract family. Foundati
 - terminal operations cannot transition back to upload;
 - exact money uses `BigInt` minor units and rejects cross-currency arithmetic.
 
+### OAuth, session and workspace invariants
+
+- authorization requests require a clean HTTPS provider endpoint, exact reviewed redirect URI, unique scopes including `openid`, state/nonce minimum entropy length and an S256-format PKCE challenge;
+- the PKCE verifier is intentionally excluded from the public model;
+- callbacks require exact scheme/user-info/host/port/path matching, one expected state, no fragment and one authorization code;
+- session state contains only opaque references and expiry/assurance metadata, never credentials;
+- remote/self revocation immediately stops sync and requires restricted cache purge or locking;
+- privileged attempts require active AAL2 metadata and current reauthentication window, while the server remains authoritative;
+- workspace cache/operation partitions include user, tenant and opaque workspace context;
+- scope-changing selection requires sync stop, presentation clearing, restricted-cache purge/lock and a fresh server-validated bootstrap.
+
 ## CI and verification evidence
 
 ### Mobile Foundation CI
 
-Successful run `30456836145`, job `90587551754`:
+Successful run `30459163969`, job `90600485284` at source head `91f6fb4c46b1c34224b88ce466ccfa82dffc32f3`:
 
 - checked out exact official Flutter commit;
 - verified Flutter `3.44.8` and Dart `3.12.2` machine output;
 - resolved all pub workspace packages;
-- generated dependency lock evidence;
-- applied and verified Dart formatting;
+- verified the committed dependency lock;
+- applied and verified canonical Dart formatting;
 - `flutter analyze` passed;
-- unit, widget, API contract and sync invariant tests passed;
+- unit, widget, API contract, sync, OAuth callback, session revocation and workspace-isolation tests passed;
 - tracked mobile source had no formatter diff;
 - coverage, formatted-source and lockfile artifacts uploaded.
 
 ### Root platform verification
 
-Foundation CI run `30456351739`, job `90586525245` passed after the mobile sync/tooling checkpoint, including repository formatting, lint, architecture boundaries, strict TypeScript, existing tests, secret/licence/SBOM gates and trusted Cloudflare/Neon gates.
+Foundation CI run `30457527955` passed after the preceding mobile foundation checkpoint, including repository formatting, lint, architecture boundaries, strict TypeScript, existing tests, secret/licence/SBOM gates and trusted Cloudflare/Neon gates. The current M2 source is also covered by the successful Mobile Foundation CI above; the branch-level root workflow is rerun on each checkpoint.
 
 ### Neon branch evidence
 
-Mobile Neon Evidence run `30455964989`, job `90584675541` passed.
+Mobile Neon Evidence run `30459163616` passed for the M2 session checkpoint.
 
-The dedicated branch and reviewed MOD-D parent have matching metadata fingerprints:
+The dedicated branch and reviewed MOD-D parent retain matching metadata fingerprints:
 
 - schema match: true;
 - relation match: true;
@@ -136,13 +149,15 @@ The evidence explicitly records:
 - MOD-D compatible sync/device/idempotency principles without POS authority;
 - payment/accounting/banking operational contracts;
 - Operations Ledger design system;
-- accepted first-party mobile contract family and deterministic client models.
+- accepted first-party mobile contract family and deterministic client models;
+- platform-neutral OAuth/session/workspace isolation interfaces.
 
 ### Gated
 
 - MOD-F effective localisation, country capability, business date, privacy/retention and legal/fiscal presentation;
 - MOD-G governed dashboards, reports, notifications, entitlements and canonical public OpenAPI;
-- shared Worker/mobile BFF adapters under their Foundation/module ownership.
+- shared Worker/mobile BFF adapters under their Foundation/module ownership;
+- protected credential storage, external-browser OAuth and deep-link adapters until reviewed native packages/platform projects exist.
 
 ## Remaining execution gates
 
@@ -151,9 +166,10 @@ The evidence explicitly records:
 3. Add development/staging/production bundle IDs, flavours/schemes and platform configuration.
 4. Add Android debug and iOS simulator compile evidence after platform generation.
 5. Select local SQL, secure storage, OAuth/routing/state-management and push packages only after provenance/security review.
-6. Implement Foundation/module-owned server adapters for the accepted CCR-0003 contracts.
-7. Consume final MOD-F and MOD-G contracts at their dependency checkpoints.
+6. Connect the reviewed session interfaces to external-browser, secure-storage and deep-link platform adapters.
+7. Implement Foundation/module-owned server adapters for the accepted CCR-0003 contracts.
+8. Consume final MOD-F and MOD-G contracts at their dependency checkpoints.
 
 ## Next implementation checkpoint
 
-Continue M1/M2 with platform project generation, environment configuration, generated localization resources, view-model/repository boundaries and authentication/workspace interfaces. No backend business migration or production deployment is part of this checkpoint.
+Continue M1/M2 with platform project generation, environment configuration, generated localization resources, view-model/repository boundaries and native authentication/workspace adapters. No backend business migration or production deployment is part of this checkpoint.
