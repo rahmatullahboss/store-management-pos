@@ -19,6 +19,7 @@ const artifactsDirectory = path.join(root, "artifacts", "mod-d");
 const reportPath = path.join(artifactsDirectory, "neon-rehearsal.json");
 const apiBase = `https://console.neon.tech/api/v2/projects/${NEON_PROJECT_ID}`;
 const headers = { Authorization: `Bearer ${NEON_API_KEY}`, "Content-Type": "application/json" };
+const advisoryLockName = `store-management-pos:mod-d-neon-rehearsal:${NEON_PROJECT_ID}:${MOD_D_NEON_BRANCH_ID}`;
 
 const migrationSources = [
   { name: "FOUNDATION", manifest: "database/foundation/manifest.json" },
@@ -72,12 +73,17 @@ const report = {
   runId: GITHUB_RUN_ID || null,
   projectId: NEON_PROJECT_ID,
   branchId: MOD_D_NEON_BRANCH_ID,
+  advisoryLockName,
+  advisoryLockAcquired: false,
   migrationIds: [],
   forcedRlsTables: 0,
   runtimeWriteGrants: 0,
   publicExecuteGrants: 0,
   failure: null,
 };
+
+let client;
+let advisoryLockAcquired = false;
 
 try {
   const branchResponse = await api(`/branches/${encodeURIComponent(MOD_D_NEON_BRANCH_ID)}`);
@@ -93,6 +99,16 @@ try {
   const connectionString = uriResponse.uri;
   if (typeof connectionString !== "string") throw new Error("Neon API did not return a MOD-D connection URI");
 
+  client = new Client({ connectionString });
+  await client.connect();
+  await client.query(
+    "SELECT pg_advisory_lock(hashtextextended($1::text, 0))",
+    [advisoryLockName],
+  );
+  advisoryLockAcquired = true;
+  report.advisoryLockAcquired = true;
+  console.log(`acquired MOD-D Neon rehearsal advisory lock ${advisoryLockName}`);
+
   await run("node", ["tooling/scripts/apply-migrations.mjs"], {
     ...process.env,
     DATABASE_URL: connectionString,
@@ -100,50 +116,44 @@ try {
   });
 
   const expectedIds = await expectedMigrationIds();
-  const client = new Client({ connectionString });
-  await client.connect();
-  try {
-    const applied = await client.query(
-      "SELECT migration_id FROM platform.schema_migrations WHERE migration_id = ANY($1::text[]) ORDER BY migration_id",
-      [expectedIds],
-    );
-    const appliedIds = applied.rows.map((row) => row.migration_id);
-    const missing = expectedIds.filter((id) => !appliedIds.includes(id));
-    if (missing.length > 0) throw new Error(`MOD-D rehearsal is missing migrations: ${missing.join(", ")}`);
+  const applied = await client.query(
+    "SELECT migration_id FROM platform.schema_migrations WHERE migration_id = ANY($1::text[]) ORDER BY migration_id",
+    [expectedIds],
+  );
+  const appliedIds = applied.rows.map((row) => row.migration_id);
+  const missing = expectedIds.filter((id) => !appliedIds.includes(id));
+  if (missing.length > 0) throw new Error(`MOD-D rehearsal is missing migrations: ${missing.join(", ")}`);
 
-    const rls = await client.query(`
-      SELECT count(*)::integer AS forced_rls_tables
-      FROM pg_class c
-      JOIN pg_namespace n ON n.oid = c.relnamespace
-      WHERE n.nspname IN ('pos','cash')
-        AND c.relkind = 'r'
-        AND c.relrowsecurity
-        AND c.relforcerowsecurity
-    `);
-    const writes = await client.query(`
-      SELECT count(*)::integer AS runtime_write_grants
-      FROM information_schema.role_table_grants
-      WHERE grantee = 'store_app_runtime'
-        AND table_schema IN ('pos','cash')
-        AND privilege_type IN ('INSERT','UPDATE','DELETE','TRUNCATE','TRIGGER')
-    `);
-    const publicExecution = await client.query(`
-      SELECT count(*)::integer AS public_execute_grants
-      FROM pg_proc p
-      JOIN pg_namespace n ON n.oid = p.pronamespace
-      WHERE n.nspname IN ('pos','cash')
-        AND has_function_privilege('public', p.oid, 'EXECUTE')
-    `);
-    report.migrationIds = appliedIds;
-    report.forcedRlsTables = rls.rows[0]?.forced_rls_tables ?? 0;
-    report.runtimeWriteGrants = writes.rows[0]?.runtime_write_grants ?? 0;
-    report.publicExecuteGrants = publicExecution.rows[0]?.public_execute_grants ?? 0;
-    if (report.forcedRlsTables === 0) throw new Error("MOD-D rehearsal found no forced-RLS tables");
-    if (report.runtimeWriteGrants !== 0) throw new Error("store_app_runtime has direct MOD-D table write grants");
-    if (report.publicExecuteGrants !== 0) throw new Error("PUBLIC execute privilege remains on a MOD-D function");
-  } finally {
-    await client.end();
-  }
+  const rls = await client.query(`
+    SELECT count(*)::integer AS forced_rls_tables
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname IN ('pos','cash')
+      AND c.relkind = 'r'
+      AND c.relrowsecurity
+      AND c.relforcerowsecurity
+  `);
+  const writes = await client.query(`
+    SELECT count(*)::integer AS runtime_write_grants
+    FROM information_schema.role_table_grants
+    WHERE grantee = 'store_app_runtime'
+      AND table_schema IN ('pos','cash')
+      AND privilege_type IN ('INSERT','UPDATE','DELETE','TRUNCATE','TRIGGER')
+  `);
+  const publicExecution = await client.query(`
+    SELECT count(*)::integer AS public_execute_grants
+    FROM pg_proc p
+    JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname IN ('pos','cash')
+      AND has_function_privilege('public', p.oid, 'EXECUTE')
+  `);
+  report.migrationIds = appliedIds;
+  report.forcedRlsTables = rls.rows[0]?.forced_rls_tables ?? 0;
+  report.runtimeWriteGrants = writes.rows[0]?.runtime_write_grants ?? 0;
+  report.publicExecuteGrants = publicExecution.rows[0]?.public_execute_grants ?? 0;
+  if (report.forcedRlsTables === 0) throw new Error("MOD-D rehearsal found no forced-RLS tables");
+  if (report.runtimeWriteGrants !== 0) throw new Error("store_app_runtime has direct MOD-D table write grants");
+  if (report.publicExecuteGrants !== 0) throw new Error("PUBLIC execute privilege remains on a MOD-D function");
 
   report.status = "passed";
   console.log(`MOD-D Neon rehearsal passed on ${MOD_D_NEON_BRANCH_ID}`);
@@ -151,6 +161,26 @@ try {
   report.failure = error instanceof Error ? error.message : String(error);
   throw error;
 } finally {
+  if (client) {
+    if (advisoryLockAcquired) {
+      try {
+        await client.query(
+          "SELECT pg_advisory_unlock(hashtextextended($1::text, 0))",
+          [advisoryLockName],
+        );
+        console.log(`released MOD-D Neon rehearsal advisory lock ${advisoryLockName}`);
+      } catch (unlockError) {
+        const message = unlockError instanceof Error ? unlockError.message : String(unlockError);
+        report.failure = `${report.failure ? `${report.failure}; ` : ""}advisory unlock: ${message}`;
+        process.exitCode = 1;
+      }
+    }
+    await client.end().catch((endError) => {
+      const message = endError instanceof Error ? endError.message : String(endError);
+      report.failure = `${report.failure ? `${report.failure}; ` : ""}client close: ${message}`;
+      process.exitCode = 1;
+    });
+  }
   report.generatedAt = new Date().toISOString();
   await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
 }
