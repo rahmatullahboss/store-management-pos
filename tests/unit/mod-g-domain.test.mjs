@@ -1,16 +1,22 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  PermanentReportingWorkerError,
+  RetryableReportingWorkerError,
   advanceProjectionCursor,
   assertMetricDefinition,
   projectionFreshness,
   reconcileProjection,
+  runExportWorker,
+  runProjectionBatch,
 } from "../../build/modules/reporting/src/index.js";
 import {
   assertConnectorMappingsLoopSafe,
   assertWebhookSubscription,
   protectSpreadsheetCell,
   redactIntegrationDiagnostic,
+  runConnectorPage,
+  runWebhookWorker,
   transitionWebhookDelivery,
   webhookDeliveryIdentity,
 } from "../../build/modules/integrations/src/index.js";
@@ -27,6 +33,30 @@ const audit = {
   requestId: "request-1",
   traceId: "trace-1",
 };
+
+const scope = {
+  tenantId: "tenant-1",
+  actorId: "user-1",
+  locale: "en-GB",
+  timeZone: "Europe/London",
+  businessDate: "2026-07-29",
+};
+
+function projectionEvent(sequence, eventId) {
+  return {
+    schemaVersion: "1.0",
+    eventId,
+    tenantId: "tenant-1",
+    eventType: "sales.invoice.posted.v1",
+    aggregateType: "sales.invoice",
+    aggregateId: `invoice-${sequence}`,
+    sequence,
+    occurredAt: "2026-07-29T12:00:00.000Z",
+    businessDate: "2026-07-29",
+    payload: { grossMinor: "1000" },
+    metadata: audit,
+  };
+}
 
 test("reporting metrics preserve exact values, control totals and provenance", () => {
   const definition = {
@@ -71,19 +101,7 @@ test("reporting metrics preserve exact values, control totals and provenance", (
 });
 
 test("projection cursor deduplicates replay and rejects silent out-of-order processing", () => {
-  const event = {
-    schemaVersion: "1.0",
-    eventId: "event-1",
-    tenantId: "tenant-1",
-    eventType: "sales.invoice.posted.v1",
-    aggregateType: "sales.invoice",
-    aggregateId: "invoice-1",
-    sequence: "1",
-    occurredAt: "2026-07-29T12:00:00.000Z",
-    businessDate: "2026-07-29",
-    payload: { grossMinor: "1000" },
-    metadata: audit,
-  };
+  const event = projectionEvent("1", "event-1");
   const first = advanceProjectionCursor(undefined, event);
   const duplicate = advanceProjectionCursor(first.cursor, event);
   assert.equal(first.disposition, "applied");
@@ -222,4 +240,193 @@ test("usage events are exact and idempotent and support impersonation is indepen
   };
   assert.doesNotThrow(() => assertImpersonationGrantActive(grant, "2026-07-29T12:30:00.000Z"));
   assert.throws(() => assertImpersonationGrantActive({ ...grant, approvedBy: "support-1" }, "2026-07-29T12:30:00.000Z"), /independent approval/i);
+});
+
+test("projection worker preserves order across permanent, retryable and deferred events", async () => {
+  const events = [
+    projectionEvent("1", "worker-event-1"),
+    projectionEvent("2", "worker-event-2"),
+    projectionEvent("3", "worker-event-3"),
+    projectionEvent("4", "worker-event-4"),
+  ];
+  const result = await runProjectionBatch({
+    tenantId: "tenant-1",
+    events,
+    commands: {
+      async consume(event) {
+        if (event.eventId === "worker-event-2") throw new PermanentReportingWorkerError("invalid_payload", "invalid");
+        if (event.eventId === "worker-event-3") throw new RetryableReportingWorkerError("database_unavailable", "retry");
+        return "applied";
+      },
+    },
+  });
+  assert.deepEqual(result.appliedEventIds, ["worker-event-1"]);
+  assert.deepEqual(result.deadLetters, [{ eventId: "worker-event-2", category: "invalid_payload" }]);
+  assert.deepEqual(result.retryEventIds, ["worker-event-3"]);
+  assert.deepEqual(result.deferredEventIds, ["worker-event-4"]);
+});
+
+test("export worker bounds artifacts and records only tenant-scoped object receipts", async () => {
+  const transitions = [];
+  const stored = [];
+  const request = {
+    schemaVersion: "1.0",
+    exportId: "export-1",
+    scope,
+    format: "csv",
+    reportId: "sales.daily",
+    parameters: { period: "2026-07" },
+    requestedAt: "2026-07-29T12:00:00.000Z",
+    metadata: audit,
+  };
+  const result = await runExportWorker({
+    request,
+    observedAt: "2026-07-29T12:01:00.000Z",
+    renderer: {
+      async render() {
+        return { contentType: "text/csv", fileExtension: "csv", bytes: new TextEncoder().encode("id,total\n1,100\n"), rowCount: "1" };
+      },
+    },
+    storage: {
+      async put(input) {
+        stored.push(input.objectKey);
+        return { etag: "etag-1" };
+      },
+    },
+    commands: {
+      async markRunning(input) { transitions.push(["running", input.exportId]); },
+      async markCompleted(input) { transitions.push(["completed", input.objectKey]); },
+      async markFailed(input) { transitions.push(["failed", input.category]); },
+    },
+  });
+  assert.equal(result.status, "completed");
+  assert.equal(result.objectKey, "exports/tenant-1/export-1.csv");
+  assert.deepEqual(stored, ["exports/tenant-1/export-1.csv"]);
+  assert.deepEqual(transitions, [["running", "export-1"], ["completed", "exports/tenant-1/export-1.csv"]]);
+
+  const failed = await runExportWorker({
+    request: { ...request, exportId: "export-2" },
+    observedAt: "2026-07-29T12:02:00.000Z",
+    maxArtifactBytes: 1,
+    renderer: {
+      async render() {
+        return { contentType: "text/csv", fileExtension: "csv", bytes: new TextEncoder().encode("too large"), rowCount: "1" };
+      },
+    },
+    storage: { async put() { throw new Error("must not store"); } },
+    commands: {
+      async markRunning() {},
+      async markCompleted() { throw new Error("must not complete"); },
+      async markFailed(input) { transitions.push(["failed", input.category]); },
+    },
+  });
+  assert.deepEqual(failed, { status: "failed", errorCategory: "byte_limit_exceeded" });
+});
+
+test("webhook worker retries transient failures and dead-letters exhausted deliveries", async () => {
+  const subscription = {
+    schemaVersion: "1.0",
+    subscriptionId: "subscription-worker",
+    tenantId: "tenant-1",
+    endpointUrl: "https://partner.example/webhooks",
+    eventTypes: ["sales.invoice.posted.v1"],
+    signingKeyReference: "secret/webhook/worker",
+    status: "active",
+    maxAttempts: 2,
+    createdAt: "2026-07-29T12:00:00.000Z",
+  };
+  const recorded = [];
+  const baseDelivery = {
+    schemaVersion: "1.0",
+    deliveryId: "delivery-worker",
+    tenantId: "tenant-1",
+    subscriptionId: subscription.subscriptionId,
+    eventId: "event-worker",
+    eventType: "sales.invoice.posted.v1",
+    payloadHash: "b".repeat(64),
+    signatureVersion: "hmac-sha256-v1",
+    status: "queued",
+    attemptCount: 0,
+    createdAt: "2026-07-29T12:00:00.000Z",
+  };
+  const ports = {
+    signer: { async sign() { return "signature"; } },
+    transport: { async send() { return { statusCode: 429 }; } },
+    commands: { async record(delivery) { recorded.push(delivery.status); } },
+  };
+  const retry = await runWebhookWorker({
+    subscription,
+    delivery: baseDelivery,
+    payload: new TextEncoder().encode("{}"),
+    ...ports,
+    observedAt: "2026-07-29T12:01:00.000Z",
+    nextAttemptAt: "2026-07-29T12:02:00.000Z",
+  });
+  assert.equal(retry.outcome, "retry");
+  assert.equal(retry.delivery.attemptCount, 1);
+  assert.equal(retry.delivery.nextAttemptAt, "2026-07-29T12:02:00.000Z");
+
+  const deadLetter = await runWebhookWorker({
+    subscription,
+    delivery: retry.delivery,
+    payload: new TextEncoder().encode("{}"),
+    ...ports,
+    observedAt: "2026-07-29T12:02:00.000Z",
+    nextAttemptAt: "2026-07-29T12:03:00.000Z",
+  });
+  assert.equal(deadLetter.outcome, "dead_letter");
+  assert.equal(deadLetter.delivery.attemptCount, 2);
+  assert.equal("nextAttemptAt" in deadLetter.delivery, false);
+  assert.deepEqual(recorded, ["delivering", "retry_wait", "delivering", "dead_letter"]);
+});
+
+test("connector worker applies relevant mappings and advances a monotonic tenant cursor", async () => {
+  const connection = {
+    schemaVersion: "1.0",
+    connectionId: "connection-worker",
+    tenantId: "tenant-1",
+    connectorType: "generic-rest",
+    providerKey: "partner-products",
+    credentialReference: "secret/connector/worker",
+    status: "active",
+    createdAt: "2026-07-29T12:00:00.000Z",
+  };
+  const mappings = [{
+    schemaVersion: "1.0",
+    mappingId: "mapping-worker",
+    connectionId: connection.connectionId,
+    resourceType: "product",
+    platformField: "name",
+    externalField: "title",
+    ownership: "platform",
+    direction: "outbound",
+    transformVersion: "1",
+  }];
+  const recorded = [];
+  const cursors = [];
+  const result = await runConnectorPage({
+    connection,
+    mappings,
+    resourceType: "product",
+    direction: "outbound",
+    observedAt: "2026-07-29T12:05:00.000Z",
+    adapter: {
+      async read() {
+        return { records: [{ syncId: "sync-1", externalId: "external-1", payload: { title: "Product" } }], nextCursor: "cursor-2", exhausted: false };
+      },
+    },
+    apply: {
+      async apply() {
+        return { status: "applied", platformReference: "product-1" };
+      },
+    },
+    commands: {
+      async recordOutcome(outcome) { recorded.push(outcome); },
+      async advanceCursor(cursor) { cursors.push(cursor); },
+    },
+  });
+  assert.equal(result.outcomes[0].status, "applied");
+  assert.equal(result.cursor.cursor, "cursor-2");
+  assert.equal(recorded[0].externalReference, "external-1");
+  assert.equal(cursors[0].tenantId, "tenant-1");
 });
