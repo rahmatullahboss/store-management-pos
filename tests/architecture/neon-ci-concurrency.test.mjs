@@ -14,12 +14,12 @@ test("Neon branch lifecycle and persistent MOD-D rehearsal jobs are serialized",
   assert.ok((workflow.match(/cancel-in-progress: false/gu) ?? []).length >= 3);
 });
 
-test("Neon preview creation cleans only ephemeral preview branches and retries exact branch-limit failure once", async () => {
+test("Neon preview creation isolates cleanup per pull request and retries exact branch-limit failure once", async () => {
   const source = await readFile(previewScriptUrl, "utf8");
-  assert.match(source, /const previewBranchPrefix = "preview\/pr-"/u);
+  assert.match(source, /const previewBranchPrefix = `preview\/pr-\$\{safeRef\}-`/u);
   assert.match(source, /branch\.name\.startsWith\(previewBranchPrefix\)/u);
   assert.match(source, /error\.payload\?\.code === "BRANCHES_LIMIT_EXCEEDED"/u);
-  assert.match(source, /cleaning stale preview branches and retrying once/u);
+  assert.match(source, /cleaning stale branches for this pull request and retrying once/u);
   assert.match(source, /branchLimitRetry/u);
   assert.doesNotMatch(source, /DELETE.*dev\/module/isu);
 });
