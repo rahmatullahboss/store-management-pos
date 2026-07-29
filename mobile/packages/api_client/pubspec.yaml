@@ -1,0 +1,7 @@
+name: store_companion_api_client
+description: Versioned first-party transport contracts for Store Companion.
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.12.0
