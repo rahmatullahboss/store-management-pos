@@ -76,6 +76,29 @@ jobs:
           assert data["dartSdkVersion"].startswith(os.environ["DART_VERSION"]), data
           PY
 
+      - name: Apply reviewed late-sequence backfill patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("mobile/packages/local_data/lib/store_companion_sync_database.dart")
+          source = path.read_text()
+          old = """      if (current < 1) {
+                _backfillSequences();
+                _database.execute(
+          """
+          new = """      _backfillSequences();
+              if (current < 1) {
+                _database.execute(
+          """
+          if source.count(old) == 1:
+              path.write_text(source.replace(old, new, 1))
+          elif source.count(new) != 1:
+              raise SystemExit("reviewed late-sequence backfill source boundary changed")
+          PY
+
       - name: Resolve workspace
         working-directory: mobile
         run: |
@@ -157,7 +180,7 @@ jobs:
           echo "${flutter_dir}/bin" >> "${GITHUB_PATH}"
           "${flutter_dir}/bin/flutter" config --no-analytics
 
-      - name: Apply reviewed late-sequence backfill fix
+      - name: Apply reviewed late-sequence backfill patch
         shell: bash
         run: |
           set -euo pipefail
@@ -169,28 +192,14 @@ jobs:
           old = """      if (current < 1) {
                 _backfillSequences();
                 _database.execute(
-                  '''
-                  INSERT INTO local_sync_schema_migrations (version, applied_at)
-                  VALUES (?, ?)
-                  ''',
-                  <Object?>[1, _timestamp(DateTime.now().toUtc())],
-                );
-              }
           """
           new = """      _backfillSequences();
               if (current < 1) {
                 _database.execute(
-                  '''
-                  INSERT INTO local_sync_schema_migrations (version, applied_at)
-                  VALUES (?, ?)
-                  ''',
-                  <Object?>[1, _timestamp(DateTime.now().toUtc())],
-                );
-              }
           """
-          if old in source:
+          if source.count(old) == 1:
               path.write_text(source.replace(old, new, 1))
-          elif new not in source:
+          elif source.count(new) != 1:
               raise SystemExit("reviewed late-sequence backfill source boundary changed")
           PY
 
