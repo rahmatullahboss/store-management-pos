@@ -49,6 +49,23 @@ for (const name of requested) {
   for (const dependency of dependencies.get(name) ?? []) if (!requested.has(dependency)) throw new Error(`${name} requires ${dependency}`);
 }
 
+function acceptedMarkers(migration) {
+  const marker = `manifest:${migration.file}`;
+  const legacyMarkers = migration.legacyMarkers ?? [];
+  if (!Array.isArray(legacyMarkers)) throw new Error(`${migration.id} legacyMarkers must be an array`);
+  const accepted = new Set([marker]);
+  for (const legacyMarker of legacyMarkers) {
+    if (typeof legacyMarker !== "string" || !/^manifest:[A-Za-z0-9][A-Za-z0-9._-]*\.sql$/u.test(legacyMarker)) {
+      throw new Error(`${migration.id} contains an invalid legacy checksum marker`);
+    }
+    if (legacyMarker === marker || accepted.has(legacyMarker)) {
+      throw new Error(`${migration.id} contains a duplicate legacy checksum marker`);
+    }
+    accepted.add(legacyMarker);
+  }
+  return { marker, accepted };
+}
+
 const client = new Client({ connectionString });
 await client.connect();
 try {
@@ -59,11 +76,11 @@ try {
       const sql = await readFile(path.join(root, source.migrations, migration.file), "utf8");
       const digest = createHash("sha256").update(sql).digest("hex");
       if (digest !== migration.sha256) throw new Error(`${migration.id} checksum does not match the manifest`);
-      const marker = `manifest:${migration.file}`;
+      const { marker, accepted } = acceptedMarkers(migration);
       const existing = await client.query("SELECT checksum FROM platform.schema_migrations WHERE migration_id = $1", [migration.id]).catch(() => ({ rows: [] }));
       if (existing.rows.length > 0) {
-        if (existing.rows[0].checksum !== marker) throw new Error(`${migration.id} database checksum marker does not match`);
-        console.log(`verified ${migration.id}`);
+        if (!accepted.has(existing.rows[0].checksum)) throw new Error(`${migration.id} database checksum marker does not match`);
+        console.log(existing.rows[0].checksum === marker ? `verified ${migration.id}` : `verified ${migration.id} using reviewed legacy marker`);
         continue;
       }
       await executeSqlStatements(client, sql);
