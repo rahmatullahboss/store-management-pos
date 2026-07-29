@@ -2,7 +2,7 @@
 
 ## Status
 
-Implementation is active on `module/inventory-procurement-v1`. CP0 through CP5 are complete; CP6 remains in progress.
+Implementation is complete on `module/inventory-procurement-v1`. CP0 through CP6 are complete and the branch is ready for review.
 
 ## Foundation and isolation
 
@@ -35,12 +35,15 @@ Implementation is active on `module/inventory-procurement-v1`. CP0 through CP5 a
 
 ## Current verification
 
+- Full `npm run verify`: pass
 - TypeScript strict typecheck: pass
-- Module migration validator: pass
+- Module migration validator: pass, 3 MOD-B migrations
 - Unit, API, UI and architecture tests: 24/24 pass
-- Lint, formatting, boundary and diff checks: pass
+- Lint, formatting, boundary, secret, license and SBOM checks: pass
+- Neon migration replay and schema assertions: pass in GitHub Actions run `30419646024`
+- Persistent Neon branch: `dev/module-inventory-procurement`
 
-## Pending before final handoff
+## Review handoff
 
-- Inspect the repository-secret-backed Neon rehearsal for `dev/module-inventory-procurement` and resolve any environment-specific failure.
-- Close CP6, open the draft PR, and attach final evidence.
+- Final implementation commits include `ddd4fe2` and `97ee74d` on top of the original MOD-B checkpoints.
+- Review the draft pull request against `main`; no unmerged MOD-A code is required.

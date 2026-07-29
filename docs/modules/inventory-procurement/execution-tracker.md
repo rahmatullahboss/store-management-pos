@@ -68,22 +68,25 @@
 - Audit and outbox evidence emitted in the same transaction as business writes.
 - API route and error contract documentation in `docs/modules/inventory-procurement/api-contracts.md`.
 
-### CP6 — Migration rehearsal, full verification, documentation, and final handoff — in progress
+### CP6 — Migration rehearsal, full verification, documentation, and final handoff — complete
 
 - Repository-secret-backed workflow `.github/workflows/mod-b-neon-rehearsal.yml` creates or verifies the persistent Neon branch `dev/module-inventory-procurement` without deleting it.
-- The workflow applies Foundation → Inventory → Procurement migrations, repeats the run to prove replay safety, and asserts RLS, append-only triggers, permission seeds and the frozen MOD-A boundary.
-- Local full `npm run verify` passes before the rehearsal workflow is pushed.
-- Remaining: inspect GitHub Actions evidence, resolve any environment-specific SQL issue, then close CP6 and open the draft PR.
+- The workflow provisions a read-write compute endpoint when required, applies Foundation → Inventory → Procurement migrations, repeats the run to prove replay safety, and asserts RLS, append-only triggers, permission seeds and the frozen MOD-A boundary.
+- GitHub Actions run `30419646024` completed successfully on commit `97ee74d`.
+- Local full `npm run verify` passes and final handoff evidence is recorded.
 
 ## Verification evidence
 
-Current local verification:
+Current verification:
 
+- `npm run verify` — pass
 - `npm run typecheck` — pass
 - `npm run db:validate` — pass, 3 MOD-B migrations checksum-verified
 - `npm test` — pass, 24/24 tests
 - New deterministic MOD-B domain/API/UI tests — 9/9 pass
+- Neon migration rehearsal — pass, run `30419646024`
+- Persistent Neon branch — verified as `dev/module-inventory-procurement`
 
 ## Environment note
 
-`NEON_API_KEY` is not present in the local execution environment. No secret was requested, exposed, or written. A repository-secret-backed workflow will be used to create or verify the persistent non-production Neon branch and run the migration rehearsal after the implementation checkpoint is pushed.
+Neon credentials remain repository-secret-backed. The non-sensitive project identifier is stored as the repository variable `NEON_PROJECT_ID`; no credential was exposed or committed.
