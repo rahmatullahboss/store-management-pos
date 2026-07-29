@@ -15,6 +15,9 @@ const availableModules = [
   { name: "MOD-A-TAX", manifest: "database/migrations/tax/manifest.json", migrations: "database/migrations/tax" },
   { name: "MOD-B-INVENTORY", manifest: "database/modules/inventory/manifest.json", migrations: "database/modules/inventory/migrations" },
   { name: "MOD-B-PROCUREMENT", manifest: "database/modules/procurement/manifest.json", migrations: "database/modules/procurement/migrations" },
+  { name: "MOD-C-CUSTOMER", manifest: "database/modules/customer/manifest.json", migrations: "database/modules/customer/migrations" },
+  { name: "MOD-C-SALES", manifest: "database/modules/sales/manifest.json", migrations: "database/modules/sales/migrations" },
+  { name: "MOD-C-FULFILLMENT", manifest: "database/modules/fulfillment/manifest.json", migrations: "database/modules/fulfillment/migrations" },
 ];
 
 const dependencies = new Map([
@@ -23,6 +26,9 @@ const dependencies = new Map([
   ["MOD-A-TAX", ["FOUNDATION"]],
   ["MOD-B-INVENTORY", ["FOUNDATION"]],
   ["MOD-B-PROCUREMENT", ["FOUNDATION", "MOD-B-INVENTORY"]],
+  ["MOD-C-CUSTOMER", ["FOUNDATION"]],
+  ["MOD-C-SALES", ["FOUNDATION", "MOD-A-CATALOG", "MOD-A-PRICING", "MOD-A-TAX", "MOD-B-INVENTORY", "MOD-C-CUSTOMER"]],
+  ["MOD-C-FULFILLMENT", ["FOUNDATION", "MOD-B-INVENTORY", "MOD-C-SALES"]],
 ]);
 
 const requested = new Set((process.env.MIGRATION_MODULES ?? availableModules.map((item) => item.name).join(",")).split(",").map((item) => item.trim()).filter(Boolean));
