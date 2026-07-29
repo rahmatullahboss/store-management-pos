@@ -7,6 +7,11 @@
       "id": "RPT-0001",
       "file": "RPT-0001-reporting-foundation.sql",
       "sha256": "80548fb17da1e0f7395def49d7ed0a3530e2aeb27e49a6313658a2467592d77f"
+    },
+    {
+      "id": "RPT-0002",
+      "file": "RPT-0002-reporting-commands.sql",
+      "sha256": "a9b672a8a744443fb0ff275ce9f898d58ca05c385830856af8ed82205c87689a"
     }
   ]
 }
