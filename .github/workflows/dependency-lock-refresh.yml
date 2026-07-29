@@ -8,18 +8,24 @@ on:
       - package.json
       - package-lock.json
       - .github/workflows/dependency-lock-refresh.yml
-  workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: dependency-lock-${{ github.event.pull_request.head.ref }}
+  cancel-in-progress: true
 
 jobs:
   generate-lock:
-    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.event.pull_request.head.ref, 'deps/') }}
+    if: ${{ startsWith(github.event.pull_request.head.ref, 'deps/') && github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22
@@ -27,11 +33,15 @@ jobs:
       - name: Regenerate lockfile from exact package pins
         run: npm install --package-lock-only --ignore-scripts
       - name: Verify requested axe-core version
-        run: node -e "const lock=require('./package-lock.json'); if(lock.packages['node_modules/axe-core']?.version !== '4.12.1') process.exit(1)"
-      - name: Upload generated lockfile
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: dependency-lock-${{ github.run_id }}
-          path: package-lock.json
-          if-no-files-found: error
-          retention-days: 2
+        run: node -e "const lock=require('./package-lock.json'); if(lock.packages['node_modules/axe-core']?.version !== '4.12.1' || !lock.packages['apps/marketing-web']) process.exit(1)"
+      - name: Commit generated lockfile
+        run: |
+          if git diff --quiet -- package-lock.json; then
+            echo "Lockfile is already synchronized."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          git commit -m "deps: regenerate lockfile for axe-core 4.12.1"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
