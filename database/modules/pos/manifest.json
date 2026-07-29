@@ -1,6 +1,6 @@
 {
   "module": "MOD-D-POS",
-  "version": 5,
+  "version": 6,
   "order": 40,
   "migrations": [
     {
@@ -27,6 +27,11 @@
       "id": "POS-0005",
       "file": "POS-0005-store-scope-controls.sql",
       "sha256": "20eb0412ddfe137d63eca874a4d14d851d5dcef03aaf05b126ae1457d2cb1446"
+    },
+    {
+      "id": "POS-0006",
+      "file": "POS-0006-runtime-commands.sql",
+      "sha256": "4f92accdd7ef23d91b0086b746822ac7c75623bb0cedefecaae9431f076cb84d"
     }
   ]
 }
