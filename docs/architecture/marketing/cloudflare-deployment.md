@@ -36,6 +36,6 @@ Preview addresses are returned by Cloudflare for each deployment and branch. A c
 
 ## One-time Cloudflare setup
 
-If the Pages project does not yet exist, the first Wrangler deployment creates or initialises the `store-operating-system` project in the account. If Cloudflare rejects automatic creation because of account policy, create a Direct Upload Pages project with the same name and rerun the workflow.
+Before deployment, the workflow lists Direct Upload Pages projects and creates `store-operating-system` with `main` as the production branch when it is absent. If Cloudflare rejects project creation because of account policy, create a Direct Upload Pages project with the same name and rerun the workflow.
 
 Do not create the project using Pages Git integration when this workflow is the chosen deployment model. Cloudflare treats Git-integrated and Direct Upload projects as different setup modes; this repository intentionally uses Direct Upload through GitHub Actions so verification remains part of the deployment gate.

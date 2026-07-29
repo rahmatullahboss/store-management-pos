@@ -79,6 +79,8 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           wranglerVersion: "4.114.0"
+          preCommands: |
+            wrangler pages project list --json | node -e 'let data=""; process.stdin.on("data", chunk => data += chunk).on("end", () => process.exit(JSON.parse(data).some(project => project.name === "store-operating-system") ? 0 : 1))' || wrangler pages project create store-operating-system --production-branch=main
           command: pages deploy apps/marketing-web/src --project-name=store-operating-system --branch=${{ github.event.pull_request.head.ref || github.ref_name }}
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
 
