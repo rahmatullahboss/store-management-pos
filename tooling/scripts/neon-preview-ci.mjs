@@ -43,9 +43,9 @@ async function sleep(milliseconds) {
 }
 
 function isRetryableColdWakeError(error) {
-  if (!(error instanceof Error)) return false;
-  const retryable = Reflect.get(error, "neon:retryable");
-  return retryable === true || /endpoint cannot be found|connection terminated|fetch failed|network/i.test(error.message);
+  const message = error instanceof Error ? error.message : String(error);
+  const retryable = error && typeof error === "object" ? Reflect.get(error, "neon:retryable") : false;
+  return retryable === true || /neon:retryable|couldn(?:'|’)t connect to compute node|endpoint cannot be found|connection terminated|server error \(http status 500\)|fetch failed|network/i.test(message);
 }
 
 async function executeColdWake(connectionString) {
