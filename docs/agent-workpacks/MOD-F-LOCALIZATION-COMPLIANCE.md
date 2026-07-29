@@ -8,8 +8,10 @@ One agent owns the complete internationalization and country-pack workpack. Do n
 Git branch:   module/localization-compliance-v1
 Worktree:     .worktrees/localization-compliance
 Neon branch:  dev/module-localization-compliance
-Base:         program/foundation-v1
+Base SHA:     6badafe06a9e0013d12ba036160c915b48fe1c13
 ```
+
+The base SHA is the secured Wave 1 `main` baseline after MOD-A, MOD-B, MOD-C and MOD-E integration and GitHub Actions/Neon cold-wake hardening. MOD-F consumes frozen contracts and approved simulators for MOD-D until its serial integration checkpoint is available.
 
 ## Mission
 
