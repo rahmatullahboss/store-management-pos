@@ -77,7 +77,8 @@ test("CCR-0001 integrates module-owned providers through the shared route compos
   assert.match(sharedRoutes, /Duplicate admin route id/);
   assert.match(sharedRoutes, /Duplicate admin route path/);
   assert.doesNotMatch(sharedRoutes, /\/catalog|\/pricing|\/tax/);
-  assert.match(appShell, /composeAdminRoutes\(\[CATALOG_ADMIN_ROUTES, PRICING_TAX_ADMIN_ROUTES\]\)/);
+  assert.match(appShell, /composeAdminRoutes\(\[[^\]]*CATALOG_ADMIN_ROUTES[^\]]*PRICING_TAX_ADMIN_ROUTES[^\]]*\]\)/);
+  assert.match(appShell, /MOD_B_ADMIN_ROUTES/);
   assert.match(catalogRoutes, /\/catalog/);
   assert.match(pricingRoutes, /\/pricing/);
   assert.match(pricingRoutes, /\/tax/);
