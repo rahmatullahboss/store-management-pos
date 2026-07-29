@@ -16,8 +16,10 @@ const artifactsDir = path.join(root, "artifacts", "foundation");
 const benchmarkReportPath = path.join(artifactsDir, "neon-benchmark-report.json");
 const lifecycleReportPath = path.join(artifactsDir, "neon-preview-lifecycle.json");
 const safeRef = (GITHUB_HEAD_REF || "manual").toLowerCase().replace(/[^a-z0-9-]+/g, "-").slice(0, 36);
-const previewBranchPrefix = `preview/pr-${safeRef}-`;
+const previewBranchRootPrefix = "preview/pr-";
+const previewBranchPrefix = `${previewBranchRootPrefix}${safeRef}-`;
 const branchName = `${previewBranchPrefix}${GITHUB_RUN_ID || Date.now()}`;
+const globalStaleAgeMs = 45 * 60 * 1000;
 const coldWakeRetryLimit = 6;
 const apiBase = `https://console.neon.tech/api/v2/projects/${NEON_PROJECT_ID}`;
 const headers = { Authorization: `Bearer ${NEON_API_KEY}`, "Content-Type": "application/json" };
@@ -58,17 +60,41 @@ async function sleep(milliseconds) {
   await new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
-async function cleanupStalePreviewBranches() {
+function branchTimestamp(branch) {
+  for (const value of [branch?.created_at, branch?.updated_at]) {
+    const timestamp = typeof value === "string" ? Date.parse(value) : Number.NaN;
+    if (Number.isFinite(timestamp)) return timestamp;
+  }
+  return Number.NaN;
+}
+
+async function cleanupStalePreviewBranches({ allPreviewBranches = false } = {}) {
   const response = await api("/branches");
   const branches = Array.isArray(response?.branches) ? response.branches : [];
-  const stale = branches.filter((branch) => typeof branch?.name === "string"
-    && branch.name.startsWith(previewBranchPrefix)
-    && branch.id !== NEON_PARENT_BRANCH_ID);
+  const now = Date.now();
+  const stale = branches
+    .filter((branch) => {
+      if (typeof branch?.name !== "string"
+        || branch.id === NEON_PARENT_BRANCH_ID
+        || branch.name === branchName) return false;
+      if (!branch.name.startsWith(allPreviewBranches ? previewBranchRootPrefix : previewBranchPrefix)) return false;
+      if (!allPreviewBranches) return true;
+      const timestamp = branchTimestamp(branch);
+      return Number.isFinite(timestamp) && now - timestamp >= globalStaleAgeMs;
+    })
+    .sort((left, right) => branchTimestamp(left) - branchTimestamp(right));
+
+  let deleted = 0;
   for (const branch of stale) {
-    await api(`/branches/${encodeURIComponent(branch.id)}`, { method: "DELETE" });
-    console.log(`deleted stale Neon preview branch ${branch.name}`);
+    try {
+      await api(`/branches/${encodeURIComponent(branch.id)}`, { method: "DELETE" });
+      deleted += 1;
+      console.log(`deleted stale Neon preview branch ${branch.name}`);
+    } catch (error) {
+      console.warn(`could not delete stale Neon preview branch ${branch.name}: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
-  return stale.length;
+  return deleted;
 }
 
 function isBranchLimitError(error) {
@@ -86,13 +112,17 @@ async function createPreviewBranch() {
     })
   };
   try {
-    return { created: await api("/branches", request), branchLimitRetry: false };
+    return { created: await api("/branches", request), branchLimitRetry: false, branchLimitCleanupDeleted: 0 };
   } catch (error) {
     if (!isBranchLimitError(error)) throw error;
-    console.warn("Neon branch limit reached; cleaning stale branches for this pull request and retrying once");
-    await cleanupStalePreviewBranches();
+    console.warn("Neon branch limit reached; cleaning only preview/pr-* branches older than 45 minutes and retrying once");
+    const branchLimitCleanupDeleted = await cleanupStalePreviewBranches({ allPreviewBranches: true });
     await sleep(2_000);
-    return { created: await api("/branches", request), branchLimitRetry: true };
+    return {
+      created: await api("/branches", request),
+      branchLimitRetry: true,
+      branchLimitCleanupDeleted
+    };
   }
 }
 
@@ -145,6 +175,7 @@ let coldWakeAttempts = 0;
 let idleObservedAt = null;
 let cleanupDeleted = false;
 let staleBranchesDeleted = 0;
+let branchLimitCleanupDeleted = 0;
 let branchLimitRetry = false;
 let status = "failed";
 let failure = null;
@@ -155,6 +186,8 @@ try {
   const creation = await createPreviewBranch();
   const created = creation.created;
   branchLimitRetry = creation.branchLimitRetry;
+  branchLimitCleanupDeleted = creation.branchLimitCleanupDeleted;
+  staleBranchesDeleted += branchLimitCleanupDeleted;
   branchId = created.branch.id;
   endpointId = created.endpoints?.[0]?.id;
   if (!endpointId) throw new Error("Neon API did not return a preview endpoint ID");
@@ -232,7 +265,9 @@ try {
     endpointId: endpointId || null,
     migrationIds,
     staleBranchesDeleted,
+    branchLimitCleanupDeleted,
     branchLimitRetry,
+    globalStaleAgeMinutes: globalStaleAgeMs / 60_000,
     initialComputeConnectMs: initialConnectMs === null ? null : Number(initialConnectMs.toFixed(2)),
     idleObservedAt,
     coldWakeMs: coldWakeMs === null ? null : Number(coldWakeMs.toFixed(2)),
