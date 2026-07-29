@@ -5,8 +5,10 @@
 **Module head:** `7da18ba317c4ed6dd7b9e84d149be355a5a5c08c`  
 **Integration branch:** `program/integration-v1`  
 **Integration merge SHA:** `c757ceff4e2a74ee7637804b61c4f656044904b2`  
-**Merge method:** merge commit with expected-head protection  
-**State:** `integration_review`
+**Release PR:** `#49`  
+**Verified release-candidate head:** `d4c0db8c3fd81bb160250c0b1ef3f22810d16f82`  
+**Merge method:** module merge commit with expected-head protection  
+**State:** `integrated`
 
 ## Serial merge evidence
 
@@ -31,6 +33,40 @@ Exact module head `7da18ba317c4ed6dd7b9e84d149be355a5a5c08c` passed:
 - final readiness job `90721457593`;
 - Foundation Design CI run `30494841377`, evidence job `90721125818`, including MOD-G browser evidence `7/7` and zero axe violations.
 
+## Exact release-candidate gates
+
+Release PR `#49` exact head `d4c0db8c3fd81bb160250c0b1ef3f22810d16f82` passed:
+
+### Foundation CI run `30495876834`
+
+- verify job `90724450491`;
+- `343/343` tests;
+- format, lint, architecture boundaries and strict TypeScript;
+- secret scan, licence register, SBOM and dependency audit;
+- assigned MOD-G Neon full-chain and deterministic replay job `90724564848`;
+- Neon recovery job `90724565107`;
+- Cloudflare preview, runtime metrics and cleanup job `90724564784`;
+- dependency-gated final readiness job `90724853833`;
+- generic disposable Neon preview intentionally skipped because the non-production project has ten permanent foundation/module branches at its ten-branch quota; no permanent branch was deleted.
+
+### Foundation Design CI run `30495876826`
+
+- evidence job `90724450086`;
+- Foundation browser/accessibility suite passed;
+- MOD-F browser/accessibility suite passed;
+- MOD-G browser/accessibility suite passed `7/7`;
+- zero axe WCAG violations, unexpected clipping or viewport overflow;
+- semantic landmarks, keyboard skip navigation, reduced motion, RTL and 200% text scaling passed.
+
+### Quota-safe Neon policy
+
+- Release verification reused the assigned non-production MOD-G branch `br-mute-band-axbhmsky`.
+- It applied and verified the complete migration chain twice for deterministic replay.
+- Recovery evidence remained independently required.
+- Disposable previews remain available for ordinary PRs and manual workflow dispatch when branch capacity exists.
+- Main/integration pushes do not consume another ephemeral branch after their exact release PR has passed.
+- Main, foundation, module, mobile and storefront branches were not deleted or reset.
+
 ## Integrated scope
 
 - reporting metric/projection/reconciliation/export contracts and runtime;
@@ -40,16 +76,17 @@ Exact module head `7da18ba317c4ed6dd7b9e84d149be355a5a5c08c` passed:
 - SaaS plans, subscriptions, exact usage, lifecycle, rollouts, incidents and approved support access;
 - reporting, integration and SaaS admin consoles;
 - migrations `RPT-0001`–`RPT-0002` and `INT-0001`–`INT-0007`;
-- workload protection, credential redaction and final readiness evidence.
+- workload protection, credential redaction and final readiness evidence;
+- integrated Foundation, MOD-F and MOD-G browser gates on release PRs and protected pushes.
 
-## Integration verification plan
+## Main release procedure
 
-1. Validate the exact combined integration head through a controlled `program/integration-v1` to `main` release pull request.
-2. Require Foundation, Design, generic Neon preview, Neon recovery and Cloudflare gates on that release PR.
-3. Confirm combined migration order and all existing module tests remain green.
-4. Update this handoff with the release PR number and exact job IDs.
-5. Advance the program board from `integration_review` to `integrated` only after the exact release-PR head is fully green.
-6. Merge to `main` only with expected-head protection.
+1. Re-run the exact metadata head after this handoff/tracker transition.
+2. Update PR `#49` with final exact-head job IDs and mark it ready for review.
+3. Confirm the expected release head, no unresolved review threads and no competing main release merge.
+4. Merge PR `#49` to `main` with expected-head protection.
+5. Verify the resulting `main` push through Foundation and Design CI.
+6. Record the main release SHA in a final release handoff/board update without altering active mobile or storefront work.
 
 ## Boundaries preserved
 
