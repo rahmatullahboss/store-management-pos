@@ -86,6 +86,7 @@ type EventRow = Record<string, unknown> & {
   readonly source_type: string;
   readonly source_id: string;
   readonly reversal_of_event_id: string | null;
+  readonly idempotency_key: string;
   readonly request_hash: string;
 };
 
@@ -108,6 +109,26 @@ export class CashSqlRepository {
         || existing.scale !== input.scale) {
         throw new PlatformError("IDEMPOTENCY_CONFLICT", "Cash shift session was replayed with a different scope or currency", 409);
       }
+      const openingEventResult = await client.query<EventRow>(
+        `SELECT id::text,event_type,currency,scale,amount_minor::text,source_type,source_id,
+                reversal_of_event_id::text,idempotency_key,request_hash
+         FROM cash.cash_events
+         WHERE tenant_id=$1::uuid AND shift_id=$2::uuid AND event_type='opening_float'
+         ORDER BY sequence
+         LIMIT 1
+         FOR SHARE`,
+        [context.tenantId, existing.id],
+      );
+      const openingEvent = openingEventResult.rows[0];
+      const sameOpening = openingFloat === 0n
+        ? openingEvent === undefined
+        : openingEvent !== undefined
+          && openingEvent.currency === input.currency
+          && openingEvent.scale === input.scale
+          && openingEvent.amount_minor === input.openingFloatMinor
+          && openingEvent.idempotency_key === input.idempotencyKey
+          && openingEvent.request_hash === input.requestHash;
+      if (!sameOpening) throw new PlatformError("IDEMPOTENCY_CONFLICT", "Cash shift was replayed with a different opening float", 409);
       return existing;
     }
 
@@ -158,7 +179,7 @@ export class CashSqlRepository {
     exactInteger(input.amountMinor, "amountMinor", false);
     const replay = await client.query<EventRow>(
       `SELECT id::text,event_type,currency,scale,amount_minor::text,source_type,source_id,
-              reversal_of_event_id::text,request_hash
+              reversal_of_event_id::text,idempotency_key,request_hash
        FROM cash.cash_events
        WHERE tenant_id=$1::uuid AND shift_id=$2::uuid AND idempotency_key=$3
        FOR UPDATE`,
@@ -179,7 +200,7 @@ export class CashSqlRepository {
     }
 
     if (input.eventType === "adjustment_in" || input.eventType === "adjustment_out") {
-      if (!input.approvalRequestId) throw new PlatformError("APPROVAL_REQUIRED", "Approved cash adjustment is required", 409);
+      if (!input.approvalRequestId) throw new PlatformError("CONFLICT", "Approved cash adjustment is required", 409);
       await this.requireApproval(client, context, input.approvalRequestId, "cash.adjustment", input.shiftId);
     }
 
@@ -193,7 +214,7 @@ export class CashSqlRepository {
          $14::timestamptz,$15::date,$16::uuid,$17,$18
        )
        RETURNING id::text,event_type,currency,scale,amount_minor::text,source_type,source_id,
-                 reversal_of_event_id::text,request_hash`,
+                 reversal_of_event_id::text,idempotency_key,request_hash`,
       [
         input.id ?? uuidV7(), context.tenantId, input.shiftId, input.eventType, input.currency,
         input.scale, input.amountMinor, input.sourceType, input.sourceId, input.reversalOfEventId ?? null,
@@ -225,7 +246,7 @@ export class CashSqlRepository {
     );
     const shift = shiftResult.rows[0];
     if (!shift) throw new PlatformError("NOT_FOUND", "Cash shift not found", 404);
-    if (!['open', 'reopened'].includes(shift.status)) throw new PlatformError("CONFLICT", "Cash shift is not open", 409);
+    if (!["open", "reopened"].includes(shift.status)) throw new PlatformError("CONFLICT", "Cash shift is not open", 409);
     if (shift.currency !== input.currency || shift.scale !== input.scale) throw new PlatformError("VALIDATION_FAILED", "Cash count currency and scale must match the shift", 400);
 
     const expectedResult = await client.query<Record<string, unknown> & { readonly expected_minor: string }>(
@@ -237,7 +258,7 @@ export class CashSqlRepository {
     const expected = BigInt(expectedResult.rows[0]?.expected_minor ?? "0");
     const variance = counted - expected;
     if (variance !== 0n) {
-      if (!input.approvalRequestId) throw new PlatformError("APPROVAL_REQUIRED", "Approved cash variance is required", 409);
+      if (!input.approvalRequestId) throw new PlatformError("CONFLICT", "Approved cash variance is required", 409);
       await this.requireApproval(client, context, input.approvalRequestId, "cash.variance", input.shiftId);
     }
 
@@ -296,6 +317,6 @@ export class CashSqlRepository {
        FOR SHARE`,
       [context.tenantId, approvalRequestId, targetType, targetId],
     );
-    if (approval.rowCount !== 1) throw new PlatformError("APPROVAL_REQUIRED", "Valid approved cash authorization is required", 409);
+    if (approval.rowCount !== 1) throw new PlatformError("CONFLICT", "Valid approved cash authorization is required", 409);
   }
 }
