@@ -89,6 +89,20 @@ Checkpoint evidence is recorded in `docs/architecture/mod-g/public-api-control-p
 
 Checkpoint evidence is recorded in `docs/architecture/mod-g/api-client-credentials-checkpoint.md`.
 
+## Completed checkpoint 5 — scoped partner REST routes and OpenAPI catalog
+
+- Added `INT-0004` with a pre-authentication API-client directory and service-principal actor mapping.
+- The directory function is security-definer, revoked from `PUBLIC` and returns only safe client metadata plus an external credential reference.
+- Added credential-first and rate-limit-first route composition before internal OIDC route handling.
+- Added tenant-RLS reporting metric list/query routes with freshness, source cursor and reconciliation provenance.
+- Added asynchronous export request/status routes backed by `reporting.request_export` and database idempotency.
+- Added webhook delivery health and dead-letter replay routes backed by `integration.request_webhook_replay`.
+- Webhook payloads, signatures and signing references remain excluded from public responses.
+- Added a complete OpenAPI 3.1 catalog for all implemented partner operations, authentication alternatives, scopes, pagination, idempotency, rate-limit headers and standard problem responses.
+- Added behavioural tests for authenticated tenant context, service-principal actor propagation, scope denial before business reads, fail-closed missing bindings, mutation idempotency and OpenAPI completeness.
+
+Checkpoint evidence is recorded in `docs/architecture/mod-g/partner-api-routes-checkpoint.md`.
+
 ## Verification evidence
 
 ### Contracts and migration foundation
@@ -110,6 +124,23 @@ Implementation head `b308f5f1653e9c6a41b6e10bab849a59866893ef` passed:
 - Cloudflare preview, runtime metrics and cleanup job `90668845158`;
 - Foundation Design CI run `30479261178`.
 
+### API-client credential lifecycle
+
+Implementation head `0929798c81dc2994e2cff4510a9ed0f1756f62b1` passed Foundation CI run `30481850859`, `314/314` tests, complete MOD-G Neon replay, Neon recovery, Cloudflare preview/runtime/cleanup and Foundation Design CI.
+
+### Scoped partner routes
+
+Implementation head `13ed32f3ec8c1f92f9f9bc5e86ff08f043113acb` passed:
+
+- Foundation CI run `30483170747`;
+- verify job `90682181316` with `319/319` tests;
+- format, lint, architecture boundaries and strict TypeScript;
+- secret scan, licence register, SBOM and dependency audit;
+- MOD-G complete-chain and deterministic replay job `90682280851` including `INT-0004`;
+- Neon recovery job `90682280829`;
+- Foundation Design CI run `30483170613`;
+- Cloudflare preview/runtime/cleanup under the same Foundation run.
+
 ## Current checkpoint
 
-Persistent API-client/service-principal commands and credential-reference verification are implemented. The next coherent checkpoint is scoped partner data routes and the complete OpenAPI operation catalog, followed by generic CSV/REST connectors, a priority ecommerce adapter, SaaS lifecycle orchestration and the reporting/integration/SaaS admin web surfaces.
+Scoped public partner routes and the complete implemented-operation OpenAPI catalog are complete. The next coherent checkpoint is generic CSV/REST connectors and one launch-priority ecommerce adapter, followed by SaaS lifecycle orchestration and the reporting/integration/SaaS admin web surfaces.
