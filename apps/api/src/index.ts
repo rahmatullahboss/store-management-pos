@@ -15,6 +15,7 @@ import { handlePosRequest } from "./modules/pos/handler.js";
 import { handlePosReceiptRequest } from "./modules/pos/receipt-handler.js";
 import { handleProcurementRequest } from "./modules/procurement/handler.js";
 import { handleCreatePaymentIntent, handleCreateRefund, handleImportSettlement, handlePaymentAction } from "./payment-handler.js";
+import { handlePublicApiDiscovery } from "./public-api-discovery.js";
 import { buildRequestContext } from "./request-context.js";
 import { handleCreateReference } from "./reference-handler.js";
 import { createTokenVerifier } from "./token-verifier.js";
@@ -36,6 +37,8 @@ export default {
     const requestId = request.headers.get("x-request-id") ?? uuidV7();
     try {
       const url = new URL(request.url);
+      const discoveryResponse = handlePublicApiDiscovery(request, url);
+      if (discoveryResponse) return discoveryResponse;
       if (request.method === "GET" && url.pathname === "/health") return Response.json({ status: "healthy", service: "api", databaseMode: "direct-neon", region: env.REGION });
       const database = new NeonDatabase({ connectionString: env.DATABASE_URL });
       const verifier = createTokenVerifier(env, database);
