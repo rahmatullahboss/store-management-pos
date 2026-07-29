@@ -8,6 +8,7 @@ import { renderCustomerWorkspace, type CustomerWorkspaceInput } from "../modules
 import { renderFulfillmentWorkspace, type FulfillmentWorkspaceInput } from "../modules/fulfillment/surface.js";
 import { renderInventoryOperationsPage, type InventoryDashboardFixture } from "../modules/inventory/index.js";
 import { renderPaymentOperationsPage, type PaymentOperationsPage } from "../modules/payments/page.js";
+import { renderPosReconciliationPage, type PosReconciliationPage } from "../modules/pos/reconciliation-page.js";
 import { PRICING_TAX_ADMIN_ROUTES } from "../modules/pricing/routes.js";
 import { renderProcurementOperationsPage, type ProcurementDashboardFixture } from "../modules/procurement/index.js";
 import { renderFinanceReadinessPage, type FinanceReadinessPage } from "../modules/reporting/finance-readiness-page.js";
@@ -32,7 +33,11 @@ const MOD_E_ADMIN_ROUTES: readonly AdminRouteDescriptor[] = Object.freeze([
   Object.freeze({ id: "finance.readiness", path: "/finance/readiness", navigationLabel: "Finance readiness", permission: "platform.audit.read", module: "finance", order: 440, exact: true }),
 ]);
 
-const integratedAdminRoutes = composeAdminRoutes([CATALOG_ADMIN_ROUTES, PRICING_TAX_ADMIN_ROUTES, MOD_B_ADMIN_ROUTES, MOD_C_ADMIN_ROUTES, MOD_E_ADMIN_ROUTES]);
+const MOD_D_ADMIN_ROUTES: readonly AdminRouteDescriptor[] = Object.freeze([
+  Object.freeze({ id: "pos.reconciliation", path: "/pos/reconciliation", navigationLabel: "POS reconciliation", permission: "pos.sync.read", module: "pos", order: 510, exact: true }),
+]);
+
+const integratedAdminRoutes = composeAdminRoutes([CATALOG_ADMIN_ROUTES, PRICING_TAX_ADMIN_ROUTES, MOD_B_ADMIN_ROUTES, MOD_C_ADMIN_ROUTES, MOD_E_ADMIN_ROUTES, MOD_D_ADMIN_ROUTES]);
 
 export interface AdminShellInput {
   readonly displayName: string;
@@ -104,4 +109,8 @@ export function renderBankingAdminPage(input: Omit<AdminShellInput, "content" | 
 
 export function renderFinanceReadinessAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page: FinanceReadinessPage): string {
   return renderAdminShell({ ...input, currentPath: "/finance/readiness", content: renderFinanceReadinessPage(page) });
+}
+
+export function renderPosReconciliationAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page: PosReconciliationPage): string {
+  return renderAdminShell({ ...input, currentPath: "/pos/reconciliation", content: renderPosReconciliationPage(page) });
 }

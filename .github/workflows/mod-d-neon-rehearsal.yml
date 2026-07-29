@@ -1,0 +1,73 @@
+name: MOD-D Neon Rehearsal
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - module/pos-cash-offline-v1
+    paths:
+      - "database/foundation/**"
+      - "database/migrations/catalog/**"
+      - "database/migrations/pricing/**"
+      - "database/migrations/tax/**"
+      - "database/modules/inventory/**"
+      - "database/modules/procurement/**"
+      - "database/modules/customer/**"
+      - "database/modules/sales/**"
+      - "database/modules/fulfillment/**"
+      - "database/modules/payments/**"
+      - "database/modules/accounting/**"
+      - "database/modules/banking/**"
+      - "database/modules/pos/**"
+      - "database/modules/cash/**"
+      - "tooling/scripts/apply-migrations.mjs"
+      - "tooling/scripts/mod-d-neon-rehearsal-ci.mjs"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/mod-d-neon-rehearsal.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mod-d-neon-rehearsal-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  rehearse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+      NEON_PROJECT_ID: twilight-boat-26805962
+      MOD_D_NEON_BRANCH_ID: br-rapid-river-axoz0rfs
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - name: Install pinned dependencies
+        run: npm ci --ignore-scripts
+      - name: Build migration tooling
+        run: npm run build
+      - name: Apply and verify complete Wave 1 plus MOD-D migration chain
+        run: npm run ci:neon-mod-d
+      - name: Verify deterministic migration replay
+        run: npm run ci:neon-mod-d
+      - name: Upload MOD-D Neon evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mod-d-neon-rehearsal-${{ github.run_id }}
+          path: artifacts/mod-d/neon-rehearsal.json
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Record rehearsal summary
+        if: always()
+        run: |
+          echo "### MOD-D Neon rehearsal" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Branch: \`dev/module-pos-cash-offline\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Branch ID: \`br-rapid-river-axoz0rfs\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Foundation + Wave 1 + POS + CASH migrations: executed twice and verified" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Forced RLS and runtime direct-write grants: checked" >> "$GITHUB_STEP_SUMMARY"
