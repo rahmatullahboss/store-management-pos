@@ -62,18 +62,33 @@ test("MOD-A publishing and feed migrations pin checksums and fail closed on over
   assert.match(snapshot, /net_minor \+ tax_minor = gross_minor/);
 });
 
-test("MOD-A records the shared route deficiency instead of editing the Foundation registry", async () => {
-  const [request, sharedRoutes, catalogRoutes, pricingRoutes] = await Promise.all([
+test("CCR-0001 integrates module-owned providers through the shared route composer", async () => {
+  const [request, sharedRoutes, appShell, catalogRoutes, pricingRoutes] = await Promise.all([
     readFile("docs/contracts/change-requests/CCR-0001-MOD-A-ADMIN-ROUTE-PROVIDERS.md", "utf8"),
     readFile("apps/admin-web/src/app-shell/routes.ts", "utf8"),
+    readFile("apps/admin-web/src/app-shell/index.ts", "utf8"),
     readFile("apps/admin-web/src/modules/catalog/routes.ts", "utf8"),
     readFile("apps/admin-web/src/modules/pricing/routes.ts", "utf8"),
   ]);
-  assert.match(request, /Status:\*\* Requested/);
+  assert.match(request, /Status:\*\* Integrated/);
   assert.match(request, /CATALOG_ADMIN_ROUTES/);
   assert.match(request, /PRICING_TAX_ADMIN_ROUTES/);
+  assert.match(sharedRoutes, /export function composeAdminRoutes/);
+  assert.match(sharedRoutes, /Duplicate admin route id/);
+  assert.match(sharedRoutes, /Duplicate admin route path/);
   assert.doesNotMatch(sharedRoutes, /\/catalog|\/pricing|\/tax/);
+  assert.match(appShell, /composeAdminRoutes\(\[CATALOG_ADMIN_ROUTES, PRICING_TAX_ADMIN_ROUTES\]\)/);
   assert.match(catalogRoutes, /\/catalog/);
   assert.match(pricingRoutes, /\/pricing/);
   assert.match(pricingRoutes, /\/tax/);
+});
+
+test("the isolated Neon benchmark exercises the CAT-0002 staged resolver", async () => {
+  const harness = await readFile("tooling/scripts/mod-a-250k-benchmark.mjs", "utf8");
+  assert.match(harness, /br-fancy-bird-axo3z9ek/);
+  assert.match(harness, /CREATE OR REPLACE FUNCTION mod_a_benchmark\.search_variants/);
+  assert.match(harness, /FROM mod_a_benchmark\.variant_barcodes barcode/);
+  assert.match(harness, /SELECT \* FROM mod_a_benchmark\.search_variants\(\$1,\$2,20\)/);
+  assert.match(harness, /DROP SCHEMA IF EXISTS mod_a_benchmark CASCADE/);
+  assert.doesNotMatch(harness, /normalized_sku=upper\(btrim\(\$2\)\) OR/);
 });

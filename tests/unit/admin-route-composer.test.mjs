@@ -1,6 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { renderAdminShell } from "../../build/apps/admin-web/src/app-shell/index.js";
 import { adminRoutes, composeAdminRoutes } from "../../build/apps/admin-web/src/app-shell/routes.js";
+import { CATALOG_ADMIN_ROUTES } from "../../build/apps/admin-web/src/modules/catalog/routes.js";
+import { PRICING_TAX_ADMIN_ROUTES } from "../../build/apps/admin-web/src/modules/pricing/routes.js";
 
 const route = (overrides = {}) => ({
   id: "catalog.products",
@@ -46,4 +49,27 @@ test("admin route composition rejects duplicate provider ids and paths", () => {
     () => composeAdminRoutes([[route({ id: "catalog.root", path: "/" })]]),
     /Duplicate admin route path: \//,
   );
+});
+
+test("MOD-A contributes nine unique permission-scoped routes to the integrated admin shell", () => {
+  const descriptors = [...CATALOG_ADMIN_ROUTES, ...PRICING_TAX_ADMIN_ROUTES];
+  const composed = composeAdminRoutes([CATALOG_ADMIN_ROUTES, PRICING_TAX_ADMIN_ROUTES]);
+
+  assert.equal(descriptors.length, 9);
+  assert.equal(new Set(descriptors.map((item) => item.id)).size, 9);
+  assert.equal(new Set(descriptors.map((item) => item.path)).size, 9);
+  assert.deepEqual(composed.slice(adminRoutes.length).map((item) => item.path), descriptors.map((item) => item.path));
+
+  const catalogOnly = renderAdminShell({
+    displayName: "Catalog Operator",
+    tenantName: "Alpha Retail",
+    permissions: new Set(["catalog.product.read"]),
+    currentPath: "/catalog",
+    content: "<h1>Catalog</h1>",
+  });
+
+  assert.match(catalogOnly, />Catalog</);
+  assert.match(catalogOnly, />Product workspace</);
+  assert.doesNotMatch(catalogOnly, />Pricing</);
+  assert.doesNotMatch(catalogOnly, />Tax</);
 });

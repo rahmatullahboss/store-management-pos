@@ -1,6 +1,6 @@
 # CCR-0001 — MOD-A Admin Route Providers
 
-**Status:** Requested  
+**Status:** Integrated
 **Requested by:** MOD-A — Catalog, Pricing and Tax  
 **Date:** 2026-07-28  
 **Shared owner:** Foundation / admin app shell  
@@ -58,4 +58,13 @@ MOD-A does not edit the shared registry while this request is pending. Its rende
 
 ## Integration decision
 
-Integrate serially in the Foundation/shared-shell ownership window before MOD-A is merged to the integration branch. No major contract version is required because this is an additive provider boundary.
+Integrated serially in the Foundation/shared-shell ownership window before mounting MOD-A in the shared admin shell. No major contract version is required because this is an additive provider boundary.
+
+Implementation evidence:
+
+- `apps/admin-web/src/app-shell/routes.ts` exports `composeAdminRoutes` while preserving the original Foundation route array when no providers are supplied;
+- duplicate module route IDs and duplicate module/Foundation paths fail closed;
+- module routes sort deterministically by `order`, then stable ID;
+- `apps/admin-web/src/app-shell/index.ts` composes `CATALOG_ADMIN_ROUTES` and `PRICING_TAX_ADMIN_ROUTES`;
+- nine MOD-A descriptors are mounted and remain permission-filtered by the existing shell;
+- `tests/unit/admin-route-composer.test.mjs` and the integration architecture checks cover the acceptance criteria.
