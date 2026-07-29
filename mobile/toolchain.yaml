@@ -1,0 +1,18 @@
+flutter:
+  channel: stable
+  version: 3.44.8
+  commit: 058e0af2c2b57e369d905a03ac9748b0ebf543c6
+  dart_version: 3.12.2
+  verified_at: 2026-07-29
+  sources:
+    - https://docs.flutter.dev/release/release-notes
+    - https://chromium.googlesource.com/external/github.com/flutter/flutter/+/refs/tags/3.44.8
+policy:
+  exact_version_in_ci: true
+  automatic_upgrade: false
+  upgrade_requires:
+    - breaking-change review
+    - dependency compatibility review
+    - Android and iOS build verification
+    - local migration and pending-operation verification
+    - documentation and programme-board checkpoint
