@@ -1,7 +1,7 @@
 {
   "module": "MOD-D-POS",
   "version": 1,
-  "order": 20,
+  "order": 40,
   "migrations": [
     {
       "id": "POS-0001",
