@@ -39,7 +39,6 @@ for (const source of sources) {
       if (typeof marker !== "string" || !/^manifest:[A-Za-z0-9][A-Za-z0-9._-]*\.sql$/u.test(marker)) {
         throw new Error(`${migration.id} contains an invalid database checksum marker`);
       }
-      if (marker !== canonicalMarker && marker === canonicalMarker) throw new Error(`${migration.id} repeats its canonical checksum marker`);
       const owner = databaseMarkers.get(marker);
       if (owner) throw new Error(`${migration.id} reuses database checksum marker ${marker} owned by ${owner}`);
       databaseMarkers.set(marker, migration.id);
