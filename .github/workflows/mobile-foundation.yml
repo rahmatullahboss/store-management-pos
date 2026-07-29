@@ -130,8 +130,7 @@ jobs:
         github.event_name == 'push' &&
         github.repository == 'rahmatullahboss/store-management-pos' &&
         github.ref == 'refs/heads/module/store-companion-mobile-v1' &&
-        github.actor != 'dependabot[bot]' &&
-        github.actor != 'github-actions[bot]'
+        github.actor != 'dependabot[bot]'
       }}
     permissions:
       contents: write
