@@ -14,7 +14,7 @@ const modules = [
     identity: "MOD-D-CASH",
     manifestPath: new URL("../../database/modules/cash/manifest.json", import.meta.url),
     migrationsDirectory: new URL("../../database/modules/cash/migrations/", import.meta.url),
-    expectedIds: ["CSH-0001"],
+    expectedIds: ["CSH-0001", "CSH-0002"],
   },
 ];
 
