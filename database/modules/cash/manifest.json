@@ -1,6 +1,6 @@
 {
   "module": "MOD-D-CASH",
-  "version": 4,
+  "version": 5,
   "order": 41,
   "migrations": [
     {
@@ -22,6 +22,11 @@
       "id": "CSH-0004",
       "file": "CSH-0004-function-privilege-hardening.sql",
       "sha256": "51be49e7afe8026beea348191db86cac001917081df7c0c1cdf3afb7797ccd7c"
+    },
+    {
+      "id": "CSH-0005",
+      "file": "CSH-0005-cash-scope-and-reversal-controls.sql",
+      "sha256": "a38b676c0a88ba72ee05508ce5d990372bcae8c7ab9c3c516f261cc0bfa78457"
     }
   ]
 }
