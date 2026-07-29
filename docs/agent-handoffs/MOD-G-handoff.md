@@ -4,7 +4,7 @@
 **Git branch:** `module/reporting-integrations-saas-v1`  
 **Worktree:** `.worktrees/reporting-integrations-saas`  
 **Approved Wave 2 release:** `93f8d98164dc105141a71b85dd2af5a98e9e31e9`  
-**Neon branch:** `dev/module-reporting-integrations` (`br-mute-band-axbhmsky`)  
+**Neon branch:** `dev/module/reporting-integrations` (`br-mute-band-axbhmsky`)  
 **Review PR:** `#45`  
 **State:** `active`
 
@@ -14,6 +14,7 @@
 - No existing implementation was reset, discarded, overwritten or force-pushed.
 - All upstream module contracts are integrated; country/privacy behavior consumes MOD-F contracts without changing the Bangladesh pack's `limited` validation status.
 - The whole MOD-G workpack is owned by one implementation stream; no small task agents are used.
+- Mobile application paths and branches are not part of this workpack and were not modified.
 
 ## Planned checkpoint sequence
 
@@ -38,9 +39,34 @@
 - Added 7 reporting and 9 integration tables with forced tenant RLS, exact values, append-only evidence and direct runtime write revocation.
 - Added dedicated `ci:neon-mod-g` complete-chain and deterministic replay rehearsal on the assigned Neon branch.
 
+## Completed checkpoint 2 — runtime commands and worker orchestration
+
+### Database command layer
+
+- Added `RPT-0002` and `INT-0002` command migrations.
+- Reporting commands cover metric publication, projection event consumption, metric snapshots, export requests and export transitions.
+- Integration commands cover webhook subscriptions/deliveries/attempts/replay and connector connections/mappings/sync outcomes.
+- Commands use security-definer functions, explicit execute grants, advisory locking, idempotent replay checks and transactional audit/outbox evidence.
+- Runtime roles retain no direct table insert/update/delete privileges.
+
+### Reporting workers
+
+- Added bounded tenant-scoped projection batches with explicit applied, duplicate, retry, dead-letter and deferred results.
+- Ordered processing stops on retryable infrastructure failure so later events cannot silently skip a cursor gap.
+- Added bounded asynchronous export orchestration through renderer, storage and command ports.
+- Export completion requires matching format/content type, exact row and byte counts, tenant-scoped object keys and a non-empty storage receipt.
+
+### Integration workers
+
+- Added signed outbound webhook execution with active-subscription checks, tenant/event isolation, attempt evidence, transient retry classification and exhausted-attempt dead letter.
+- Added connector page orchestration with loop-safe mappings, bounded reads, scoped cursors, append-only outcome evidence and cursor advancement only after the full page is recorded.
+- Provider/internal errors are normalized to bounded categories without exposing credentials or raw secret values.
+
+Checkpoint evidence is recorded in `docs/architecture/mod-g/worker-orchestration-checkpoint.md`.
+
 ## Verification evidence
 
-Checkpoint evidence is recorded in `docs/architecture/mod-g/contracts-migrations-checkpoint.md`.
+### Contracts and migration foundation
 
 GitHub run `30463780467` passed:
 
@@ -52,6 +78,17 @@ GitHub run `30463780467` passed:
 
 The assigned-branch artifact reports 48 applied migrations, 7 reporting tables, 9 integration tables, forced RLS on all 16 MOD-G tables, zero direct runtime writes, zero `PUBLIC` function execution and zero unsafe credential-value columns.
 
+### Runtime commands and workers
+
+Implementation head `abae858f7861c49b3de0397971af9d21bd3c56c6` passed Foundation CI run `30478165369`, verify job `90665021102`:
+
+- format, lint and architecture boundaries;
+- strict TypeScript typecheck;
+- build and `306/306` unit and architecture tests;
+- secret scan, licence register, SBOM and dependency audit.
+
+The exact checkpoint run also executes MOD-G Neon replay, Neon recovery and Cloudflare preview/runtime gates. Foundation Design CI run `30478174548` covers the unchanged visual surfaces.
+
 ## Current checkpoint
 
-Contracts and migration foundation are complete. The next coherent checkpoint is controlled runtime commands/repositories plus projection, webhook, connector and export worker orchestration. Substantial admin UI remains deferred until those operational boundaries and recovery tests pass.
+Runtime commands and core projection/export/webhook/connector worker orchestration are implemented. The next coherent checkpoint is the public REST/OpenAPI layer with client scopes, rate limits, pagination and idempotency, followed by concrete generic connector adapters, SaaS lifecycle orchestration and the reporting/integration/SaaS admin web surfaces.
