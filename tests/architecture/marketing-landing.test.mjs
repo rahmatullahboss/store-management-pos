@@ -23,8 +23,10 @@ test("marketing landing page preserves product truth and action hierarchy", () =
   assert.doesNotMatch(html, /trusted by|customer logo|testimonial/iu);
 });
 
-test("pricing is explicit, bounded and marked for validation", () => {
-  for (const amount of ["৳2,990", "৳7,990", "৳19,900"]) assert.match(html, new RegExp(amount, "u"));
+test("pricing starts at BDT 899 and scales through three launch tiers", () => {
+  for (const amount of ["৳899", "৳2,499", "৳5,999", "৳8,990", "৳24,990", "৳59,990"]) {
+    assert.match(script, new RegExp(amount, "u"));
+  }
   assert.match(html, /Final commercial terms should be validated with pilot customers/u);
   assert.match(html, /Hardware, payment-processing fees, VAT, custom integrations, data migration and on-site implementation are quoted separately/u);
 });
