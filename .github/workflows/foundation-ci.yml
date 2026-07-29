@@ -235,3 +235,30 @@ jobs:
           path: artifacts/foundation/cloudflare-*.json
           if-no-files-found: warn
           retention-days: 14
+
+  mod-g-final-readiness:
+    if: ${{ always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'module/reporting-integrations-saas-v1' && github.actor != 'dependabot[bot]' && needs.verify.result == 'success' && needs['mod-g-neon-rehearsal'].result == 'success' && needs['neon-recovery'].result == 'success' && needs['cloudflare-preview'].result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs:
+      - verify
+      - mod-g-neon-rehearsal
+      - neon-recovery
+      - cloudflare-preview
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts
+      - name: Verify final MOD-G readiness evidence
+        run: npm run mod-g:final:verify
+      - name: Upload MOD-G final readiness evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mod-g-final-${{ github.run_id }}
+          path: artifacts/mod-g-final/
+          if-no-files-found: error
+          retention-days: 14
