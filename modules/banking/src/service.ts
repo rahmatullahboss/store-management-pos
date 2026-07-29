@@ -88,6 +88,27 @@ export interface ReconciliationResult {
   readonly replayed: boolean;
 }
 
+export interface RecordReconciliationRunCommand {
+  readonly runId: string;
+  readonly bankAccountId: string;
+  readonly periodStart: string;
+  readonly periodEnd: string;
+  readonly idempotencyKey: string;
+  readonly requestHash: string;
+}
+
+export interface ReconciliationRunResult {
+  readonly runId: string;
+  readonly status: "completed" | "completed_with_exceptions";
+  readonly sourceLineCount: bigint;
+  readonly matchedLineCount: bigint;
+  readonly exceptionCount: bigint;
+  readonly statementTotal: Money;
+  readonly matchedTotal: Money;
+  readonly difference: Money;
+  readonly replayed: boolean;
+}
+
 export interface UnreconciledStatementLine {
   readonly statementLineId: string;
   readonly bankAccountId: string;
@@ -104,6 +125,7 @@ export interface BankingStore {
   importStatement(context: RequestContext, command: ImportStatementCommand): Promise<ImportStatementResult>;
   reconcileStatementLine(context: RequestContext, command: ReconcileStatementLineCommand): Promise<ReconciliationResult>;
   reverseReconciliation(context: RequestContext, command: ReverseReconciliationCommand): Promise<ReconciliationResult>;
+  recordReconciliationRun(context: RequestContext, command: RecordReconciliationRunCommand): Promise<ReconciliationRunResult>;
   listUnreconciled(context: RequestContext, bankAccountId?: string): Promise<readonly UnreconciledStatementLine[]>;
 }
 
@@ -187,6 +209,14 @@ export class BankingService {
     return await this.store.reverseReconciliation(context, command);
   }
 
+  async recordReconciliationRun(context: RequestContext, command: RecordReconciliationRunCommand): Promise<ReconciliationRunResult> {
+    requireLegalEntity(context);
+    requirePermission(context, "banking.reconcile.auto");
+    assertIdempotency(command);
+    if (command.periodEnd < command.periodStart) throw new PlatformError("VALIDATION_FAILED", "Reconciliation period is invalid", 400);
+    return await this.store.recordReconciliationRun(context, command);
+  }
+
   async listUnreconciled(context: RequestContext, bankAccountId?: string): Promise<readonly UnreconciledStatementLine[]> {
     requireLegalEntity(context);
     requirePermission(context, "banking.read");
@@ -219,6 +249,7 @@ export class InMemoryBankingStore implements BankingStore {
   readonly #lines = new Map<string, ImportedStatementLine>();
   readonly #reconciliations = new Map<string, StoredReconciliation>();
   readonly #reconciliationByIdempotency = new Map<string, { readonly requestHash: string; readonly result: ReconciliationResult }>();
+  readonly #runsByIdempotency = new Map<string, { readonly requestHash: string; readonly result: ReconciliationRunResult }>();
   readonly #reversalByOriginal = new Map<string, string>();
 
   async importStatement(_context: RequestContext, command: ImportStatementCommand): Promise<ImportStatementResult> {
@@ -353,6 +384,34 @@ export class InMemoryBankingStore implements BankingStore {
     this.#reversalByOriginal.set(command.originalReconciliationId, command.reconciliationId);
     this.#reconciliationByIdempotency.set(command.idempotencyKey, { requestHash: command.requestHash, result });
     this.#lines.set(line.statementLineId, cloneLine({ ...line, reconciliationStatus: status }));
+    return result;
+  }
+
+  async recordReconciliationRun(_context: RequestContext, command: RecordReconciliationRunCommand): Promise<ReconciliationRunResult> {
+    const replay = this.#runsByIdempotency.get(command.idempotencyKey);
+    if (replay) {
+      if (replay.requestHash !== command.requestHash) throw new PlatformError("CONFLICT", "Idempotency key payload mismatch", 409);
+      return Object.freeze({ ...replay.result, replayed: true });
+    }
+    const lines = [...this.#lines.values()].filter((line) => line.bankAccountId === command.bankAccountId
+      && line.bookedAt.slice(0, 10) >= command.periodStart && line.bookedAt.slice(0, 10) <= command.periodEnd);
+    const first = lines[0];
+    if (!first) throw new PlatformError("NOT_FOUND", "Reconciliation period has no statement lines", 404);
+    const summaries = lines.map((line) => this.#lineSummary(line));
+    const statementTotalMinor = summaries.reduce((total, line) => total + line.originalAmount.amountMinor, 0n);
+    const matchedTotalMinor = summaries.reduce((total, line) => total + line.matchedAmount.amountMinor, 0n);
+    const result: ReconciliationRunResult = Object.freeze({
+      runId: command.runId,
+      status: statementTotalMinor === matchedTotalMinor ? "completed" : "completed_with_exceptions",
+      sourceLineCount: BigInt(summaries.length),
+      matchedLineCount: BigInt(summaries.filter((line) => line.unmatchedAmount.amountMinor === 0n).length),
+      exceptionCount: 0n,
+      statementTotal: money(statementTotalMinor, first.amount.currency, first.amount.scale),
+      matchedTotal: money(matchedTotalMinor, first.amount.currency, first.amount.scale),
+      difference: money(statementTotalMinor - matchedTotalMinor, first.amount.currency, first.amount.scale),
+      replayed: false,
+    });
+    this.#runsByIdempotency.set(command.idempotencyKey, { requestHash: command.requestHash, result });
     return result;
   }
 

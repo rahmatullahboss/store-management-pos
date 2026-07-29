@@ -4,6 +4,8 @@ import { uuidV7 } from "../../../packages/foundation/src/ids.js";
 import { createTokenVerifier } from "./token-verifier.js";
 import { buildRequestContext } from "./request-context.js";
 import { handleCreateReference } from "./reference-handler.js";
+import { handleAllocateOpenItem, handleClosePeriod, handleCreateOpenItem, handleGeneralLedger, handleOpenItemAging, handlePostJournal, handleReopenPeriod, handleReverseJournal, handleTrialBalance } from "./accounting-handler.js";
+import { handleImportBankStatement, handleListUnreconciled, handleReconcileStatementLine, handleRecordReconciliationRun, handleReverseReconciliation } from "./banking-handler.js";
 import { handleCreatePaymentIntent, handleCreateRefund, handleImportSettlement, handlePaymentAction } from "./payment-handler.js";
 
 export interface ApiEnvironment {
@@ -33,6 +35,24 @@ export default {
       }
       if (request.method === "POST" && url.pathname === "/v1/refunds") return await handleCreateRefund(request, context, database, env);
       if (request.method === "POST" && url.pathname === "/v1/settlements/import") return await handleImportSettlement(request, context, database, env);
+      if (request.method === "POST" && url.pathname === "/v1/accounting/journals") return await handlePostJournal(request, context, database);
+      const journalReversal = url.pathname.match(/^\/v1\/accounting\/journals\/([^/]+)\/reverse$/u);
+      if (request.method === "POST" && journalReversal?.[1]) return await handleReverseJournal(request, context, database, journalReversal[1]);
+      if (request.method === "POST" && url.pathname === "/v1/accounting/open-items") return await handleCreateOpenItem(request, context, database);
+      const openItemAllocation = url.pathname.match(/^\/v1\/accounting\/open-items\/([^/]+)\/allocations$/u);
+      if (request.method === "POST" && openItemAllocation?.[1]) return await handleAllocateOpenItem(request, context, database, openItemAllocation[1]);
+      const periodAction = url.pathname.match(/^\/v1\/accounting\/periods\/([^/]+)\/(close|reopen)$/u);
+      if (request.method === "POST" && periodAction?.[1] && periodAction[2] === "close") return await handleClosePeriod(request, context, database, periodAction[1]);
+      if (request.method === "POST" && periodAction?.[1] && periodAction[2] === "reopen") return await handleReopenPeriod(request, context, database, periodAction[1]);
+      if (request.method === "GET" && url.pathname === "/v1/accounting/reports/trial-balance") return await handleTrialBalance(url, context, database);
+      if (request.method === "GET" && url.pathname === "/v1/accounting/reports/general-ledger") return await handleGeneralLedger(url, context, database);
+      if (request.method === "GET" && url.pathname === "/v1/accounting/reports/open-item-aging") return await handleOpenItemAging(url, context, database);
+      if (request.method === "POST" && url.pathname === "/v1/banking/statements/import") return await handleImportBankStatement(request, context, database);
+      if (request.method === "POST" && url.pathname === "/v1/banking/reconciliations") return await handleReconcileStatementLine(request, context, database);
+      const reconciliationReversal = url.pathname.match(/^\/v1\/banking\/reconciliations\/([^/]+)\/reverse$/u);
+      if (request.method === "POST" && reconciliationReversal?.[1]) return await handleReverseReconciliation(request, context, database, reconciliationReversal[1]);
+      if (request.method === "POST" && url.pathname === "/v1/banking/reconciliation-runs") return await handleRecordReconciliationRun(request, context, database);
+      if (request.method === "GET" && url.pathname === "/v1/banking/unreconciled") return await handleListUnreconciled(url, context, database);
       return Response.json({ error: { code: "NOT_FOUND", message: "Route not found", requestId } }, { status: 404 });
     } catch (error) {
       return errorResponse(error, requestId);

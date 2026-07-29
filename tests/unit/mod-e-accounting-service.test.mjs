@@ -200,6 +200,7 @@ test("journal reversal creates a new balanced correction linked to the original"
   const reversal = await service.reverseJournal(context, {
     originalJournalId: "journal-1",
     reversalJournalId: "journal-2",
+    reversalPostingGroupId: "posting-group-2",
     businessDate: "2026-07-29",
     reason: "Provider reversal",
     approvalRequestId: "approval-2",

@@ -21,7 +21,7 @@
 
 ## Current checkpoint
 
-Activation, exact-domain/provider-contract, canonical database, payment lifecycle, accounting command kernel and banking reconciliation checkpoints are complete. API/UI/jobs integration is the current E6 checkpoint.
+Activation, exact-domain/provider-contract, canonical database, payment lifecycle, accounting command kernel, banking reconciliation and API/UI/jobs checkpoints are complete. Readiness, observability and final deployment evidence are the current E7 checkpoint.
 
 ## Rolling checkpoint evidence
 
@@ -33,12 +33,12 @@ Activation, exact-domain/provider-contract, canonical database, payment lifecycl
 | E3 payments | implementation complete | PAY-0002 command functions and append-only attempt results; two-phase provider orchestration; payment/refund/settlement APIs; fresh runtime-role create→unknown→recover→refund→settlement drill |
 | E4 accounting | implementation complete | ACC-0002 command kernel for balanced journal posting, exact reversal, AR/AP open items and allocations, period close/reopen, idempotency, approval binding, audit/outbox and runtime-only grants; service and PostgreSQL lifecycle evidence |
 | E5 banking | implementation complete | BNK-0002 statement import dedupe, exact signed reconciliation, settlement candidate locking, append-only reversal/rematch, reconciliation-run controls, audit/outbox and runtime-only grants; service and PostgreSQL lifecycle evidence |
-| E6 API/UI/jobs | pending | payment API exists; accounting/banking API, admin UI and background jobs remain |
-| E7 readiness | pending | — |
+| E6 API/UI/jobs | implementation complete | Neon accounting/banking stores; authenticated exact-money API routes for journals, open items, period controls, reports, statement import, reconciliation and control runs; permission-scoped payment/accounting/banking admin pages; payment recovery and reconciliation-control worker jobs; 15 focused API/UI/job tests |
+| E7 readiness | active | observability controls, operating runbook, final verification and deployment evidence remain |
 
 ## Verification evidence
 
-- `npm run verify`: passed; format, lint, boundaries, typecheck, 44/44 tests, secret scan, license check and SBOM.
+- `npm run verify`: passed; format, lint, boundaries, typecheck, 59/59 tests, secret scan, license check and SBOM.
 - `npm run test:database:mod-e`: passed against an isolated fresh local PostgreSQL cluster after applying FND-0001→FND-0005, PAY-0001→PAY-0002, ACC-0001→ACC-0002 and BNK-0001→BNK-0002.
 - Database drills are rollback-only and cover core invariants, payment lifecycle, accounting lifecycle and banking lifecycle.
 - Accounting lifecycle: invoice→AR open item→receipt→allocation→journal/allocation reversal→period close/reopen.
@@ -48,4 +48,4 @@ Activation, exact-domain/provider-contract, canonical database, payment lifecycl
 
 - PAY-0002, ACC-0002 and BNK-0002 are fresh-rebuild and lifecycle-drill verified but are not yet applied to the isolated Neon branch because a connected Neon execution path was unavailable in this checkpoint.
 - No provider credential or live provider adapter is configured; production payment commands fail closed while the deterministic simulator remains restricted to local/development/preview/test.
-- Accounting and banking API routes, finance admin UI, reconciliation jobs, observability dashboards and readiness evidence remain in E6/E7.
+- Finance API, admin render surfaces and worker job executors are implemented; production queue/scheduler bindings, live-provider operations and observability dashboards remain E7 deployment work.

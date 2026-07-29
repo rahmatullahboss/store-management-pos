@@ -71,6 +71,7 @@ export interface StoredJournal extends PostedJournal {
 export interface ReverseJournalCommand {
   readonly originalJournalId: string;
   readonly reversalJournalId: string;
+  readonly reversalPostingGroupId: string;
   readonly businessDate: string;
   readonly reason: string;
   readonly approvalRequestId: string;
@@ -300,7 +301,7 @@ export class AccountingService {
     }));
     return await this.store.postJournal(context, {
       journalId: command.reversalJournalId,
-      postingGroupId: original.postingGroupId,
+      postingGroupId: command.reversalPostingGroupId,
       chartId: original.chartId,
       fiscalPeriodId: original.fiscalPeriodId,
       journalType: "reversal",

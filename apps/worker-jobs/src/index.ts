@@ -1,3 +1,5 @@
+export * from "./finance-jobs.js";
+
 import { consumeAtLeastOnce, type ConsumerInbox, type DomainEventEnvelope } from "../../../packages/foundation/src/events.js";
 import { parseDomainEventEnvelopeV1 } from "../../../packages/contracts/src/v1/validators.js";
 
