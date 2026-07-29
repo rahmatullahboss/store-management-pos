@@ -1,0 +1,8 @@
+name: store_companion_session_core
+description: Platform-neutral authentication and workspace session invariants.
+publish_to: none
+version: 0.1.0
+resolution: workspace
+
+environment:
+  sdk: ^3.12.0
