@@ -30,6 +30,6 @@ BEGIN
 END $function_hardening_check$;
 
 INSERT INTO platform.schema_migrations(migration_id, module, checksum)
-VALUES ('CSH-0003','MOD-D-CASH','manifest:CSH-0004-function-privilege-hardening.sql');
+VALUES ('CSH-0004','MOD-D-CASH','manifest:CSH-0004-function-privilege-hardening.sql');
 
 COMMIT;
