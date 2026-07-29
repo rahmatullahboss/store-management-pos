@@ -85,14 +85,8 @@ jobs:
 
           path = Path("mobile/packages/local_data/lib/store_companion_sync_database.dart")
           source = path.read_text()
-          old = """      if (current < 1) {
-                _backfillSequences();
-                _database.execute(
-          """
-          new = """      _backfillSequences();
-              if (current < 1) {
-                _database.execute(
-          """
+          old = "      if (current < 1) {\n        _backfillSequences();\n        _database.execute("
+          new = "      _backfillSequences();\n      if (current < 1) {\n        _database.execute("
           if source.count(old) == 1:
               path.write_text(source.replace(old, new, 1))
           elif source.count(new) != 1:
@@ -189,14 +183,8 @@ jobs:
 
           path = Path("mobile/packages/local_data/lib/store_companion_sync_database.dart")
           source = path.read_text()
-          old = """      if (current < 1) {
-                _backfillSequences();
-                _database.execute(
-          """
-          new = """      _backfillSequences();
-              if (current < 1) {
-                _database.execute(
-          """
+          old = "      if (current < 1) {\n        _backfillSequences();\n        _database.execute("
+          new = "      _backfillSequences();\n      if (current < 1) {\n        _database.execute("
           if source.count(old) == 1:
               path.write_text(source.replace(old, new, 1))
           elif source.count(new) != 1:
