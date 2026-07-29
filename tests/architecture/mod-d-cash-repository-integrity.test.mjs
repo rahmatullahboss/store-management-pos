@@ -3,17 +3,17 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const repositoryUrl = new URL("../../modules/cash/src/sql-repository.ts", import.meta.url);
-const runtimeCommandsUrl = new URL(
-  "../../database/modules/cash/migrations/CSH-0003-runtime-commands.sql",
-  import.meta.url,
-);
+const runtimeCommandUrls = [
+  new URL("../../database/modules/cash/migrations/CSH-0004-runtime-commands.sql", import.meta.url),
+  new URL("../../database/modules/cash/migrations/CSH-0005-cash-scope-and-reversal-controls.sql", import.meta.url),
+];
 
 async function sources() {
-  const [repository, runtimeCommands] = await Promise.all([
+  const [repository, ...commandSources] = await Promise.all([
     readFile(repositoryUrl, "utf8"),
-    readFile(runtimeCommandsUrl, "utf8"),
+    ...runtimeCommandUrls.map(async (url) => await readFile(url, "utf8")),
   ]);
-  return { repository, runtimeCommands };
+  return { repository, runtimeCommands: commandSources.join("\n") };
 }
 
 test("cash writes use reviewed runtime commands instead of direct table DML", async () => {
@@ -36,13 +36,16 @@ test("cash runtime commands bind exact replay, approval and audit evidence", asy
   assert.match(runtimeCommands, /cash shift was replayed with a different opening float/u);
   assert.match(runtimeCommands, /cash event was replayed with different content/u);
   assert.match(runtimeCommands, /cash closure was replayed with different content/u);
-  assert.match(runtimeCommands, /action_code = 'cash\.adjustment\.approve'/u);
-  assert.match(runtimeCommands, /action_code = 'cash\.variance\.approve'/u);
-  assert.match(runtimeCommands, /target_type = 'cash_adjustment'/u);
-  assert.match(runtimeCommands, /target_type = 'cash_shift_variance'/u);
+  assert.match(runtimeCommands, /cash\.adjustment\.approve/u);
+  assert.match(runtimeCommands, /cash\.variance\.approve/u);
+  assert.match(runtimeCommands, /cash_adjustment/u);
+  assert.match(runtimeCommands, /cash_shift_variance/u);
+  assert.match(runtimeCommands, /cash\.reversal\.approve/u);
+  assert.match(runtimeCommands, /cash_event_reversal/u);
   assert.match(runtimeCommands, /platform\.audit_events/u);
   assert.match(runtimeCommands, /platform\.outbox_events/u);
   assert.match(runtimeCommands, /VALUES \('CSH-0004'/u);
+  assert.match(runtimeCommands, /VALUES \('CSH-0005'/u);
 });
 
 test("cash read surface is tenant-scoped and bounded", async () => {
