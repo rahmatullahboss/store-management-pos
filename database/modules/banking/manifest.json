@@ -1,0 +1,17 @@
+{
+  "module": "MOD-E-BANKING",
+  "version": 1,
+  "order": 30,
+  "migrations": [
+    {
+      "id": "BNK-0001",
+      "file": "BNK-0001-banking-reconciliation.sql",
+      "sha256": "24b4256fc69248facfc61722a99ae251303f87c69add04202d1e2de782f9a6b9"
+    },
+    {
+      "id": "BNK-0002",
+      "file": "BNK-0002-banking-commands.sql",
+      "sha256": "d73fca4d0afd4eefbf96dcd64241711241aa676276397c9da7b9a89ad29a6d0a"
+    }
+  ]
+}
