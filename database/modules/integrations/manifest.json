@@ -12,6 +12,11 @@
       "id": "INT-0002",
       "file": "INT-0002-integration-commands.sql",
       "sha256": "90d9a39dbe59fe818ab14193dbde7840b93d3605466e3b674a08966a21723a34"
+    },
+    {
+      "id": "INT-0003",
+      "file": "INT-0003-api-client-credentials.sql",
+      "sha256": "afdaf636330e13c828970731dfb84df5fcc454841dacade8a21aa7cf30fd5c38"
     }
   ]
 }
