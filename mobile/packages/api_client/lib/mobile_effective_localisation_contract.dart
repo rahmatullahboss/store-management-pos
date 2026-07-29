@@ -28,9 +28,7 @@ final class MobileEffectiveCurrencyContract {
         'Effective cash increment must be greater than zero.',
       );
     }
-    if (!const <String>{'nearest', 'up', 'down'}.contains(
-      cashRoundingMode,
-    )) {
+    if (!const <String>{'nearest', 'up', 'down'}.contains(cashRoundingMode)) {
       throw MobileContractException(
         'Unsupported effective cash rounding mode: $cashRoundingMode.',
       );
@@ -43,9 +41,7 @@ final class MobileEffectiveCurrencyContract {
   }
 
   /// Parses one currency record from the MOD-F response.
-  factory MobileEffectiveCurrencyContract.fromJson(
-    Map<String, Object?> json,
-  ) {
+  factory MobileEffectiveCurrencyContract.fromJson(Map<String, Object?> json) {
     final cashIncrementText = _requiredString(json, 'cashIncrementMinor');
     final cashIncrement = BigInt.tryParse(cashIncrementText);
     if (cashIncrement == null) {
@@ -157,9 +153,7 @@ final class MobileEffectiveLocalisationContract {
       );
     }
     _rejectDuplicateValues(
-      currencies.map(
-        (MobileEffectiveCurrencyContract value) => value.currency,
-      ),
+      currencies.map((MobileEffectiveCurrencyContract value) => value.currency),
       'currency',
     );
     _rejectDuplicateValues(
@@ -191,13 +185,14 @@ final class MobileEffectiveLocalisationContract {
     effectiveFrom: _requiredIsoDate(json, 'effectiveFrom'),
     effectiveTo: _optionalIsoDate(json, 'effectiveTo'),
     capabilities: _requiredMap(json, 'capabilities'),
-    currencies: _requiredMapList(json, 'currencies')
-        .map(MobileEffectiveCurrencyContract.fromJson)
-        .toList(growable: false),
-    businessDayBoundaries:
-        _requiredMapList(json, 'businessDayBoundaries')
-            .map(MobileEffectiveBusinessDayContract.fromJson)
-            .toList(growable: false),
+    currencies: _requiredMapList(
+      json,
+      'currencies',
+    ).map(MobileEffectiveCurrencyContract.fromJson).toList(growable: false),
+    businessDayBoundaries: _requiredMapList(
+      json,
+      'businessDayBoundaries',
+    ).map(MobileEffectiveBusinessDayContract.fromJson).toList(growable: false),
   );
 
   /// Country-pack activation reference.
@@ -314,10 +309,7 @@ int _requiredInt(Map<String, Object?> json, String key) {
   return value;
 }
 
-Map<String, Object?> _requiredMap(
-  Map<String, Object?> json,
-  String key,
-) {
+Map<String, Object?> _requiredMap(Map<String, Object?> json, String key) {
   final value = json[key];
   if (value is! Map<Object?, Object?>) {
     throw MobileContractException('$key must be an object.');
@@ -361,10 +353,7 @@ List<Map<String, Object?>> _requiredMapList(
       .toList(growable: false);
 }
 
-void _rejectDuplicateValues(
-  Iterable<String> values,
-  String description,
-) {
+void _rejectDuplicateValues(Iterable<String> values, String description) {
   final observed = <String>{};
   for (final value in values) {
     if (!observed.add(value)) {
