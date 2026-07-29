@@ -82,7 +82,7 @@ function renderEmbeddedLocalizationControlPage(page: LocalizationControlPage): s
   return `<style>
     .modf-active .modf-badge--attention{color:#f0d36d}
     .modf-table-wrap:focus-visible{outline:3px solid #276e8f;outline-offset:-3px}
-    @media(max-width:1100px){.modf-active{grid-template-columns:1fr 1fr}.modf-active dl{grid-column:1/-1}}
+    @media(max-width:1100px){.modf-active{grid-template-columns:1fr 1fr!important}.modf-active dl{grid-column:1/-1!important}}
   </style>${embedded}`;
 }
 
