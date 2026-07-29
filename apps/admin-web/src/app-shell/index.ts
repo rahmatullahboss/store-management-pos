@@ -67,14 +67,20 @@ export interface AdminShellInput {
   readonly offline?: boolean;
 }
 
+function embedPageRoot(rendered: string, rootClass: string, label: string): string {
+  const opening = `<main class="${rootClass}"`;
+  const openingIndex = rendered.indexOf(opening);
+  const closingIndex = rendered.lastIndexOf("</main>");
+  if (openingIndex < 0 || closingIndex < openingIndex) throw new Error(`${label} page root contract is invalid`);
+  return `${rendered.slice(0, openingIndex)}<section class="${rootClass}"${rendered.slice(openingIndex + opening.length, closingIndex)}</section>${rendered.slice(closingIndex + 7)}`;
+}
+
 function renderEmbeddedLocalizationControlPage(page: LocalizationControlPage): string {
   const rendered = renderLocalizationControlPage(page);
   const opening = '<main class="modf-control"';
   const openingIndex = rendered.indexOf(opening);
   const closingIndex = rendered.lastIndexOf("</main>");
-  if (openingIndex < 0 || closingIndex < openingIndex) {
-    throw new Error("Localization control page root contract is invalid");
-  }
+  if (openingIndex < 0 || closingIndex < openingIndex) throw new Error("Localization control page root contract is invalid");
   let embedded = `${rendered.slice(0, openingIndex)}<section class="modf-control"${rendered.slice(openingIndex + opening.length, closingIndex)}</section>${rendered.slice(closingIndex + 7)}`;
   embedded = embedded.replace(
     '<div class="modf-table-wrap">',
@@ -155,29 +161,21 @@ export function renderPosReconciliationAdminPage(input: Omit<AdminShellInput, "c
 }
 
 export function renderLocalizationAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page: LocalizationControlPage): string {
-  return renderAdminShell({
-    ...input,
-    currentPath: "/localization",
-    content: renderEmbeddedLocalizationControlPage({ ...page, focus: "country_packs" }),
-  });
+  return renderAdminShell({ ...input, currentPath: "/localization", content: renderEmbeddedLocalizationControlPage({ ...page, focus: "country_packs" }) });
 }
 
 export function renderComplianceAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page: LocalizationControlPage): string {
-  return renderAdminShell({
-    ...input,
-    currentPath: "/compliance",
-    content: renderEmbeddedLocalizationControlPage({ ...page, focus: "compliance" }),
-  });
+  return renderAdminShell({ ...input, currentPath: "/compliance", content: renderEmbeddedLocalizationControlPage({ ...page, focus: "compliance" }) });
 }
 
 export function renderReportingAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page: ReportingOperationsPage): string {
-  return renderAdminShell({ ...input, currentPath: "/reporting", content: renderReportingOperationsPage(page) });
+  return renderAdminShell({ ...input, currentPath: "/reporting", content: embedPageRoot(renderReportingOperationsPage(page), "modg-page", "Reporting operations") });
 }
 
 export function renderIntegrationsAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page: IntegrationConsolePage): string {
-  return renderAdminShell({ ...input, currentPath: "/integrations", content: renderIntegrationConsolePage(page) });
+  return renderAdminShell({ ...input, currentPath: "/integrations", content: embedPageRoot(renderIntegrationConsolePage(page), "modg-int", "Integration console") });
 }
 
 export function renderSaasOperationsAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page: SaasAdminPage): string {
-  return renderAdminShell({ ...input, currentPath: "/platform/saas", content: renderSaasAdminPage(page) });
+  return renderAdminShell({ ...input, currentPath: "/platform/saas", content: embedPageRoot(renderSaasAdminPage(page), "modg-saas", "SaaS administration") });
 }
