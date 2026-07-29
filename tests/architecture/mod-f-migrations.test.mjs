@@ -21,7 +21,7 @@ test("MOD-F migration manifest is deterministic and ordered after integrated MOD
   const { manifest, migrations } = await load();
   assert.equal(manifest.module, "MOD-F-LOCALIZATION");
   assert.equal(manifest.order, 50);
-  assert.deepEqual(migrations.map(({ id }) => id), ["LOC-0001", "LOC-0002", "LOC-0003", "LOC-0004"]);
+  assert.deepEqual(migrations.map(({ id }) => id), ["LOC-0001", "LOC-0002", "LOC-0003", "LOC-0004", "LOC-0005"]);
   const present = (await readdir(migrationsUrl)).filter((file) => file.endsWith(".sql")).sort();
   assert.deepEqual(present, migrations.map(({ file }) => file).sort());
   for (const migration of migrations) {
@@ -77,6 +77,22 @@ test("MOD-F command functions are tenant-scoped, idempotent and runtime-callable
   assert.match(sql, /REVOKE ALL ON FUNCTION/u);
   assert.match(sql, /GRANT EXECUTE ON FUNCTION/u);
   assert.doesNotMatch(sql, /CURRENT_DATE/u);
+});
+
+test("MOD-F publishes safe transactional audit and outbox evidence", async () => {
+  const { migrations } = await load();
+  const migration = migrations.find(({ id }) => id === "LOC-0005");
+  assert.ok(migration);
+  assert.match(migration.sql, /localization\.publish_command_evidence/u);
+  assert.match(migration.sql, /INSERT INTO platform\.audit_events/u);
+  assert.match(migration.sql, /INSERT INTO platform\.outbox_events/u);
+  assert.match(migration.sql, /localization\.country_pack\.activated\.v1/u);
+  assert.match(migration.sql, /localization\.legal_number\.allocated\.v1/u);
+  assert.match(migration.sql, /localization\.legal_document\.published\.v1/u);
+  assert.match(migration.sql, /localization\.fiscal_submission\.status_observed\.v1/u);
+  assert.match(migration.sql, /localization\.privacy_operation\.status_changed\.v1/u);
+  assert.match(migration.sql, /REVOKE ALL ON FUNCTION localization\.publish_command_evidence\(\) FROM PUBLIC/u);
+  assert.doesNotMatch(migration.sql, /subject_reference|reason_message|semantic_payload_hash|archive_object_key/u);
 });
 
 test("MOD-F provisions read permissions separately from privileged commands", async () => {
