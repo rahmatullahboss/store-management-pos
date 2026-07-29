@@ -14,7 +14,7 @@ function exactInteger(value: string, field: string, allowZero = true): bigint {
 }
 
 function exactDecimal(value: string, field: string): string {
-  if (!EXACT_DECIMAL.test(value) || Number(value) <= 0) throw new PlatformError("VALIDATION_FAILED", `${field} must be an exact positive decimal string`, 400);
+  if (!EXACT_DECIMAL.test(value) || !/[1-9]/u.test(value)) throw new PlatformError("VALIDATION_FAILED", `${field} must be an exact positive decimal string`, 400);
   return value;
 }
 
