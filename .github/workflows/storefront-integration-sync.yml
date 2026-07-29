@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: storefront-integration-sync
@@ -24,33 +24,53 @@ jobs:
         with:
           ref: module/storefront-commerce-v1
           fetch-depth: 0
-          persist-credentials: false
+          persist-credentials: true
       - name: Fetch current integration baseline
         run: git fetch --no-tags origin program/integration-v1
-      - name: Attempt non-destructive merge and report conflicts
+      - name: Attempt merge and persist a non-destructive report
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "Storefront Integration Bot"
           git config user.email "storefront-integration-bot@users.noreply.github.com"
+          feature_head=$(git rev-parse HEAD)
+          integration_head=$(git rev-parse origin/program/integration-v1)
           set +e
           git merge --no-commit --no-ff origin/program/integration-v1
           merge_status=$?
           set -e
-          echo "feature_head=$(git rev-parse HEAD)"
-          echo "integration_head=$(git rev-parse origin/program/integration-v1)"
+          mkdir -p docs/architecture/storefront
+          report=docs/architecture/storefront/integration-conflicts.txt
           if [ "$merge_status" -eq 0 ]; then
-            echo "MERGE_STATUS=clean"
-            git diff --stat --cached
+            {
+              echo "status=clean"
+              echo "feature_head=$feature_head"
+              echo "integration_head=$integration_head"
+              echo "generated_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            } > "$report"
             git merge --abort || true
+          else
+            conflicts=$(git diff --name-only --diff-filter=U | sort)
+            index=$(git ls-files -u)
+            {
+              echo "status=conflicted"
+              echo "feature_head=$feature_head"
+              echo "integration_head=$integration_head"
+              echo "generated_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+              echo "conflict_files_begin"
+              printf '%s\n' "$conflicts"
+              echo "conflict_files_end"
+              echo "unmerged_index_begin"
+              printf '%s\n' "$index"
+              echo "unmerged_index_end"
+            } > /tmp/storefront-integration-conflicts.txt
+            git merge --abort || true
+            cp /tmp/storefront-integration-conflicts.txt "$report"
+          fi
+          git add "$report"
+          if git diff --cached --quiet; then
+            echo "Conflict report is unchanged."
             exit 0
           fi
-          echo "MERGE_STATUS=conflicted"
-          echo "CONFLICT_FILES_BEGIN"
-          git diff --name-only --diff-filter=U | sort
-          echo "CONFLICT_FILES_END"
-          echo "UNMERGED_INDEX_BEGIN"
-          git ls-files -u
-          echo "UNMERGED_INDEX_END"
-          git merge --abort || true
-          exit 1
+          git commit -m "chore(storefront): record integration conflicts"
+          git push origin HEAD:module/storefront-commerce-v1
