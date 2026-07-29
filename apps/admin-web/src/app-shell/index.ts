@@ -70,8 +70,20 @@ function renderEmbeddedLocalizationControlPage(page: LocalizationControlPage): s
   if (openingIndex < 0 || closingIndex < openingIndex) {
     throw new Error("Localization control page root contract is invalid");
   }
-  const embedded = `${rendered.slice(0, openingIndex)}<section class="modf-control"${rendered.slice(openingIndex + opening.length, closingIndex)}</section>${rendered.slice(closingIndex + 7)}`;
-  return `<style>.modf-active .modf-badge--attention{color:#f0d36d}</style>${embedded}`;
+  let embedded = `${rendered.slice(0, openingIndex)}<section class="modf-control"${rendered.slice(openingIndex + opening.length, closingIndex)}</section>${rendered.slice(closingIndex + 7)}`;
+  embedded = embedded.replace(
+    '<div class="modf-table-wrap">',
+    '<div class="modf-table-wrap" tabindex="0" role="region" aria-label="Country-pack versions table">',
+  );
+  embedded = embedded.replace(
+    '<div class="modf-table-wrap">',
+    '<div class="modf-table-wrap" tabindex="0" role="region" aria-label="Compliance evidence table">',
+  );
+  return `<style>
+    .modf-active .modf-badge--attention{color:#f0d36d}
+    .modf-table-wrap:focus-visible{outline:3px solid #276e8f;outline-offset:-3px}
+    @media(max-width:1100px){.modf-active{grid-template-columns:1fr 1fr}.modf-active dl{grid-column:1/-1}}
+  </style>${embedded}`;
 }
 
 export function renderAdminShell(input: AdminShellInput): string {
