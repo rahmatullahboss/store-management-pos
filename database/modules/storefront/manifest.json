@@ -11,6 +11,11 @@
       "id": "STF-0002",
       "file": "STF-0002-storefront-commands.sql",
       "sha256": "dd394c5b368776868169a32f8b8732aa292f8fdaf90a499b98f938bcf3ec7ac6"
+    },
+    {
+      "id": "STF-0003",
+      "file": "STF-0003-public-host-resolution.sql",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
     }
   ]
 }
