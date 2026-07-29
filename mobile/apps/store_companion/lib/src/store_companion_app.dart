@@ -44,9 +44,10 @@ final class _CompanionShellState extends State<_CompanionShell> {
   late String _activeWorkspaceId = widget.bootstrap.activeWorkspaceId;
   int _selectedDestination = 0;
 
-  WorkspaceContext get _activeWorkspace => widget.bootstrap.workspaces.firstWhere(
-    (WorkspaceContext workspace) => workspace.id == _activeWorkspaceId,
-  );
+  WorkspaceContext get _activeWorkspace =>
+      widget.bootstrap.workspaces.firstWhere(
+        (WorkspaceContext workspace) => workspace.id == _activeWorkspaceId,
+      );
 
   List<_Destination> get _destinations {
     final workspace = _activeWorkspace;
@@ -249,7 +250,9 @@ final class _ContextBand extends StatelessWidget {
                     ),
                     items: bootstrap.workspaces
                         .map(
-                          (WorkspaceContext workspace) => DropdownMenuItem<String>(
+                          (
+                            WorkspaceContext workspace,
+                          ) => DropdownMenuItem<String>(
                             value: workspace.id,
                             child: Text(
                               '${workspace.label} — ${workspace.scopeLabel}',
@@ -389,18 +392,18 @@ final class _HomePage extends StatelessWidget {
         header: true,
         child: Text(
           'Store Companion',
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.w800,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800),
         ),
       ),
       const SizedBox(height: 8),
       Text(
         'Exception-first mobile operations without duplicating the server’s '
         'business rules.',
-        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-          color: OperationsLedgerColors.inkSoft,
-        ),
+        style: Theme.of(
+          context,
+        ).textTheme.bodyLarge?.copyWith(color: OperationsLedgerColors.inkSoft),
       ),
       const SizedBox(height: 16),
       const _SyntheticNotice(),
@@ -409,9 +412,9 @@ final class _HomePage extends StatelessWidget {
       const SizedBox(height: 24),
       Text(
         'Needs attention',
-        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-          fontWeight: FontWeight.w800,
-        ),
+        style: Theme.of(
+          context,
+        ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
       ),
       const SizedBox(height: 8),
       const _TaskRow(
@@ -487,9 +490,9 @@ final class _OperationalSignal extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           'No pending local operations',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w800,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 4),
         const Text(
