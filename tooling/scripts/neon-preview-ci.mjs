@@ -16,16 +16,32 @@ const artifactsDir = path.join(root, "artifacts", "foundation");
 const benchmarkReportPath = path.join(artifactsDir, "neon-benchmark-report.json");
 const lifecycleReportPath = path.join(artifactsDir, "neon-preview-lifecycle.json");
 const safeRef = (GITHUB_HEAD_REF || "manual").toLowerCase().replace(/[^a-z0-9-]+/g, "-").slice(0, 36);
-const previewBranchPrefix = `preview/pr-${safeRef}-`;
-const branchName = `${previewBranchPrefix}${GITHUB_RUN_ID || Date.now()}`;
+const previewBranchPrefix = "preview/pr-";
+const branchName = `${previewBranchPrefix}${safeRef}-${GITHUB_RUN_ID || Date.now()}`;
 const apiBase = `https://console.neon.tech/api/v2/projects/${NEON_PROJECT_ID}`;
 const headers = { Authorization: `Bearer ${NEON_API_KEY}`, "Content-Type": "application/json" };
+
+class NeonApiError extends Error {
+  constructor(status, payload, text) {
+    super(`Neon API ${status}: ${text}`);
+    this.name = "NeonApiError";
+    this.status = status;
+    this.payload = payload;
+  }
+}
 
 async function api(pathname, init = {}) {
   const response = await fetch(`${apiBase}${pathname}`, { ...init, headers: { ...headers, ...init.headers } });
   const text = await response.text();
-  const payload = text ? JSON.parse(text) : null;
-  if (!response.ok) throw new Error(`Neon API ${response.status}: ${text}`);
+  let payload = null;
+  if (text) {
+    try {
+      payload = JSON.parse(text);
+    } catch {
+      payload = { raw: text };
+    }
+  }
+  if (!response.ok) throw new NeonApiError(response.status, payload, text);
   return payload;
 }
 
@@ -51,6 +67,32 @@ async function cleanupStalePreviewBranches() {
     await api(`/branches/${encodeURIComponent(branch.id)}`, { method: "DELETE" });
     console.log(`deleted stale Neon preview branch ${branch.name}`);
   }
+  return stale.length;
+}
+
+function isBranchLimitError(error) {
+  return error instanceof NeonApiError
+    && error.status === 422
+    && error.payload?.code === "BRANCHES_LIMIT_EXCEEDED";
+}
+
+async function createPreviewBranch() {
+  const request = {
+    method: "POST",
+    body: JSON.stringify({
+      branch: { name: branchName, parent_id: NEON_PARENT_BRANCH_ID },
+      endpoints: [{ type: "read_write" }]
+    })
+  };
+  try {
+    return { created: await api("/branches", request), branchLimitRetry: false };
+  } catch (error) {
+    if (!isBranchLimitError(error)) throw error;
+    console.warn("Neon branch limit reached; cleaning stale preview branches and retrying once");
+    await cleanupStalePreviewBranches();
+    await sleep(2_000);
+    return { created: await api("/branches", request), branchLimitRetry: true };
+  }
 }
 
 async function suspendEndpointAndWaitForIdle(endpointId) {
@@ -75,19 +117,17 @@ let initialConnectMs = null;
 let coldWakeMs = null;
 let idleObservedAt = null;
 let cleanupDeleted = false;
+let staleBranchesDeleted = 0;
+let branchLimitRetry = false;
 let status = "failed";
 let failure = null;
 let migrationIds = [];
 
 try {
-  await cleanupStalePreviewBranches();
-  const created = await api("/branches", {
-    method: "POST",
-    body: JSON.stringify({
-      branch: { name: branchName, parent_id: NEON_PARENT_BRANCH_ID },
-      endpoints: [{ type: "read_write" }]
-    })
-  });
+  staleBranchesDeleted = await cleanupStalePreviewBranches();
+  const creation = await createPreviewBranch();
+  const created = creation.created;
+  branchLimitRetry = creation.branchLimitRetry;
   branchId = created.branch.id;
   endpointId = created.endpoints?.[0]?.id;
   if (!endpointId) throw new Error("Neon API did not return a preview endpoint ID");
@@ -165,6 +205,8 @@ try {
     branchId: branchId || null,
     endpointId: endpointId || null,
     migrationIds,
+    staleBranchesDeleted,
+    branchLimitRetry,
     initialComputeConnectMs: initialConnectMs === null ? null : Number(initialConnectMs.toFixed(2)),
     idleObservedAt,
     coldWakeMs: coldWakeMs === null ? null : Number(coldWakeMs.toFixed(2)),
