@@ -10,11 +10,14 @@ on:
       - "apps/pos-web/**"
       - "packages/ui/**"
       - "tests/unit/contracts-ui.test.mjs"
+      - "tests/unit/mod-f-localization-ui.test.mjs"
+      - "tests/unit/mod-f-localization-landmarks.test.mjs"
       - "PRODUCT.md"
       - "DESIGN.md"
       - ".impeccable/**"
       - ".agents/skills/impeccable/**"
       - "tooling/scripts/foundation-design-evidence.mjs"
+      - "tooling/scripts/mod-f-design-evidence.mjs"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/foundation-design-ci.yml"
@@ -27,11 +30,14 @@ on:
       - "apps/pos-web/**"
       - "packages/ui/**"
       - "tests/unit/contracts-ui.test.mjs"
+      - "tests/unit/mod-f-localization-ui.test.mjs"
+      - "tests/unit/mod-f-localization-landmarks.test.mjs"
       - "PRODUCT.md"
       - "DESIGN.md"
       - ".impeccable/**"
       - ".agents/skills/impeccable/**"
       - "tooling/scripts/foundation-design-evidence.mjs"
+      - "tooling/scripts/mod-f-design-evidence.mjs"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/foundation-design-ci.yml"
@@ -47,7 +53,7 @@ permissions:
 jobs:
   evidence:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     env:
       CHROME_PATH: /usr/bin/google-chrome
     steps:
@@ -64,11 +70,16 @@ jobs:
           node .agents/skills/impeccable/scripts/context.mjs --target packages/ui/src/app-shell.ts | tee artifacts/foundation/impeccable-context.txt
       - name: Run browser, accessibility and deterministic design evidence
         run: npm run design:verify
+      - name: Run MOD-F browser and accessibility evidence
+        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.ref == 'module/localization-compliance-v1' }}
+        run: npm run mod-f:design:verify
       - name: Upload Impeccable evidence
+        if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: foundation-impeccable-evidence-${{ github.run_id }}
           path: |
             artifacts/foundation/impeccable-context.txt
             docs/architecture/foundation/design-evidence/
+            docs/architecture/mod-f/design-evidence/
           retention-days: 14
