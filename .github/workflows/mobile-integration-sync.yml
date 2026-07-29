@@ -1,0 +1,93 @@
+name: Mobile Integration Sync
+
+on:
+  push:
+    branches:
+      - module/store-companion-mobile-v1
+    paths:
+      - ".github/workflows/mobile-integration-sync.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: mobile-integration-sync-${{ github.repository }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  merge-reviewed-integration:
+    if: >-
+      ${{
+        github.repository == 'rahmatullahboss/store-management-pos' &&
+        github.ref == 'refs/heads/module/store-companion-mobile-v1' &&
+        github.actor != 'dependabot[bot]' &&
+        github.actor != 'github-actions[bot]'
+      }}
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+      - name: Merge current reviewed integration history
+        shell: bash
+        run: |
+          set -euo pipefail
+          mobile_branch="module/store-companion-mobile-v1"
+          integration_branch="program/integration-v1"
+          board_path="docs/agent-workpacks/program-board.yaml"
+
+          test "$(git branch --show-current)" = "${mobile_branch}"
+          remote_mobile_before="$(git ls-remote origin "refs/heads/${mobile_branch}" | awk '{print $1}')"
+          test "${remote_mobile_before}" = "${GITHUB_SHA}"
+
+          git fetch --no-tags origin \
+            "${mobile_branch}" \
+            "${integration_branch}"
+
+          if git merge-base --is-ancestor "origin/${integration_branch}" HEAD; then
+            echo "MOB-01 already contains the reviewed integration head."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          set +e
+          git merge \
+            --no-ff \
+            --no-commit \
+            "origin/${integration_branch}"
+          merge_status=$?
+          set -e
+
+          if (( merge_status != 0 )); then
+            mapfile -t conflicted_paths < <(git diff --name-only --diff-filter=U)
+            if (( ${#conflicted_paths[@]} != 1 )) || \
+               [[ "${conflicted_paths[0]}" != "${board_path}" ]]; then
+              printf 'Unexpected integration conflicts:\n' >&2
+              printf '%s\n' "${conflicted_paths[@]}" >&2
+              git merge --abort
+              exit 1
+            fi
+            git checkout --theirs -- "${board_path}"
+            git add "${board_path}"
+          fi
+
+          if [[ -n "$(git diff --name-only --diff-filter=U)" ]]; then
+            echo "Unresolved integration conflict remains." >&2
+            git merge --abort
+            exit 1
+          fi
+
+          integration_head="$(git rev-parse "origin/${integration_branch}")"
+          git commit \
+            -m "Sync reviewed Wave 2 integration into MOB-01" \
+            -m "Merge ${integration_head} through a two-parent merge commit. Resolve only the programme-owned program board from the integration side; preserve all mobile-owned paths. No reset, rebase, force update or history rewrite."
+
+          remote_mobile_after="$(git ls-remote origin "refs/heads/${mobile_branch}" | awk '{print $1}')"
+          test "${remote_mobile_after}" = "${GITHUB_SHA}"
+          git push origin "HEAD:${mobile_branch}"
