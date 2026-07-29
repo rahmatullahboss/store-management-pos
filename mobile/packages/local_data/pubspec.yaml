@@ -1,0 +1,22 @@
+name: store_companion_local_data
+description: Encrypted local persistence boundary for Store Companion.
+publish_to: none
+version: 0.1.0
+resolution: workspace
+
+environment:
+  sdk: ^3.12.0
+  flutter: ">=3.44.8"
+
+dependencies:
+  drift: 2.34.3
+  flutter:
+    sdk: flutter
+  flutter_secure_storage: 10.3.1
+  path: 1.9.1
+  path_provider: 2.1.6
+  sqlite3: 3.5.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
