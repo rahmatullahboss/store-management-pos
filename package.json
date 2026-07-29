@@ -47,5 +47,5 @@
     "db:verify:mod-b": "node tooling/scripts/verify-mod-b-schema.mjs"
   },
   "dependencies": { "@neondatabase/serverless": "1.1.0" },
-  "devDependencies": { "axe-core": "4.12.1", "puppeteer-core": "25.4.0", "typescript": "5.8.3" }
+  "devDependencies": { "axe-core": "4.12.1", "puppeteer-core": "25.4.0", "typescript": "7.0.2" }
 }
