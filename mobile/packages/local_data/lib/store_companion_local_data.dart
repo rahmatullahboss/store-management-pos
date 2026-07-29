@@ -31,6 +31,15 @@ final class LocalKeyMaterialException extends LocalDataSecurityException {
   const LocalKeyMaterialException(super.message);
 }
 
+/// Safe proof that the reviewed encrypted SQLite build is active.
+final class LocalCipherEvidence {
+  /// Creates non-secret cipher evidence.
+  const LocalCipherEvidence({required this.cipher});
+
+  /// Cipher implementation reported by SQLite3MultipleCiphers.
+  final String cipher;
+}
+
 /// A validated 256-bit database passphrase that redacts itself from diagnostics.
 final class LocalEncryptionKey {
   LocalEncryptionKey._(this._hex);
@@ -52,11 +61,7 @@ final class LocalEncryptionKey {
   /// The cipher capability is checked before the key is applied. The key is
   /// never returned to callers and this type deliberately redacts diagnostics.
   void configure(Database database) {
-    final cipher = database.select('PRAGMA cipher;');
-    if (cipher.isEmpty) {
-      throw const LocalCipherUnavailableException();
-    }
-
+    _cipherName(database);
     database.execute("PRAGMA key = '$_hex';");
     database.select('SELECT count(*) AS object_count FROM sqlite_master;');
     database.execute('PRAGMA foreign_keys = ON;');
@@ -75,20 +80,32 @@ final class LocalEncryptionKey {
   String toString() => 'LocalEncryptionKey(redacted)';
 }
 
+/// Runtime proof that the selected sqlite3 native asset supports encryption.
+abstract final class LocalCipherProbe {
+  /// Opens an isolated database, applies a redacted key and returns safe evidence.
+  static LocalCipherEvidence verifyBuild(LocalEncryptionKey key) {
+    final database = sqlite3.openInMemory();
+    try {
+      key.configure(database);
+      return LocalCipherEvidence(cipher: _cipherName(database));
+    } finally {
+      database.close();
+    }
+  }
+}
+
 /// Secure-storage-backed owner of one opaque local database key reference.
 final class FlutterSecureLocalKeyVault {
   /// Creates a vault for one opaque installation/workspace partition.
   FlutterSecureLocalKeyVault({
     required FlutterSecureStorage storage,
     required String storageReference,
-    Random? secureRandom,
   }) : _storage = storage,
-       _storageKey = _validatedStorageKey(storageReference),
-       _secureRandom = secureRandom ?? Random.secure();
+       _storageKey = _validatedStorageKey(storageReference);
 
   final FlutterSecureStorage _storage;
   final String _storageKey;
-  final Random _secureRandom;
+  final Random _secureRandom = Random.secure();
   Future<LocalEncryptionKey>? _pending;
 
   /// Reads the existing key or creates and verifies one new 256-bit key.
@@ -118,6 +135,18 @@ final class FlutterSecureLocalKeyVault {
 
 final RegExp _keyPattern = RegExp(r'^[0-9a-f]{64}$');
 final RegExp _storageReferencePattern = RegExp(r'^[A-Za-z0-9_-]{24,128}$');
+
+String _cipherName(Database database) {
+  final rows = database.select('PRAGMA cipher;');
+  if (rows.isEmpty || rows.first.values.isEmpty) {
+    throw const LocalCipherUnavailableException();
+  }
+  final name = rows.first.values.first?.toString().trim() ?? '';
+  if (name.isEmpty) {
+    throw const LocalCipherUnavailableException();
+  }
+  return name;
+}
 
 String _validatedStorageKey(String reference) {
   if (!_storageReferencePattern.hasMatch(reference)) {
