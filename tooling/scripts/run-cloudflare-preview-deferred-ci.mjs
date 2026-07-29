@@ -3,7 +3,7 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const { CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID } = process.env;
+const { CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, GITHUB_RUN_ID } = process.env;
 if (!CLOUDFLARE_API_TOKEN || !CLOUDFLARE_ACCOUNT_ID) {
   throw new Error("CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID are required for the Cloudflare preview supervisor");
 }
@@ -15,28 +15,13 @@ const reportPath = path.join(artifactsDir, "cloudflare-preview-report.json");
 const sourcePath = path.join(scriptsDir, "cloudflare-preview-ci.mjs");
 const runtimePath = path.join(scriptsDir, `.cloudflare-preview-deferred-${process.pid}.mjs`);
 const apiBase = `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}`;
-const workerPrefix = "store-pos-fnd-";
+const currentWorkerName = GITHUB_RUN_ID
+  ? `store-pos-fnd-${GITHUB_RUN_ID.replace(/[^0-9]/g, "").slice(-14)}`
+  : null;
 const timeoutMs = 240_000;
 
 async function sleep(milliseconds) {
   await new Promise((resolve) => setTimeout(resolve, milliseconds));
-}
-
-async function cloudflare(pathname, init = {}) {
-  const response = await fetch(`${apiBase}${pathname}`, {
-    ...init,
-    headers: {
-      Authorization: `Bearer ${CLOUDFLARE_API_TOKEN}`,
-      "Content-Type": "application/json",
-      ...init.headers
-    }
-  });
-  const payload = await response.json().catch(() => null);
-  if (!response.ok || payload?.success === false) {
-    const messages = payload?.errors?.map((error) => error.message).filter(Boolean).join("; ");
-    throw new Error(`Cloudflare API ${response.status}${messages ? `: ${messages}` : ""}`);
-  }
-  return payload?.result;
 }
 
 async function deleteWorker(workerName) {
@@ -53,12 +38,9 @@ async function deleteWorker(workerName) {
   console.log(`deleted stale Cloudflare CI worker ${workerName}`);
 }
 
-async function cleanupStaleWorkers() {
-  const scripts = await cloudflare("/workers/scripts");
-  const names = Array.isArray(scripts) ? scripts.map((script) => script.id || script.name).filter(Boolean) : [];
-  for (const workerName of names.filter((name) => name.startsWith(workerPrefix))) {
-    await deleteWorker(workerName);
-  }
+async function cleanupCurrentRunWorker() {
+  if (!currentWorkerName) return;
+  await deleteWorker(currentWorkerName);
 }
 
 async function readReport() {
@@ -91,7 +73,7 @@ async function stopProcessGroup(child) {
 
 await mkdir(artifactsDir, { recursive: true });
 await rm(reportPath, { force: true });
-await cleanupStaleWorkers();
+await cleanupCurrentRunWorker();
 
 const source = await readFile(sourcePath, "utf8");
 const eagerCleanup = `  try {\n    if (await deleteWorker()) console.log(\`deleted Cloudflare preview worker \${workerName}\`);\n  } catch (error) {\n    console.error(\`failed to delete Cloudflare preview worker \${workerName}: \${error.message}\`);\n    process.exitCode = 1;\n  }\n`;

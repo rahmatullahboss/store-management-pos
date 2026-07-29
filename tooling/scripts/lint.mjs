@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("../..", import.meta.url));
-const sourceRoots = ["apps", "packages"].map((name) => path.join(root, name));
+const sourceRoots = ["apps", "packages", "modules"].map((name) => path.join(root, name));
 const banned = [
   { pattern: /\bMath\.random\s*\(/, message: "Math.random is not allowed for identifiers or security-sensitive values" },
   { pattern: /\bparseFloat\s*\(/, message: "parseFloat is not allowed for exact money or quantity handling" },

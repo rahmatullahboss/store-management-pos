@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-29T10:57:50.775Z",
+  "generatedAt": "2026-07-29T14:02:34.335Z",
   "chromePath": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
   "source": "apps/marketing-web/src/index.html",
   "scenarios": [
@@ -11,16 +11,12 @@
       "screenshot": "docs/architecture/marketing/design-evidence/marketing-desktop.jpg",
       "billingState": {
         "annualPressed": "true",
-        "launchPrice": "৳29,900"
+        "launchPrice": "৳8,990"
       },
       "violations": [],
       "layout": {
         "viewportOverflow": false,
-        "rootScrollX": 0,
-        "intrinsicScrollWidth": 1440,
-        "viewportWidth": 1440,
-        "clipped": [],
-        "overflowers": [],
+        "overflowers": 0,
         "landmarks": {
           "main": 1,
           "nav": 1,
@@ -31,12 +27,12 @@
       },
       "keyboard": {
         "firstFocus": {
-          "tag": "A",
           "className": "skip-link",
           "outline": "solid"
         },
         "skipTarget": "main"
       },
+      "mobileNavigationPassed": true,
       "passed": true
     },
     {
@@ -47,16 +43,12 @@
       "screenshot": "docs/architecture/marketing/design-evidence/marketing-mobile.jpg",
       "billingState": {
         "annualPressed": "true",
-        "launchPrice": "৳29,900"
+        "launchPrice": "৳8,990"
       },
       "violations": [],
       "layout": {
         "viewportOverflow": false,
-        "rootScrollX": 0,
-        "intrinsicScrollWidth": 390,
-        "viewportWidth": 390,
-        "clipped": [],
-        "overflowers": [],
+        "overflowers": 0,
         "landmarks": {
           "main": 1,
           "nav": 1,
@@ -66,12 +58,12 @@
       },
       "keyboard": {
         "firstFocus": {
-          "tag": "A",
           "className": "skip-link",
           "outline": "solid"
         },
         "skipTarget": "main"
       },
+      "mobileNavigationPassed": true,
       "passed": true
     }
   ],

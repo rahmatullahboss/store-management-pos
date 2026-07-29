@@ -2,11 +2,17 @@ name: Foundation CI
 
 on:
   pull_request:
-    branches: [main]
+    branches:
+      - main
+      - program/integration-v1
+  push:
+    branches:
+      - main
+      - program/integration-v1
   workflow_dispatch:
 
 concurrency:
-  group: foundation-ci-${{ github.event.pull_request.head.sha || github.sha }}
+  group: foundation-ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -17,10 +23,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22
+          package-manager-cache: false
       - name: Install pinned dependencies
         run: npm ci --ignore-scripts
       - name: Format
@@ -43,6 +50,7 @@ jobs:
         run: npm audit --audit-level=high
 
   neon-preview:
+    if: ${{ github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: verify
@@ -51,16 +59,17 @@ jobs:
       NEON_PROJECT_ID: twilight-boat-26805962
       NEON_PARENT_BRANCH_ID: br-spring-grass-ax3ptydv
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22
+          package-manager-cache: false
       - run: npm ci --ignore-scripts
       - run: npm run build
       - run: npm run ci:neon-preview
       - name: Upload Neon preview evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: neon-foundation-${{ github.run_id }}
           path: |
@@ -70,22 +79,24 @@ jobs:
           retention-days: 14
 
   neon-recovery:
+    if: ${{ github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: verify
     env:
       NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22
+          package-manager-cache: false
       - run: npm ci --ignore-scripts
       - run: npm run build
       - run: npm run ci:neon-recovery
       - name: Upload Neon recovery evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: neon-recovery-${{ github.run_id }}
           path: artifacts/foundation/neon-recovery-report.json
@@ -93,6 +104,7 @@ jobs:
           retention-days: 14
 
   cloudflare-preview:
+    if: ${{ github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: verify
@@ -100,10 +112,11 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22
+          package-manager-cache: false
       - run: npm ci --ignore-scripts
       - run: npm run build
       - run: npm run ci:cloudflare-preview
@@ -113,7 +126,7 @@ jobs:
         run: npm run cleanup:cloudflare-preview
       - name: Upload Cloudflare Foundation evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: cloudflare-foundation-${{ github.run_id }}
           path: artifacts/foundation/cloudflare-*.json

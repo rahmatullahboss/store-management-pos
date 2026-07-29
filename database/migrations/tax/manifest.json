@@ -1,0 +1,16 @@
+{
+  "module": "MOD-A-TAX",
+  "version": 1,
+  "migrations": [
+    {
+      "id": "TAX-0001",
+      "file": "TAX-0001-core.sql",
+      "sha256": "67995519209b2698efa9787d78041a0c7a54139cfd1b9e2920798be3c5128ae2"
+    },
+    {
+      "id": "TAX-0002",
+      "file": "TAX-0002-publishing.sql",
+      "sha256": "fec575e0e91b0036eecfec2ed624b49dd7f06683c100809b34b31610cdb8f966"
+    }
+  ]
+}
