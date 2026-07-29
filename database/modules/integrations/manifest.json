@@ -1,0 +1,12 @@
+{
+  "module": "MOD-G-INTEGRATION",
+  "version": 1,
+  "order": 61,
+  "migrations": [
+    {
+      "id": "INT-0001",
+      "file": "INT-0001-integration-foundation.sql",
+      "sha256": "d54709eac1ff64f3ca3124fb748a455e36187743ba2b5e3a22337229a04936ec"
+    }
+  ]
+}
