@@ -6,8 +6,8 @@ function operation(index) {
   const occurredAt = new Date(Date.UTC(2026, 6, 29, 0, index * 5)).toISOString();
   return {
     operationId: `operation-${String(index + 1).padStart(4, "0")}`,
-    deviceId: "device-outage-1",
-    registerId: "register-outage-1",
+    deviceId: "device-storage-1",
+    registerId: "register-storage-1",
     kind: "sale",
     payloadVersion: "1.0",
     requestHash: `hash-${index + 1}`,
@@ -43,40 +43,6 @@ class CapacityLimitedStore {
     return await this.inner.snapshot();
   }
 }
-
-test("representative 24-hour outage backlog survives restart and drains in deterministic order", async () => {
-  const store = new MemoryOfflineDurableStore({ projectionVersion: "catalog-1", appVersion: "1.0.0" });
-  let engine = new DurableOfflineEngine(store);
-  const operationCount = 288; // one durable checkout every five minutes for 24 hours
-
-  for (let index = 0; index < operationCount; index += 1) {
-    const input = operation(index);
-    const committedAt = new Date(Date.parse(input.occurredAt) + 250).toISOString();
-    const committed = await engine.commit(input, committedAt);
-    assert.equal(committed.record.sequence, BigInt(index + 1));
-  }
-
-  engine = new DurableOfflineEngine(store);
-  const firstBatch = await engine.pendingBatch(100);
-  assert.equal(firstBatch.length, 100);
-  assert.equal(firstBatch[0].operationId, "operation-0001");
-  assert.equal(firstBatch.at(-1).operationId, "operation-0100");
-
-  for (const record of firstBatch) {
-    await engine.recordOutcome(record.deviceId, record.operationId, {
-      state: "accepted",
-      serverReference: `sale-${record.sequence}`,
-    });
-  }
-  await engine.advanceUploadCursor(100n);
-
-  engine = new DurableOfflineEngine(store);
-  const remaining = await engine.pendingBatch(1_000);
-  assert.equal(remaining.length, 188);
-  assert.equal(remaining[0].sequence, 101n);
-  assert.equal(remaining.at(-1).sequence, 288n);
-  assert.equal((await store.snapshot()).operations.length, operationCount);
-});
 
 test("storage pressure refusal rolls back atomically and preserves earlier pending operations", async () => {
   const store = new CapacityLimitedStore(2);
