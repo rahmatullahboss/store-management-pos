@@ -23,6 +23,46 @@ void main() {
     },
   );
 
+  test('compile-time development and staging defaults are deterministic', () {
+    final development = MobileRuntimeConfig.fromEnvironment(
+      environmentName: 'development',
+    );
+    final staging = MobileRuntimeConfig.fromEnvironment(
+      environmentName: 'staging',
+    );
+
+    expect(development.applicationId, 'com.ozzyl.storecompanion.dev');
+    expect(staging.applicationId, 'com.ozzyl.storecompanion.staging');
+    expect(staging.environment, MobileEnvironment.staging);
+  });
+
+  test('production requires a complete reviewed endpoint set', () {
+    expect(
+      () => MobileRuntimeConfig.fromEnvironment(
+        environmentName: 'production',
+      ),
+      throwsA(isA<RuntimeConfigurationException>()),
+    );
+    expect(
+      () => MobileRuntimeConfig.fromEnvironment(
+        environmentName: 'production',
+        apiBaseUri: 'https://api.store.ozzyl.com/v1/',
+      ),
+      throwsA(isA<RuntimeConfigurationException>()),
+    );
+
+    final production = MobileRuntimeConfig.fromEnvironment(
+      environmentName: 'production',
+      apiBaseUri: 'https://api.store.ozzyl.com/v1/',
+      authorizationEndpoint: 'https://identity.ozzyl.com/authorize',
+      redirectUri: 'com.ozzyl.storecompanion://oauth/callback',
+      deepLinkHosts: 'links.ozzyl.com,actions.ozzyl.com',
+    );
+
+    expect(production.isProduction, isTrue);
+    expect(production.allowedDeepLinkHosts, hasLength(2));
+  });
+
   test('rejects insecure API endpoint', () {
     expect(
       () => MobileRuntimeConfig(
