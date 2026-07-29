@@ -61,7 +61,7 @@ if (!/receipt_snapshots_append_only/u.test(pos)) throw new Error("POS receipt sn
 if (!/checkout_operation_identity_immutable/u.test(pos)) throw new Error("POS checkout identity immutability guard is missing");
 if (!/payment_state <> 'unknown' OR status IN \('pending','unknown','review'\)/u.test(pos)) throw new Error("POS unknown-payment retry guard is missing");
 const cash = await readFile(path.join(root, "database/modules/cash/migrations/CSH-0001-cash-ledger.sql"), "utf8");
-if (!/cash_events_append_only/u.test(cash)) throw new Error("Cash event append-only trigger is missing");
+if (!/cash_events_append_only/u.test(cash)) throw new Error("Cash event ledger append-only trigger is missing");
 if (!/expected_minor/u.test(cash) || !/variance_minor/u.test(cash)) throw new Error("Cash reconciliation reconstruction is missing");
 const cashControls = await readFile(path.join(root, "database/modules/cash/migrations/CSH-0002-reversal-controls.sql"), "utf8");
 if (!/cash_events_one_reversal_idx/u.test(cashControls)) throw new Error("Cash reversal uniqueness guard is missing");
@@ -89,5 +89,35 @@ if (!/Only published products can enter/u.test(await readFile(path.join(root, "p
 }
 if (!/REVOKE INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA storefront FROM store_app_runtime/u.test(storefrontCore)) {
   throw new Error("Storefront runtime direct writes must be revoked");
+}
+const storefrontCommands = await readFile(path.join(root, "database/modules/storefront/migrations/STF-0002-storefront-commands.sql"), "utf8");
+if (!/storefront_command_receipts_append_only/u.test(storefrontCommands)) throw new Error("Storefront command receipts must be append-only");
+if (!/storefront command idempotency conflict/u.test(storefrontCommands)) throw new Error("Storefront idempotency conflict guard is missing");
+if ((storefrontCommands.match(/pg_advisory_xact_lock/gu) ?? []).length < 3) throw new Error("Storefront lifecycle commands are not sufficiently serialized");
+for (const command of [
+  "create_storefront",
+  "transition_storefront",
+  "create_sales_channel",
+  "transition_sales_channel",
+  "set_product_publication",
+  "register_domain",
+  "record_domain_verification",
+  "transition_domain",
+  "publish_theme_revision",
+]) {
+  if (!storefrontCommands.includes(`FUNCTION storefront.${command}`)) throw new Error(`Storefront command ${command} is missing`);
+}
+if (!/INSERT INTO platform\.audit_events/u.test(storefrontCommands) || !/INSERT INTO platform\.outbox_events/u.test(storefrontCommands)) {
+  throw new Error("Storefront transactional audit/outbox evidence is missing");
+}
+if (!/storefront\.cache\.generation_advanced\.v1/u.test(storefrontCommands)) throw new Error("Storefront cache invalidation event is missing");
+if (!/REVOKE ALL ON FUNCTION storefront\.publish_command_evidence\(\) FROM PUBLIC/u.test(storefrontCommands)) {
+  throw new Error("Storefront evidence publisher must not be publicly executable");
+}
+if (!/GRANT EXECUTE ON FUNCTION storefront\.set_product_publication/u.test(storefrontCommands)) {
+  throw new Error("Storefront public command grants are missing");
+}
+if (!/REVOKE INSERT, UPDATE, DELETE ON storefront\.command_receipts FROM store_app_runtime/u.test(storefrontCommands)) {
+  throw new Error("Storefront runtime command receipt writes must be revoked");
 }
 console.log(`validated ${ids.size} module migrations across ${counts.size} workpack groups`);
