@@ -15,8 +15,8 @@
     },
     {
       "id": "CSH-0003",
-      "file": "CSH-0004-function-privilege-hardening.sql",
-      "sha256": "e4cf0d7c0617bf0c5e959c9023a3547fb4dd8cec7e6e5bcdeee262f36d5b16d9"
+      "file": "CSH-0003-function-privilege-hardening.sql",
+      "sha256": "43c2aae378255a628bc6c5d1b7d7dd9bf6f9552641a1837f3003c8e6aa10e58e"
     },
     {
       "id": "CSH-0004",
