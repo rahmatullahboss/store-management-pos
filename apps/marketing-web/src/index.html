@@ -1,0 +1,311 @@
+<!--
+THESIS: A single transaction becomes the page's navigation spine, proving that this platform connects checkout, stock, tax, cash and accounting instead of presenting another generic POS feature grid.
+OWN-WORLD: Operations Ledger marketing mode — stock-room green, warm ledger paper, receipt white, amber exception signals, exact numeric alignment and continuous trace lines.
+STORY: A retailer recognises the daily operating problem, watches one sale propagate safely through the system, sees the capabilities and pricing that fit their scale, then chooses a launch plan or tailored conversation.
+FIRST VIEWPORT: A bold transaction-led promise occupies the left; an illustrative receipt and live effect chain occupy the right; the primary action is visible beside the first sentence.
+FORM: Transaction-to-ledger walkthrough, fourth in the grounded structural set; sticky trace spine staging; surface seed dae064e2.
+FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
+-->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="An international store management and POS platform connecting products, stock, sales, payments, accounting and reporting across every location." />
+    <meta name="theme-color" content="#14251e" />
+    <title>Store Operating System | Ozzyl IT Services</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="./script.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="site-header" data-header>
+      <a class="brand" href="#top" aria-label="Ozzyl IT Services Store Operating System home">
+        <span class="brand__mark" aria-hidden="true">OS</span>
+        <span class="brand__copy"><strong>Store Operating System</strong><span>by Ozzyl IT Services</span></span>
+      </a>
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="primary-navigation" data-nav-toggle>
+        <span class="visually-hidden">Toggle navigation</span>
+        <span aria-hidden="true"></span><span aria-hidden="true"></span>
+      </button>
+      <nav class="primary-navigation" id="primary-navigation" aria-label="Primary" data-navigation>
+        <a href="#platform">Platform</a>
+        <a href="#capabilities">Capabilities</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#questions">Questions</a>
+      </nav>
+      <a class="header-action" href="#pricing">View launch plans</a>
+    </header>
+
+    <main id="main" tabindex="-1">
+      <section class="hero" id="top" aria-labelledby="hero-title">
+        <div class="hero__copy">
+          <h1 id="hero-title">One sale. Every operational effect. Fully traceable.</h1>
+          <p class="hero__lead">Run checkout, products, stock, purchasing, customers, payments, accounting and reporting from one reliable operating system built for one store today and many locations tomorrow.</p>
+          <div class="hero__actions">
+            <a class="button button--primary" href="#pricing">Choose a launch plan</a>
+            <a class="button button--quiet" href="#platform">See how a sale flows</a>
+          </div>
+          <p class="hero__note"><span aria-hidden="true">●</span> Early-access positioning and recommended launch pricing. Final commercial terms should be validated with pilot customers.</p>
+          <dl class="hero__assurances" aria-label="Platform assurances">
+            <div><dt>Operate</dt><dd>Online and through controlled connection loss</dd></div>
+            <div><dt>Control</dt><dd>Role permissions, approvals and business dates</dd></div>
+            <div><dt>Trace</dt><dd>Receipt to stock, tax, payment and journal effect</dd></div>
+          </dl>
+        </div>
+
+        <div class="hero-stage" aria-label="Illustrative sale trace">
+          <p class="synthetic-label">Illustrative interface · synthetic data</p>
+          <article class="receipt" aria-labelledby="receipt-title">
+            <div class="receipt__top"><span>Dhaka Central</span><span>Register 02</span></div>
+            <h2 id="receipt-title">Sale confirmed</h2>
+            <ul>
+              <li><span>Cotton overshirt</span><strong>৳2,450.00</strong></li>
+              <li><span>Canvas carry bag</span><strong>৳620.00</strong></li>
+            </ul>
+            <dl>
+              <div><dt>Subtotal</dt><dd>৳3,070.00</dd></div>
+              <div><dt>Tax</dt><dd>৳0.00</dd></div>
+              <div class="receipt__total"><dt>Total</dt><dd>৳3,070.00</dd></div>
+            </dl>
+            <div class="receipt__footer"><span>SALE-2026-0148</span><span>Paid · Cash</span></div>
+          </article>
+          <ol class="effect-chain" aria-label="Effects created by the sale">
+            <li class="is-complete"><span class="effect-chain__mark" aria-hidden="true">✓</span><div><strong>Payment allocated</strong><span>Cash tender recorded against the sale</span></div><small>Recorded</small></li>
+            <li class="is-complete"><span class="effect-chain__mark" aria-hidden="true">✓</span><div><strong>Stock movement posted</strong><span>Two item quantities leave Store 01</span></div><small>Posted</small></li>
+            <li class="is-complete"><span class="effect-chain__mark" aria-hidden="true">✓</span><div><strong>Tax decision preserved</strong><span>Country-pack rule and calculation version retained</span></div><small>Versioned</small></li>
+            <li class="is-active"><span class="effect-chain__mark" aria-hidden="true">↳</span><div><strong>Journal effect prepared</strong><span>Balanced entries wait for the posting policy</span></div><small>Trace</small></li>
+          </ol>
+        </div>
+      </section>
+
+      <section class="proof-strip" aria-label="Core platform scope">
+        <p>Built around operational correctness, not disconnected feature screens.</p>
+        <ul>
+          <li>Offline-aware POS</li>
+          <li>Immutable stock and finance ledgers</li>
+          <li>Multi-store and multi-warehouse</li>
+          <li>Internationalisation-ready</li>
+        </ul>
+      </section>
+
+      <section class="transaction-story" id="platform" aria-labelledby="platform-title">
+        <div class="transaction-story__intro">
+          <h2 id="platform-title">Follow one transaction through the whole business.</h2>
+          <p>Most systems stop at a receipt. This platform is designed so every important amount and quantity can reveal where it came from, which rule changed it and what happened next.</p>
+        </div>
+
+        <div class="story-layout">
+          <aside class="story-spine" aria-label="Transaction stages">
+            <div class="story-spine__summary">
+              <span class="story-spine__reference">SALE-2026-0148</span>
+              <strong data-stage-title>Checkout confirmed</strong>
+              <span data-stage-status>Source document created</span>
+            </div>
+            <ol>
+              <li class="is-current" data-stage-link="checkout"><span>Checkout</span></li>
+              <li data-stage-link="inventory"><span>Inventory</span></li>
+              <li data-stage-link="finance"><span>Finance</span></li>
+              <li data-stage-link="reporting"><span>Reporting</span></li>
+            </ol>
+          </aside>
+
+          <div class="story-chapters">
+            <article class="story-chapter" id="checkout" data-stage="checkout" data-title="Checkout confirmed" data-status="Source document created">
+              <div class="story-chapter__copy">
+                <h3>Fast at the counter, deliberate behind it.</h3>
+                <p>Cashiers get barcode-first checkout, customer selection, discounts, returns, multiple tenders and visible sync state. Sensitive actions can require the right role or approval without slowing every ordinary sale.</p>
+                <ul class="capability-list">
+                  <li>Keyboard- and barcode-first workflows</li>
+                  <li>Cash, card and configurable tender handling</li>
+                  <li>Shift, register and business-date context</li>
+                  <li>Controlled offline queue and synchronisation</li>
+                </ul>
+              </div>
+              <div class="chapter-evidence chapter-evidence--checkout" aria-label="Illustrative checkout controls">
+                <div class="scan-line"><span aria-hidden="true">⌁</span><span>Scan barcode or search products</span><kbd>Enter</kbd></div>
+                <div class="mini-cart"><span>2 items</span><strong>Pay ৳3,070.00</strong><kbd>F8</kbd></div>
+                <p><span aria-hidden="true">✓</span> Stock and ledger effects post only after confirmation.</p>
+              </div>
+            </article>
+
+            <article class="story-chapter" id="inventory" data-stage="inventory" data-title="Inventory updated" data-status="Immutable movement recorded">
+              <div class="story-chapter__copy">
+                <h3>Know what moved, where it moved and why.</h3>
+                <p>Available stock is derived from traceable movements across stores and warehouses. Purchasing, receiving, transfers, counts, reservations and adjustments stay connected to the source operation.</p>
+                <ul class="capability-list">
+                  <li>Products, variants, units, barcodes and price books</li>
+                  <li>Warehouses, transfers, counts and adjustments</li>
+                  <li>Suppliers, requisitions, purchase orders and receiving</li>
+                  <li>Costing and landed-cost workflows</li>
+                </ul>
+              </div>
+              <div class="chapter-evidence movement-ledger" aria-label="Illustrative stock movement ledger">
+                <div class="movement-ledger__head"><span>Movement</span><span>Location</span><span>Quantity</span></div>
+                <div><strong>Sale issue</strong><span>Dhaka Central</span><b>−1 pcs</b></div>
+                <div><strong>Sale issue</strong><span>Dhaka Central</span><b>−1 pcs</b></div>
+                <div class="movement-ledger__balance"><span>Available after posting</span><strong>18 pcs</strong></div>
+              </div>
+            </article>
+
+            <article class="story-chapter" id="finance" data-stage="finance" data-title="Financial effect posted" data-status="Balanced journal preserved">
+              <div class="story-chapter__copy">
+                <h3>Operational work and accounting share the same source.</h3>
+                <p>Payments, refunds, settlements, receivables, payables and journals are designed to reconcile back to the transaction that created them. Corrections happen through reversals or adjustments rather than silent edits.</p>
+                <ul class="capability-list">
+                  <li>Payment allocations, refunds and settlements</li>
+                  <li>Double-entry ledger and chart of accounts</li>
+                  <li>Cash, bank and reconciliation workflows</li>
+                  <li>Period controls and traceable corrections</li>
+                </ul>
+              </div>
+              <div class="chapter-evidence journal" aria-label="Illustrative balanced journal">
+                <div class="journal__row journal__row--head"><span>Account</span><span>Debit</span><span>Credit</span></div>
+                <div class="journal__row"><strong>Cash on hand</strong><span>৳3,070.00</span><span>—</span></div>
+                <div class="journal__row"><strong>Sales revenue</strong><span>—</span><span>৳3,070.00</span></div>
+                <div class="journal__row journal__row--total"><strong>Balanced</strong><span>৳3,070.00</span><span>৳3,070.00</span></div>
+              </div>
+            </article>
+
+            <article class="story-chapter" id="reporting" data-stage="reporting" data-title="Reporting refreshed" data-status="Every number keeps a drill-through path">
+              <div class="story-chapter__copy">
+                <h3>See the operating picture without losing the evidence.</h3>
+                <p>Owners and managers can move from branch-level summaries to the documents, movements, approvals and journal effects underneath them. Reports are designed to explain numbers, not merely display them.</p>
+                <ul class="capability-list">
+                  <li>Sales, margin, stock, tax, cash and finance reports</li>
+                  <li>Role-specific dashboards and exception queues</li>
+                  <li>Exports, APIs, webhooks and audit events</li>
+                  <li>Tenant, legal entity, location and business-date context</li>
+                </ul>
+              </div>
+              <div class="chapter-evidence trace-panel" aria-label="Illustrative reporting trace">
+                <div><span>Source</span><strong>SALE-2026-0148</strong></div>
+                <div><span>Movement</span><strong>STOCK-2026-8921</strong></div>
+                <div><span>Payment</span><strong>PAY-2026-3318</strong></div>
+                <div><span>Journal</span><strong>JRN-2026-7750</strong></div>
+                <a href="#capabilities">Open capability map <span aria-hidden="true">→</span></a>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="capability-map" id="capabilities" aria-labelledby="capabilities-title">
+        <div class="capability-map__heading">
+          <h2 id="capabilities-title">One operating system, shaped around the people doing the work.</h2>
+          <p>Complex controls stay available without forcing every role to navigate the whole system.</p>
+        </div>
+        <div class="role-rail" role="list">
+          <article role="listitem"><span class="role-rail__mark" aria-hidden="true">C</span><div><h3>Cashiers</h3><p>Scan, sell, return, hold, receive payment and keep working through controlled connectivity loss.</p></div><strong>POS</strong></article>
+          <article role="listitem"><span class="role-rail__mark" aria-hidden="true">M</span><div><h3>Managers</h3><p>Approve exceptions, manage shifts, review stock risks and close the day with clear context.</p></div><strong>Control</strong></article>
+          <article role="listitem"><span class="role-rail__mark" aria-hidden="true">W</span><div><h3>Warehouse teams</h3><p>Receive, count, transfer, reserve, pick and ship against exact documents and quantities.</p></div><strong>Stock</strong></article>
+          <article role="listitem"><span class="role-rail__mark" aria-hidden="true">F</span><div><h3>Finance teams</h3><p>Reconcile payments, cash, bank, receivables, payables and journals without rebuilding the story.</p></div><strong>Ledger</strong></article>
+          <article role="listitem"><span class="role-rail__mark" aria-hidden="true">O</span><div><h3>Owners</h3><p>Compare locations, understand exceptions and drill from the summary to the operational source.</p></div><strong>Insight</strong></article>
+        </div>
+      </section>
+
+      <section class="operating-principles" aria-labelledby="principles-title">
+        <div class="operating-principles__copy">
+          <h2 id="principles-title">Designed for the conditions real stores operate in.</h2>
+          <p>Busy counters, mixed devices, multiple locations, changing teams and temporary network failure are product constraints—not edge cases left for later.</p>
+        </div>
+        <dl>
+          <div><dt>Connection drops</dt><dd>Offline is a visible operating state with a durable local queue, explicit risk and idempotent synchronisation.</dd></div>
+          <div><dt>Teams grow</dt><dd>Permissions, approvals and role-focused views reveal only the complexity each person needs.</dd></div>
+          <div><dt>Locations multiply</dt><dd>Store, warehouse, register, legal entity, timezone and business date remain first-class context.</dd></div>
+          <div><dt>Markets change</dt><dd>Country packs carry tax, numbering, fiscal and localisation rules without redesigning the core.</dd></div>
+        </dl>
+      </section>
+
+      <section class="pricing" id="pricing" aria-labelledby="pricing-title">
+        <div class="pricing__heading">
+          <div>
+            <h2 id="pricing-title">Recommended launch pricing that grows by operating scale.</h2>
+            <p>Use locations and registers as the primary value metric; keep ordinary staff collaboration inside each plan instead of charging for every user.</p>
+          </div>
+          <div class="billing-switch" aria-label="Billing period">
+            <button type="button" class="is-active" aria-pressed="true" data-billing="monthly">Monthly</button>
+            <button type="button" aria-pressed="false" data-billing="annual">Annual · 2 months included</button>
+          </div>
+        </div>
+
+        <div class="pricing-grid">
+          <article class="plan">
+            <div><h3>Launch</h3><p>For a single retail location moving from spreadsheets or disconnected billing tools.</p></div>
+            <p class="plan__price"><span data-monthly="৳2,990" data-annual="৳29,900">৳2,990</span><small data-monthly-suffix="/ month" data-annual-suffix="/ year">/ month</small></p>
+            <dl><div><dt>Stores</dt><dd>1</dd></div><div><dt>Registers</dt><dd>2</dd></div><div><dt>Staff access</dt><dd>5</dd></div></dl>
+            <ul>
+              <li>POS, products, pricing and customers</li>
+              <li>Core inventory and purchasing</li>
+              <li>Cash and daily operating reports</li>
+              <li>Standard onboarding support</li>
+            </ul>
+            <a class="button button--quiet button--full" href="#contact">Discuss Launch</a>
+          </article>
+
+          <article class="plan plan--recommended">
+            <div class="plan__flag">Recommended</div>
+            <div><h3>Growth</h3><p>For growing retailers that need connected branches, control workflows and accounting.</p></div>
+            <p class="plan__price"><span data-monthly="৳7,990" data-annual="৳79,900">৳7,990</span><small data-monthly-suffix="/ month" data-annual-suffix="/ year">/ month</small></p>
+            <dl><div><dt>Stores</dt><dd>3</dd></div><div><dt>Registers</dt><dd>8</dd></div><div><dt>Staff access</dt><dd>20</dd></div></dl>
+            <ul>
+              <li>Everything in Launch</li>
+              <li>Transfers, counts and advanced purchasing</li>
+              <li>Approvals, finance and reconciliation</li>
+              <li>Advanced reports and priority support</li>
+            </ul>
+            <a class="button button--primary button--full" href="#contact">Discuss Growth</a>
+          </article>
+
+          <article class="plan">
+            <div><h3>Scale</h3><p>For established multi-branch operations that need stronger governance and integrations.</p></div>
+            <p class="plan__price"><span data-monthly="৳19,900" data-annual="৳199,000">৳19,900</span><small data-monthly-suffix="/ month" data-annual-suffix="/ year">/ month</small></p>
+            <dl><div><dt>Stores</dt><dd>10</dd></div><div><dt>Registers</dt><dd>25</dd></div><div><dt>Staff access</dt><dd>75</dd></div></dl>
+            <ul>
+              <li>Everything in Growth</li>
+              <li>Multi-entity controls and period close</li>
+              <li>API, webhooks and integration governance</li>
+              <li>Migration planning and dedicated success review</li>
+            </ul>
+            <a class="button button--quiet button--full" href="#contact">Discuss Scale</a>
+          </article>
+        </div>
+
+        <div class="enterprise-band">
+          <div><h3>Enterprise and country rollouts</h3><p>Custom locations, legal entities, country packs, SSO, migration, support and integration requirements.</p></div>
+          <a class="button button--inverse" href="#contact">Request a tailored proposal</a>
+        </div>
+        <p class="pricing__note">Pricing is a recommended launch model, not an existing customer commitment. Hardware, payment-processing fees, VAT, custom integrations, data migration and on-site implementation are quoted separately.</p>
+      </section>
+
+      <section class="faq" id="questions" aria-labelledby="questions-title">
+        <div class="faq__heading"><h2 id="questions-title">Questions retailers ask before changing systems.</h2><p>Clear boundaries make a safer implementation.</p></div>
+        <div class="faq__list">
+          <details><summary>Can the POS continue when the internet connection drops?</summary><p>The product is designed around a controlled offline operating mode. Eligible operations are stored in a durable local queue, the interface clearly shows offline risk, and synchronisation is idempotent when connectivity returns. The exact offline scope should be confirmed during onboarding.</p></details>
+          <details><summary>Can one account manage multiple stores and warehouses?</summary><p>Yes. Store, warehouse, register, legal entity, timezone and business date are first-class dimensions. Plan limits define the included operating scale, while larger rollouts are quoted separately.</p></details>
+          <details><summary>Does it include accounting, not only sales reports?</summary><p>The platform scope includes payment allocation, refunds, settlements, double-entry accounting, receivables, payables, banking, reconciliation and period controls. Each rollout should enable modules in a controlled sequence based on readiness.</p></details>
+          <details><summary>Will existing product and stock data be migrated?</summary><p>Migration can cover products, variants, barcodes, units, opening stock, suppliers, customers and selected opening balances. Data quality, mapping and verification effort are assessed and quoted separately.</p></details>
+          <details><summary>Is it suitable for restaurants or pharmacies?</summary><p>The initial core targets general retail, grocery without complex regulated workflows, fashion, electronics, home goods, cosmetics, specialty retail and basic wholesale. Restaurant, pharmacy, fuel, hospitality, manufacturing and repair workflows require later extension packs.</p></details>
+        </div>
+      </section>
+
+      <section class="closing" id="contact" aria-labelledby="closing-title">
+        <div>
+          <h2 id="closing-title">Start with the operating reality of one location. Build toward the whole business.</h2>
+          <p>Review your current checkout, stock, purchasing and finance workflow with Ozzyl IT Services, then choose a phased launch scope and final commercial proposal.</p>
+        </div>
+        <div class="closing__actions">
+          <a class="button button--inverse" href="#pricing">Review launch plans</a>
+          <p>Connect this CTA to the approved Ozzyl sales channel before public launch.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div><strong>Store Operating System</strong><span>A product initiative by Ozzyl IT Services</span></div>
+      <p>Working product identity · Early-access marketing surface</p>
+      <a href="#top">Back to top <span aria-hidden="true">↑</span></a>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,83 @@
+{
+  "generatedAt": "2026-07-29T10:57:50.775Z",
+  "chromePath": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  "source": "apps/marketing-web/src/index.html",
+  "scenarios": [
+    {
+      "id": "marketing-desktop",
+      "width": 1440,
+      "height": 1000,
+      "mobileNavigation": false,
+      "screenshot": "docs/architecture/marketing/design-evidence/marketing-desktop.jpg",
+      "billingState": {
+        "annualPressed": "true",
+        "launchPrice": "৳29,900"
+      },
+      "violations": [],
+      "layout": {
+        "viewportOverflow": false,
+        "rootScrollX": 0,
+        "intrinsicScrollWidth": 1440,
+        "viewportWidth": 1440,
+        "clipped": [],
+        "overflowers": [],
+        "landmarks": {
+          "main": 1,
+          "nav": 1,
+          "header": 1,
+          "footer": 1
+        },
+        "scaledTextViewportOverflow": false
+      },
+      "keyboard": {
+        "firstFocus": {
+          "tag": "A",
+          "className": "skip-link",
+          "outline": "solid"
+        },
+        "skipTarget": "main"
+      },
+      "passed": true
+    },
+    {
+      "id": "marketing-mobile",
+      "width": 390,
+      "height": 844,
+      "mobileNavigation": true,
+      "screenshot": "docs/architecture/marketing/design-evidence/marketing-mobile.jpg",
+      "billingState": {
+        "annualPressed": "true",
+        "launchPrice": "৳29,900"
+      },
+      "violations": [],
+      "layout": {
+        "viewportOverflow": false,
+        "rootScrollX": 0,
+        "intrinsicScrollWidth": 390,
+        "viewportWidth": 390,
+        "clipped": [],
+        "overflowers": [],
+        "landmarks": {
+          "main": 1,
+          "nav": 1,
+          "header": 1,
+          "footer": 1
+        }
+      },
+      "keyboard": {
+        "firstFocus": {
+          "tag": "A",
+          "className": "skip-link",
+          "outline": "solid"
+        },
+        "skipTarget": "main"
+      },
+      "passed": true
+    }
+  ],
+  "summary": {
+    "passed": 2,
+    "total": 2,
+    "axeViolations": 0
+  }
+}
