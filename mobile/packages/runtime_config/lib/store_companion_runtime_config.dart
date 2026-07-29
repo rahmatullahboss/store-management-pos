@@ -137,12 +137,8 @@ final class MobileRuntimeConfig {
     authorizationEndpoint: Uri.parse(
       'https://identity.store-companion.staging.test/authorize',
     ),
-    redirectUri: Uri.parse(
-      'com.ozzyl.storecompanion.staging://oauth/callback',
-    ),
-    allowedDeepLinkHosts: const <String>{
-      'links.store-companion.staging.test',
-    },
+    redirectUri: Uri.parse('com.ozzyl.storecompanion.staging://oauth/callback'),
+    allowedDeepLinkHosts: const <String>{'links.store-companion.staging.test'},
   );
 
   static final RegExp _applicationIdPattern = RegExp(
