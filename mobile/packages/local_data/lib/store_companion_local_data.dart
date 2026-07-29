@@ -1,6 +1,7 @@
 /// Encrypted local persistence primitives for Store Companion.
 library;
 
+import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -85,14 +86,18 @@ final class LocalEncryptionKey {
 
 /// Runtime proof that the selected sqlite3 native asset supports encryption.
 abstract final class LocalCipherProbe {
-  /// Opens an isolated database, applies a redacted key and returns safe evidence.
+  /// Opens an isolated file database, applies a redacted key and returns safe evidence.
   static LocalCipherEvidence verifyBuild(LocalEncryptionKey key) {
-    final database = sqlite3.openInMemory();
+    final directory = Directory.systemTemp.createTempSync(
+      'store-companion-cipher-probe-',
+    );
+    final database = sqlite3.open('${directory.path}/probe.sqlite3');
     try {
       key.configure(database);
       return LocalCipherEvidence(cipher: _cipherName(database));
     } finally {
       database.close();
+      directory.deleteSync(recursive: true);
     }
   }
 }
