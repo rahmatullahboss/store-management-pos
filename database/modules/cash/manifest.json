@@ -1,7 +1,7 @@
 {
   "module": "MOD-D-CASH",
   "version": 1,
-  "order": 21,
+  "order": 41,
   "migrations": [
     {
       "id": "CSH-0001",
