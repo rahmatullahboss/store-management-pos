@@ -4,20 +4,22 @@
 **Repository:** `rahmatullahboss/store-management-pos`  
 **Git branch:** `module/localization-compliance-v1`  
 **Assigned worktree:** `.worktrees/localization-compliance`  
-**Secured Wave 1 baseline:** `6badafe06a9e0013d12ba036160c915b48fe1c13`  
+**Original secured Wave 1 baseline:** `6badafe06a9e0013d12ba036160c915b48fe1c13`  
+**Integrated MOD-D sync commit:** `17d32e1e4d09106de896904f16d46eeebe418f73`  
+**Current integration baseline:** `f6a04b7fea55e40fa9cc050759f622404ab5a195`  
 **Neon project:** `twilight-boat-26805962`  
 **Neon branch:** `dev/module-localization-compliance` (`br-polished-flower-ax2ph8wp`)  
 **Neon parent:** `br-spring-grass-ax3ptydv`  
 **Draft pull request:** `#29`  
 **Workpack state:** `active`
 
-## Activation evidence
+## Activation and sync evidence
 
-- The empty remote branch was fast-forwarded without force to the secured Wave 1 `main` baseline.
-- The assigned Neon branch is an isolated, non-default development branch with no pre-existing module-owned schema changes.
-- MOD-A, MOD-C and MOD-E dependencies are consumed from the integrated baseline.
-- MOD-D dependencies use frozen contracts and approved simulators; no unmerged MOD-D implementation is imported.
-- Existing unrelated work was not reset, discarded, overwritten or force-pushed.
+- The original empty remote branch was fast-forwarded without force to the secured Wave 1 baseline.
+- MOD-D is now serially integrated; MOD-F was synchronized through a two-parent merge commit without reset, rebase, force push or loss of its 17 existing commits.
+- The synchronized branch is ahead of and no longer behind `program/integration-v1`.
+- The programme board and shared CI/tooling come from the latest integration tree; only MOD-F-owned domain, test and checkpoint files were replayed.
+- The assigned Neon branch is an isolated, non-default development branch; production credentials and production data remain prohibited.
 - The complete MOD-F workpack remains under one owner without subtask agents.
 
 ## Completed checkpoint: localization and compliance domain foundation
@@ -31,13 +33,20 @@
 - Published legal document, fiscal/e-invoice, legal numbering, privacy, retention and data-residency contracts.
 - Implemented immutable collision-free legal-number allocation with operation replay behavior and explicit offline restrictions.
 - Implemented retention-safe privacy disposition where legal evidence is preserved and erasure becomes anonymization when allowed.
-- Added unit coverage for Bengali/English fallback, Arabic RTL, CJK direction, BDT cash rounding, Dhaka business-day boundaries, effective-date overlap, primary/synthetic country packs, legal numbering and privacy retention.
+- Added unit coverage for Bengali/English fallback, Arabic RTL, CJK, BDT cash rounding, Dhaka business-day boundaries, effective-date overlap, primary/synthetic country packs, legal numbering and privacy retention.
+
+## Integrated dependencies
+
+- MOD-A catalog/pricing/tax contracts are integrated.
+- MOD-C customer/sales/fulfillment contracts are integrated.
+- MOD-D POS/offline/hardware/receipt contracts are integrated and may now replace frozen simulators at owned adapter boundaries.
+- MOD-E payment/accounting/banking contracts are integrated.
 
 ## Current verification
 
-- Draft PR #29 is open and mergeable.
-- Core verify gate passes format, lint, architecture boundaries, strict TypeScript, build/unit tests, secret scan, licence register, CycloneDX SBOM and high-severity dependency audit.
-- Neon preview/recovery and Cloudflare preview/runtime gates are pending completion for the latest checkpoint.
+- Draft PR #29 remains the active review surface.
+- Branch ancestry is clean: synchronized MOD-F is ahead of and not behind `program/integration-v1`.
+- A fresh full GitHub gate is triggered by the synchronization and documentation checkpoints.
 
 ## Next coherent checkpoint
 
