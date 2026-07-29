@@ -6,6 +6,9 @@ export default defineConfig({
   devToolbar: { enabled: false },
   output: "server",
   compressHTML: true,
+  redirects: {
+    "/__evidence/storefront": "/evidence/storefront",
+  },
   build: {
     inlineStylesheets: "always",
   },
