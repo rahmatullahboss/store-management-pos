@@ -441,6 +441,6 @@ GRANT EXECUTE ON FUNCTION cash.append_event_v1(uuid,uuid,text,char(3),smallint,b
 GRANT EXECUTE ON FUNCTION cash.close_shift_v1(uuid,uuid,uuid,text,char(3),smallint,bigint,jsonb,uuid,timestamptz) TO store_app_runtime;
 
 INSERT INTO platform.schema_migrations(migration_id, module, checksum)
-VALUES ('CSH-0003','MOD-D-CASH','manifest:CSH-0003-runtime-commands.sql');
+VALUES ('CSH-0004','MOD-D-CASH','manifest:CSH-0003-runtime-commands.sql');
 
 COMMIT;
