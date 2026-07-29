@@ -58,12 +58,18 @@ test("out-of-order outcomes preserve deterministic pending upload order", async 
   await assert.rejects(() => engine.recordOutcome("device-1", "operation-2", { state: "rejected", rejectionReason: "conflict" }), /immutable outcome/i);
 });
 
-test("upload cursor is monotonic and cannot requeue acknowledged operations", async () => {
+test("upload cursor advances only across acknowledged operations and remains monotonic", async () => {
   const store = new MemoryOfflineDurableStore();
   const engine = new DurableOfflineEngine(store);
   await engine.commit(operation(), "2026-07-29T08:00:01.000Z");
   await engine.commit(operation({ operationId: "operation-2", requestHash: "hash-2" }), "2026-07-29T08:00:02.000Z");
 
+  await assert.rejects(() => engine.advanceUploadCursor(2n), /cannot skip pending operation/i);
+  assert.equal((await store.snapshot()).uploadCursor, 0n);
+  assert.deepEqual((await engine.pendingBatch()).map((record) => record.operationId), ["operation-1", "operation-2"]);
+
+  await engine.recordOutcome("device-1", "operation-1", { state: "accepted", serverReference: "sale-1" });
+  await engine.recordOutcome("device-1", "operation-2", { state: "rejected", rejectionReason: "conflict" });
   await engine.advanceUploadCursor(2n);
   assert.equal((await store.snapshot()).uploadCursor, 2n);
   assert.deepEqual(await engine.pendingBatch(), []);
