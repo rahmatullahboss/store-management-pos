@@ -44,10 +44,13 @@ for (const [name, render] of [
   ["country-pack", renderLocalizationAdminPage],
   ["compliance", renderComplianceAdminPage],
 ]) {
-  test(`${name} admin workspace has one main landmark and one labelled component root`, () => {
+  test(`${name} admin workspace has one main landmark and accessible table regions`, () => {
     const html = render(input, page);
     assert.equal((html.match(/<main\b/gu) ?? []).length, 1);
     assert.equal((html.match(/<section class="modf-control"/gu) ?? []).length, 1);
+    assert.equal((html.match(/class="modf-table-wrap" tabindex="0" role="region"/gu) ?? []).length, 2);
+    assert.match(html, /aria-label="Country-pack versions table"/u);
+    assert.match(html, /aria-label="Compliance evidence table"/u);
     assert.match(html, /<main class="shell-main" id="main" tabindex="-1">/u);
     assert.match(html, /<section class="modf-control"[^>]*aria-labelledby="modf-title"/u);
     assert.doesNotMatch(html, /<main class="modf-control"/u);
