@@ -1,0 +1,98 @@
+name: Storefront CI
+
+on:
+  pull_request:
+    branches:
+      - program/integration-v1
+    paths:
+      - "apps/storefront-web/**"
+      - "packages/storefront-client/**"
+      - "packages/storefront-contracts/**"
+      - "packages/storefront-theme/**"
+      - "tests/unit/storefront-*.test.mjs"
+      - "tooling/scripts/storefront-design-evidence.mjs"
+      - "docs/architecture/storefront/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/storefront-ci.yml"
+  push:
+    branches:
+      - program/integration-v1
+    paths:
+      - "apps/storefront-web/**"
+      - "packages/storefront-client/**"
+      - "packages/storefront-contracts/**"
+      - "packages/storefront-theme/**"
+      - "tests/unit/storefront-*.test.mjs"
+      - "tooling/scripts/storefront-design-evidence.mjs"
+      - "docs/architecture/storefront/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/storefront-ci.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: storefront-ci-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - name: Install exact dependencies
+        run: npm ci --ignore-scripts
+      - name: Root format, type and storefront unit gates
+        run: |
+          npm run format:check
+          npm run lint
+          npm run check:boundaries
+          npm run typecheck
+          npm test
+      - name: Astro Cloudflare build
+        run: npm run storefront:build
+      - name: Security and dependency gates
+        run: |
+          npm run check:secrets
+          npm run check:licenses
+          npm run sbom
+          npm audit --audit-level=high
+
+  browser-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: verify
+    env:
+      CHROME_PATH: /usr/bin/google-chrome
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - name: Install exact dependencies
+        run: npm ci --ignore-scripts
+      - name: Load storefront design context
+        run: |
+          mkdir -p artifacts/storefront
+          node .agents/skills/impeccable/scripts/context.mjs --target apps/storefront-web/src/components/ProductCard.astro | tee artifacts/storefront/impeccable-context.txt
+      - name: Run Astro browser and accessibility evidence
+        run: npm run storefront:design:verify
+      - name: Upload storefront evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: storefront-evidence-${{ github.run_id }}
+          path: |
+            artifacts/storefront/impeccable-context.txt
+            docs/architecture/storefront/design-evidence/
+          if-no-files-found: warn
+          retention-days: 14
