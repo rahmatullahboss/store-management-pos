@@ -1,6 +1,6 @@
 {
   "module": "MOD-D-POS",
-  "version": 7,
+  "version": 8,
   "order": 40,
   "migrations": [
     {
@@ -37,6 +37,11 @@
       "id": "POS-0007",
       "file": "POS-0007-function-privilege-hardening.sql",
       "sha256": "cb4bf12df726ca24276a97d2b4429e7a7a14d14d59a4c53f992099c51b60ca89"
+    },
+    {
+      "id": "POS-0008",
+      "file": "POS-0008-receipt-delivery.sql",
+      "sha256": "dc50b7c70d9f71173f03566743e3f21ecd72fb3d659c3e39b7e2664cd104fadb"
     }
   ]
 }
