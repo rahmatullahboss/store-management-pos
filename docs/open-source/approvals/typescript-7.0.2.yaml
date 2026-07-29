@@ -27,7 +27,7 @@ entry:
     date: 2026-07-30
   security_review:
     owner: foundation-platform
-    result: native_compiler_binary_and_transitive_package_inventory_must_pass_lock_sबom_and_audit_gates
+    result: native_compiler_binary_and_transitive_package_inventory_must_pass_lock_sbom_and_audit_gates
   update_owner: foundation-platform
   upstream_tracking: "npm exact version; major migrations require compiler, emit, tests, native-package inventory and SBOM review"
   sbom_component: "pkg:npm/typescript@7.0.2"
