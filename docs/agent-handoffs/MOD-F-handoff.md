@@ -6,7 +6,7 @@
 **Assigned worktree:** `.worktrees/localization-compliance`  
 **Original secured Wave 1 baseline:** `6badafe06a9e0013d12ba036160c915b48fe1c13`  
 **Integrated MOD-D sync commit:** `17d32e1e4d09106de896904f16d46eeebe418f73`  
-**Latest integration ancestry sync:** `9de20b36bdbf1cab1478da8d4c871b4ec94b230a`  
+**Post-release integration ancestry sync:** `12d7bd6492d1553deaef63667d9506d03a915fd3`  
 **Neon project:** `twilight-boat-26805962`  
 **Neon branch:** `dev/module-localization-compliance` (`br-polished-flower-ax2ph8wp`)  
 **Pull request:** `#29`  
