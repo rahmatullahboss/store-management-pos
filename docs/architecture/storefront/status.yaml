@@ -2,16 +2,21 @@ workpack:
   id: MOD-H
   title: Storefront Commerce and Custom Domains
   status: active
-  current_checkpoint: H0
+  current_checkpoint: H1
   updated_at: 2026-07-30
   owner_model: one_agent_complete_workpack
+  pull_request: 48
+  pull_request_state: draft
 
 coordinates:
   repository: rahmatullahboss/store-management-pos
   base_branch: program/integration-v1
   branch: module/storefront-commerce-v1
   worktree: .worktrees/storefront-commerce
+  neon_project: twilight-boat-26805962
+  neon_project_name: store-management-pos-nonprod
   neon_branch: dev/module-storefront-commerce
+  neon_branch_status: blocked_by_project_branch_quota_10_of_10
   integration_target: program/integration-v1
 
 upstream:
@@ -22,37 +27,59 @@ upstream:
   product_branding_reuse: prohibited
   provenance_recording: required
   wholesale_import: prohibited
+  imported_source_batches: 0
 
 checkpoints:
   H0:
     title: Activation and provenance
-    status: active
+    status: active_with_external_neon_quota_blocker
     completed:
       - git_branch_created
+      - draft_pr_48_created
       - workpack_created
       - initial_repository_audit_completed
       - adaptation_categories_defined
       - continuation_hub_created
+      - programme_board_updated
+      - agent_policy_updated
+      - execution_appendix_created
+      - product_scope_updated
+      - storefront_delivery_roadmap_created
+      - storefront_implementation_backlog_created
+      - reuse_register_OSS_0006_created
+      - internal_source_adaptation_notice_created
+      - upstream_file_manifest_baseline_created
+      - module_boundary_registered
+      - foundation_design_ci_30483378220_pass
+      - foundation_verify_job_90682906537_pass
     remaining:
-      - programme_board_update
-      - parallel_execution_update
-      - product_and_roadmap_update
-      - reuse_register_update
-      - upstream_file_manifest_baseline
-      - neon_branch_create_or_verify
-      - activation_checkpoint_commit_ci
+      - create_or_verify_dev_module_storefront_commerce_when_neon_branch_slot_available
+      - record_final_cloudflare_and_neon_recovery_results_for_activation_head
+    blockers:
+      - neon_nonproduction_project_has_10_branches_and_limit_is_10
+    safety_decision:
+      - no_existing_neon_branch_deleted_reset_or_repurposed
+      - proceed_with_repository_owned_migrations_and_run_scoped_validation_until_slot_exists
   H1:
     title: Storefront foundation
-    status: ready_after_H0
+    status: active
+    completed:
+      - storefront_exact_money_and_bootstrap_contracts
+      - strict_hostname_parser
+      - bounded_public_bootstrap_client
+      - safe_transport_error_boundary
+      - original_semantic_theme_contract
+      - fail_closed_request_runtime
+      - health_and_unavailable_responses
+      - storefront_foundation_unit_tests
+      - root_format_lint_boundary_typecheck_build_test_secret_licence_sbom_audit_pass
     remaining:
-      - scaffold_apps_storefront_web
-      - scaffold_storefront_contracts
-      - scaffold_storefront_client
-      - scaffold_storefront_theme
-      - add_runtime_hostname_context
-      - add_health_and_unavailable_states
-      - add_boundary_tests
-      - add_ci_path_coverage
+      - add_package_manifests_and_exact_dependency_pins
+      - add_astro_cloudflare_worker_shell
+      - add_runtime_environment_schema
+      - add_host_resolution_adapter_interface
+      - add_storefront_specific_ci_path_and_browser_evidence
+      - execute_first_reviewed_upstream_UI_adaptation_batch_with_file_provenance
   H2:
     title: Storefront domain and publishing
     status: blocked_by_H1
@@ -82,18 +109,37 @@ module_authority:
   storefront_publication_presentation_domains: MOD-H
 
 next_action:
-  id: H0-DOCS-01
-  description: Complete shared programme, product, roadmap and provenance documentation, then create or verify the non-production Neon branch.
+  id: H1-RUNTIME-02
+  description: Reconcile remaining infrastructure CI, then pin Astro/Cloudflare dependencies and create the first Worker-rendered synthetic storefront shell without importing upstream D1 or commerce authority.
 
 last_commits:
-  - sha: 049edcccfe860d53585e4c099f4b3070c63dfa4f
-    purpose: MOD-H workpack activation
-  - sha: e1736687ad134807ebebd46d15ae815022dc9b78
-    purpose: continuation hub
-  - sha: 5be8594dd62621871880e96c615b8bdd3c52b86f
-    purpose: selective adaptation plan
+  - sha: 8464bbc90491c7ae955c61e155334249b9d2862f
+    purpose: programme board activation
+  - sha: 79088da15ab8524ff090ba10a2d2157729a55f33
+    purpose: scoped source adaptation register
+  - sha: a6f3ebbd93f639f70ec8b2a6556e12e6fc883d03
+    purpose: storefront product truth
+  - sha: 6a52f2c38da9c8557ce56816e4a6800551058578
+    purpose: MOD-H architecture boundary
+  - sha: 7f4a5d3196bbc563230e3237cb4e9742b0923ca1
+    purpose: H1 contracts runtime theme and tests
 
 evidence:
+  github:
+    pr: 48
+    base_sha: 7c552a6c55844c6437ed4cc60ab85db3d8f8bb76
+    verified_head: 7f4a5d3196bbc563230e3237cb4e9742b0923ca1
+    foundation_ci_run: 30483383293
+    foundation_verify_job: 90682906537
+    foundation_design_run: 30483378220
+    foundation_design_job: 90682888755
+  neon:
+    project_id: twilight-boat-26805962
+    postgres_version: 17
+    branch_count: 10
+    branch_limit: 10
+    requested_branch: dev/module-storefront-commerce
+    result: not_created_to_preserve_existing_work
   audit_sources:
     - upstream README and architecture
     - upstream storefront README
@@ -104,8 +150,8 @@ evidence:
     - upstream product public eligibility
     - local PRODUCT.md, DESIGN.md and programme policies
   known_risks:
-    - exact_money_rewrite_required
     - multi_tenant_domain_control_plane_not_present_upstream
     - sales_channel_publication_model_not_present_upstream
     - customer_auth_and_checkout_contract_rewrite_required
     - source_rights_and_provenance_must_remain_auditable
+    - dedicated_neon_branch_waiting_for_safe_quota_slot
