@@ -1,0 +1,10 @@
+name: store_companion_mobile_workspace
+publish_to: none
+
+environment:
+  sdk: ^3.12.0
+
+workspace:
+  - apps/store_companion
+  - packages/app_core
+  - packages/design_system
