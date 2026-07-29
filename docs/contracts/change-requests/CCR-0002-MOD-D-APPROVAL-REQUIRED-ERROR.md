@@ -1,6 +1,6 @@
 # CCR-0002 — MOD-D Approval-Required Error
 
-**Status:** Implemented, pending serial integration review  
+**Status:** Accepted for serial integration  
 **Requested by:** MOD-D — POS, Cash, Offline and Hardware  
 **Date:** 2026-07-29  
 **Shared owner:** Foundation / API error contract  
@@ -43,7 +43,9 @@ HTTP status remains selected by the throwing workflow. MOD-D currently uses `409
 
 ## Integration decision
 
-Implemented additively on the MOD-D branch for serial review. Integration must verify Foundation API compatibility and retain the shared error response envelope before promotion.
+Accepted on 2026-07-29 for controlled serial integration.
+
+The review confirmed that the change is additive, preserves the Foundation response envelope and existing status selection, does not weaken permission or approval validation, and is covered by strict TypeScript, cash repository/API tests and the complete MOD-D CI gate. Integration must retain the exact shared error envelope and rerun the integration-branch core, design, database/recovery and Cloudflare gates before the programme board can move MOD-D to `integrated`.
 
 Implementation evidence:
 
