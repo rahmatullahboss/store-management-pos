@@ -15,7 +15,7 @@ const modules = [
     identity: "MOD-G-INTEGRATION",
     manifestPath: new URL("../../database/modules/integrations/manifest.json", import.meta.url),
     migrationsDirectory: new URL("../../database/modules/integrations/migrations/", import.meta.url),
-    expectedIds: ["INT-0001", "INT-0002"],
+    expectedIds: ["INT-0001", "INT-0002", "INT-0003"],
   },
 ];
 
@@ -99,11 +99,11 @@ test("reporting migration preserves exact, rebuildable and auditable projection 
   assert.doesNotMatch(sql, /CURRENT_DATE/u);
 });
 
-test("integration migration preserves webhook replay evidence and connector loop ownership", async () => {
+test("integration migration preserves credential, webhook replay and connector ownership evidence", async () => {
   const { migrations } = await loadModule(modules[1]);
   const sql = migrations.map((migration) => migration.sql).join("\n");
   for (const table of [
-    "api_clients", "webhook_subscriptions", "webhook_deliveries", "webhook_delivery_attempts",
+    "api_clients", "api_client_security_events", "webhook_subscriptions", "webhook_deliveries", "webhook_delivery_attempts",
     "webhook_replay_requests", "connector_connections", "connector_field_mappings",
     "connector_cursors", "connector_sync_outcomes",
   ]) assert.match(sql, new RegExp(`integration\\.${table}`, "u"));
@@ -111,12 +111,17 @@ test("integration migration preserves webhook replay evidence and connector loop
   assert.match(sql, /UNIQUE \(tenant_id, connection_id, operation_id\)/u);
   assert.match(sql, /ownership <> 'platform' OR direction = 'outbound'/u);
   assert.match(sql, /ownership <> 'external' OR direction = 'inbound'/u);
+  assert.match(sql, /api_client_security_events_append_only/u);
   assert.match(sql, /webhook_delivery_attempts_append_only/u);
   assert.match(sql, /webhook_replay_requests_append_only/u);
   assert.match(sql, /connector_sync_outcomes_append_only/u);
   assert.match(sql, /credential_reference/u);
+  assert.match(sql, /credential_reference ~ '\^\(secret\|vault\|kms\|provider\):\/\//u);
   assert.doesNotMatch(sql, /credential_(?:secret|value)|api_key_value|access_token_value/u);
   for (const command of [
+    "register_api_client",
+    "rotate_api_client_credential",
+    "change_api_client_status",
     "create_webhook_subscription",
     "enqueue_webhook_delivery",
     "record_webhook_attempt",
@@ -125,6 +130,8 @@ test("integration migration preserves webhook replay evidence and connector loop
     "add_connector_mapping",
     "record_connector_sync_outcome",
   ]) assert.match(sql, new RegExp(`integration\\.${command}`, "u"));
+  assert.match(sql, /revoked API client status is terminal/u);
+  assert.match(sql, /API client credential version conflict/u);
   assert.match(sql, /only dead-letter webhook deliveries can be replayed/u);
   assert.match(sql, /webhook attempt replay payload differs/u);
   assert.match(sql, /connector sync replay payload differs/u);
