@@ -156,21 +156,22 @@ export async function handlePosRequest(
   }
 
   if (request.method === "POST" && url.pathname === "/v1/pos/sessions") {
-    requirePermission(context, "pos.session.open");
+    requirePermission(context, "pos.checkout.execute");
     const body = await jsonBody(request);
     return jsonResponse(await database.withClientTransaction(context, async (client) => await repository.openSession(client, context, sessionInput(body))), { status: 201 });
   }
 
   if (request.method === "POST" && url.pathname === "/v1/pos/carts") {
-    requirePermission(context, "pos.checkout");
+    requirePermission(context, "pos.checkout.execute");
     const body = await jsonBody(request);
     return jsonResponse(await database.withClientTransaction(context, async (client) => await repository.createCart(client, context, cartInput(body))), { status: 201 });
   }
 
   if (request.method === "POST" && url.pathname === "/v1/pos/checkouts") {
-    requirePermission(context, "pos.checkout");
     const body = await jsonBody(request);
-    return jsonResponse(await database.withClientTransaction(context, async (client) => await repository.recordCheckout(client, context, checkoutInput(body))), { status: 202 });
+    const input = checkoutInput(body);
+    requirePermission(context, input.mode === "offline" ? "pos.checkout.offline" : "pos.checkout.execute");
+    return jsonResponse(await database.withClientTransaction(context, async (client) => await repository.recordCheckout(client, context, input)), { status: 202 });
   }
 
   if (request.method === "POST" && url.pathname === "/v1/pos/offline/operations") {
