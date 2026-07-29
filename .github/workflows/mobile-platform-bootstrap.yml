@@ -1,0 +1,90 @@
+name: Mobile Platform Bootstrap
+
+on:
+  push:
+    branches:
+      - module/store-companion-mobile-v1
+    paths:
+      - "tooling/mobile/generate-platform-projects.sh"
+      - ".github/workflows/mobile-platform-bootstrap.yml"
+      - "mobile/toolchain.yaml"
+  workflow_dispatch:
+
+concurrency:
+  group: mobile-platform-bootstrap-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+env:
+  FLUTTER_COMMIT: 058e0af2c2b57e369d905a03ac9748b0ebf543c6
+
+jobs:
+  generate-build-and-commit:
+    if: github.ref == 'refs/heads/module/store-companion-mobile-v1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+      - name: Install exact official Flutter SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter_dir="${RUNNER_TEMP}/flutter"
+          git clone \
+            --filter=blob:none \
+            --no-checkout \
+            https://github.com/flutter/flutter.git \
+            "${flutter_dir}"
+          git -C "${flutter_dir}" checkout --detach "${FLUTTER_COMMIT}"
+          actual_commit="$(git -C "${flutter_dir}" rev-parse HEAD)"
+          test "${actual_commit}" = "${FLUTTER_COMMIT}"
+          echo "${flutter_dir}/bin" >> "${GITHUB_PATH}"
+          "${flutter_dir}/bin/flutter" config --no-analytics
+          "${flutter_dir}/bin/flutter" --version
+      - name: Generate platform projects and verify Android flavours
+        run: bash tooling/mobile/generate-platform-projects.sh
+      - name: Commit deterministic platform source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            mobile/apps/store_companion/.metadata \
+            mobile/apps/store_companion/android \
+            mobile/apps/store_companion/ios \
+            mobile/pubspec.lock
+          if git diff --cached --quiet; then
+            echo "Platform projects already match the deterministic generator."
+            exit 0
+          fi
+          git commit -m "feat(mobile): generate Android and iOS platform projects"
+          git push origin HEAD:module/store-companion-mobile-v1
+      - name: Upload Android development APK
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: store-companion-development-debug-${{ github.run_id }}
+          path: mobile/apps/store_companion/build/app/outputs/flutter-apk/app-development-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload Android staging APK
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: store-companion-staging-debug-${{ github.run_id }}
+          path: mobile/apps/store_companion/build/app/outputs/flutter-apk/app-staging-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload Android production APK
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: store-companion-production-debug-${{ github.run_id }}
+          path: mobile/apps/store_companion/build/app/outputs/flutter-apk/app-production-debug.apk
+          if-no-files-found: error
+          retention-days: 14
