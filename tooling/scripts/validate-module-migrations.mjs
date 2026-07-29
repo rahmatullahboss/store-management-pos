@@ -45,4 +45,9 @@ if (!/payment_state <> 'unknown' OR status IN \('pending','unknown','review'\)/u
 const cash = await readFile(path.join(root, "database/modules/cash/migrations/CSH-0001-cash-ledger.sql"), "utf8");
 if (!/cash_events_append_only/u.test(cash)) throw new Error("Cash event append-only trigger is missing");
 if (!/expected_minor/u.test(cash) || !/variance_minor/u.test(cash)) throw new Error("Cash reconciliation reconstruction is missing");
+const cashControls = await readFile(path.join(root, "database/modules/cash/migrations/CSH-0002-reversal-controls.sql"), "utf8");
+if (!/cash_events_one_reversal_idx/u.test(cashControls)) throw new Error("Cash reversal uniqueness guard is missing");
+if (!/cash reversal must exactly offset the original event/u.test(cashControls)) throw new Error("Cash exact reversal guard is missing");
+if (!/cash events require an open or explicitly reopened shift/u.test(cashControls)) throw new Error("Closed-shift cash event guard is missing");
+if (!/CREATE VIEW cash\.shift_expected_cash/u.test(cashControls)) throw new Error("Cash expected-balance reconstruction view is missing");
 console.log(`validated ${ids.size} module migrations (${[...counts].map(([module, count]) => `${module}:${count}`).join(", ")})`);
