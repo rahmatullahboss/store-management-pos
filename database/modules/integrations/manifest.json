@@ -22,6 +22,11 @@
       "id": "INT-0004",
       "file": "INT-0004-public-api-directory.sql",
       "sha256": "822474d28a6ef3d7e57e0d26923b2b9804b353e72e6a1eb3af328187203a763a"
+    },
+    {
+      "id": "INT-0005",
+      "file": "INT-0005-saas-platform-foundation.sql",
+      "sha256": "dfdc696c42ebe057658224bafc5dad5e379add6f61d6ce03b4395724a5448fea"
     }
   ]
 }
