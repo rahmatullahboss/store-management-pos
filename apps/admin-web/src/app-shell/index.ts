@@ -70,7 +70,8 @@ function renderEmbeddedLocalizationControlPage(page: LocalizationControlPage): s
   if (openingIndex < 0 || closingIndex < openingIndex) {
     throw new Error("Localization control page root contract is invalid");
   }
-  return `${rendered.slice(0, openingIndex)}<section class="modf-control"${rendered.slice(openingIndex + opening.length, closingIndex)}</section>${rendered.slice(closingIndex + 7)}`;
+  const embedded = `${rendered.slice(0, openingIndex)}<section class="modf-control"${rendered.slice(openingIndex + opening.length, closingIndex)}</section>${rendered.slice(closingIndex + 7)}`;
+  return `<style>.modf-active .modf-badge--attention{color:#f0d36d}</style>${embedded}`;
 }
 
 export function renderAdminShell(input: AdminShellInput): string {
