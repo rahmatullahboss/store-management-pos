@@ -1,0 +1,64 @@
+name: Mobile Neon Evidence
+
+on:
+  pull_request:
+    branches:
+      - program/integration-v1
+    paths:
+      - "tooling/mobile/neon-mobile-branch.mjs"
+      - ".github/workflows/mobile-neon-evidence.yml"
+      - "database/**"
+      - "docs/architecture/mobile/**"
+  push:
+    branches:
+      - module/store-companion-mobile-v1
+    paths:
+      - "tooling/mobile/neon-mobile-branch.mjs"
+      - ".github/workflows/mobile-neon-evidence.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: mobile-neon-evidence-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  verify-mobile-branch:
+    if: >-
+      ${{
+        github.event_name != 'pull_request' ||
+        (
+          github.event.pull_request.head.repo.full_name == github.repository &&
+          github.event.pull_request.head.ref == 'module/store-companion-mobile-v1' &&
+          github.actor != 'dependabot[bot]'
+        )
+      }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+      NEON_PROJECT_ID: twilight-boat-26805962
+      NEON_BRANCH_NAME: dev/module-store-companion-mobile
+      NEON_PARENT_BRANCH_NAME: dev/module-pos-cash-offline
+      NEON_PARENT_BRANCH_ID: br-rapid-river-axoz0rfs
+      NEON_DATABASE_NAME: neondb
+      NEON_ROLE_NAME: neondb_owner
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts
+      - name: Create or verify correct-parent mobile branch
+        run: node tooling/mobile/neon-mobile-branch.mjs
+      - name: Upload Mobile Neon evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mobile-neon-evidence-${{ github.run_id }}
+          path: artifacts/mobile/neon-branch-evidence.json
+          if-no-files-found: error
+          retention-days: 14
