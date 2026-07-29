@@ -15,13 +15,13 @@
     },
     {
       "id": "CSH-0003",
-      "file": "CSH-0003-runtime-commands.sql",
-      "sha256": "5bbab9e4b23b13e05defbc678a6e107337d8e776d03a7075805e4d2eb15c181b"
+      "file": "CSH-0004-function-privilege-hardening.sql",
+      "sha256": "e4cf0d7c0617bf0c5e959c9023a3547fb4dd8cec7e6e5bcdeee262f36d5b16d9"
     },
     {
       "id": "CSH-0004",
-      "file": "CSH-0004-function-privilege-hardening.sql",
-      "sha256": "51be49e7afe8026beea348191db86cac001917081df7c0c1cdf3afb7797ccd7c"
+      "file": "CSH-0003-runtime-commands.sql",
+      "sha256": "5bbab9e4b23b13e05defbc678a6e107337d8e776d03a7075805e4d2eb15c181b"
     },
     {
       "id": "CSH-0005",
