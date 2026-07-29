@@ -8,7 +8,7 @@ const modules = [
     identity: "MOD-D-POS",
     manifestPath: new URL("../../database/modules/pos/manifest.json", import.meta.url),
     migrationsDirectory: new URL("../../database/modules/pos/migrations/", import.meta.url),
-    expectedIds: ["POS-0001", "POS-0002"],
+    expectedIds: ["POS-0001", "POS-0002", "POS-0003"],
   },
   {
     identity: "MOD-D-CASH",
@@ -76,6 +76,15 @@ test("POS migration preserves checkout, receipt, sync and device evidence", asyn
   assert.match(sql, /CREATE TABLE pos\.carts/u);
   assert.match(sql, /CREATE TABLE pos\.cart_lines/u);
   assert.match(sql, /FOREIGN KEY \(tenant_id, cart_id\) REFERENCES pos\.carts/u);
+  assert.match(sql, /offline_authorizations_signature_present/u);
+  assert.match(sql, /permission_snapshot_version/u);
+  assert.match(sql, /country_capability_version/u);
+  assert.match(sql, /CREATE TABLE pos\.offline_operations/u);
+  assert.match(sql, /offline_operations_append_only/u);
+  assert.match(sql, /CREATE TABLE pos\.offline_operation_outcomes/u);
+  assert.match(sql, /offline_operation_outcomes_append_only/u);
+  assert.match(sql, /CREATE TABLE pos\.receipt_delivery_requests/u);
+  assert.match(sql, /receipt_delivery_events_append_only/u);
   assert.doesNotMatch(sql, /REFERENCES (?:catalog|pricing|tax|inventory|customer|sales|payment|accounting|banking)\./u);
 });
 
