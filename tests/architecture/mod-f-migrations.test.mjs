@@ -4,7 +4,6 @@ import { readdir, readFile } from "node:fs/promises";
 import test from "node:test";
 import { discoverMigrationManifests } from "../../tooling/scripts/migration-manifests.mjs";
 
-const root = new URL("../../", import.meta.url);
 const manifestUrl = new URL("../../database/modules/localization/manifest.json", import.meta.url);
 const migrationsUrl = new URL("../../database/modules/localization/migrations/", import.meta.url);
 
@@ -22,7 +21,7 @@ test("MOD-F migration manifest is deterministic and ordered after integrated MOD
   const { manifest, migrations } = await load();
   assert.equal(manifest.module, "MOD-F-LOCALIZATION");
   assert.equal(manifest.order, 50);
-  assert.deepEqual(migrations.map(({ id }) => id), ["LOC-0001", "LOC-0002"]);
+  assert.deepEqual(migrations.map(({ id }) => id), ["LOC-0001", "LOC-0002", "LOC-0003"]);
   const present = (await readdir(migrationsUrl)).filter((file) => file.endsWith(".sql")).sort();
   assert.deepEqual(present, migrations.map(({ file }) => file).sort());
   for (const migration of migrations) {
@@ -61,15 +60,20 @@ test("MOD-F core schema preserves tenant isolation and immutable legal evidence"
 
 test("MOD-F command functions are tenant-scoped, idempotent and runtime-callable only", async () => {
   const { migrations } = await load();
-  const sql = migrations[1].sql;
+  const sql = migrations.slice(1).map(({ sql: migrationSql }) => migrationSql).join("\n");
   assert.match(sql, /SECURITY DEFINER/u);
   assert.match(sql, /SET search_path = pg_catalog, localization, platform/u);
   assert.match(sql, /activate_country_pack/u);
   assert.match(sql, /allocate_legal_number/u);
   assert.match(sql, /record_fiscal_transition/u);
+  assert.match(sql, /publish_legal_document/u);
+  assert.match(sql, /create_fiscal_submission/u);
+  assert.match(sql, /create_privacy_operation/u);
+  assert.match(sql, /transition_privacy_operation/u);
   assert.match(sql, /pg_advisory_xact_lock/u);
   assert.match(sql, /p_business_date/u);
   assert.match(sql, /idempotency conflict/u);
+  assert.match(sql, /replay payload differs/u);
   assert.match(sql, /REVOKE ALL ON FUNCTION/u);
   assert.match(sql, /GRANT EXECUTE ON FUNCTION/u);
   assert.doesNotMatch(sql, /CURRENT_DATE/u);
