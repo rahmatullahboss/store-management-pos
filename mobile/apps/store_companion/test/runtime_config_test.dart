@@ -38,9 +38,7 @@ void main() {
 
   test('production requires a complete reviewed endpoint set', () {
     expect(
-      () => MobileRuntimeConfig.fromEnvironment(
-        environmentName: 'production',
-      ),
+      () => MobileRuntimeConfig.fromEnvironment(environmentName: 'production'),
       throwsA(isA<RuntimeConfigurationException>()),
     );
     expect(
