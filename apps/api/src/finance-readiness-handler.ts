@@ -68,7 +68,7 @@ function reportFromRow(row: FinanceReadinessRow): FinanceReadinessReport {
 
 export async function readFinanceReadiness(context: RequestContext, database: NeonDatabase): Promise<FinanceReadinessReport> {
   if (!context.permissions.has("platform.audit.read")) {
-    throw new PlatformError("FORBIDDEN", "platform.audit.read permission is required", 403);
+    throw new PlatformError("PERMISSION_DENIED", "platform.audit.read permission is required", 403);
   }
   return await database.withClientTransaction(context, async (client) => {
     const result = await client.query<FinanceReadinessRow>(
