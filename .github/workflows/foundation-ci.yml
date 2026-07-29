@@ -65,6 +65,9 @@ jobs:
       NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
       NEON_PROJECT_ID: twilight-boat-26805962
       NEON_PARENT_BRANCH_ID: br-spring-grass-ax3ptydv
+      NEON_FALLBACK_BRANCH_ID: br-autumn-pine-axuo502u
+      NEON_FALLBACK_ENDPOINT_ID: ep-blue-moon-axw07qmr
+      NEON_FALLBACK_ROLE_NAME: neondb_owner
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
