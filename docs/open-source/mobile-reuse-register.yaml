@@ -1,0 +1,63 @@
+scope: MOB-01
+canonical_merge_target: docs/open-source/reuse-register.yaml
+policy: module_local_append_only_manifest_for_programme_integration
+
+entries:
+  - id: OSS-MOB-0001
+    status: approved_dependency
+    purpose: Build the Android and iOS Store Companion application from one reviewed native client codebase.
+    reuse_mode: platform_adoption
+    project: Flutter SDK
+    repository: https://github.com/flutter/flutter
+    exact_commit_or_tag: 058e0af2c2b57e369d905a03ac9748b0ebf543c6
+    version: 3.44.8
+    bundled_dart_version: 3.12.2
+    files_or_packages:
+      - Flutter framework and toolchain
+      - Dart SDK bundled with Flutter
+      - flutter SDK package
+      - flutter_localizations SDK package
+      - flutter_test SDK package for development testing
+    declared_license: BSD-3-Clause
+    file_level_licenses_checked: true
+    notice_files:
+      - upstream:LICENSE
+      - upstream:PATENT_GRANT
+      - upstream:AUTHORS
+    copyright_holders:
+      - Google LLC
+      - Flutter contributors
+      - Dart contributors
+    modifications: No upstream source copied or modified. CI checks out the exact official Flutter commit and the application consumes SDK packages.
+    product_locations:
+      - mobile/toolchain.yaml
+      - mobile/pubspec.yaml
+      - mobile/apps/store_companion/pubspec.yaml
+      - mobile/packages/design_system/pubspec.yaml
+      - .github/workflows/mobile-foundation.yml
+    distributed_to_customers: true
+    network_service_use: false
+    compatible_with_product_model: approved
+    legal_review:
+      required: false
+      reviewer: mob-01-engineering-policy
+      decision: approved_permissive_platform_sdk
+      date: 2026-07-29
+    security_review:
+      owner: MOB-01
+      result: exact_stable_commit_and_official_source_pinned_no_third_party_setup_action
+    update_owner: MOB-01
+    upstream_tracking: Upgrade only at a coherent checkpoint after breaking-change, Android/iOS, dependency, migration and pending-operation verification.
+    sbom_components:
+      - pkg:github/flutter/flutter@058e0af2c2b57e369d905a03ac9748b0ebf543c6
+    third_party_notice_entry: pending_programme_integration_into_docs/THIRD_PARTY_NOTICES.md
+    tests:
+      - exact Flutter commit check in Mobile Foundation CI
+      - Flutter and Dart version machine-output check
+      - flutter analyze
+      - flutter test
+    notes: Current public CI installs Flutter directly from the official GitHub repository. Android/iOS generated platform projects and release artefacts remain a later executable-worktree checkpoint.
+
+future_dependencies:
+  default_status: proposed
+  rule: Every pub package, native SDK, telemetry provider, secure-storage/database library, OAuth helper, routing/state-management library and push provider requires a new reviewed entry before adoption.
