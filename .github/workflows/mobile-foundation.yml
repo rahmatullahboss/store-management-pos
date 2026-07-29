@@ -97,6 +97,15 @@ jobs:
       - name: Verify formatted source is committed
         run: git diff --exit-code -- mobile
 
+      - name: Upload generated dependency lock evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mobile-pubspec-lock-${{ github.run_id }}
+          path: mobile/pubspec.lock
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Upload formatted source evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
