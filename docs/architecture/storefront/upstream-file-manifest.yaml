@@ -40,6 +40,32 @@ batches:
     decision: Establish selective adaptation boundaries; no code copied in this batch.
     tests: []
 
+  - id: SF-UP-001
+    status: adapted
+    purpose: Strengthen merchant theme colour sanitisation without importing upstream branding, defaults, data models or business services.
+    upstream_paths:
+      - packages/shared/src/storefront-theme.ts
+    upstream_blob_sha: ccdd95740666f411f944fe47747e7f857321c5e1
+    mode: adapt
+    local_paths:
+      - packages/storefront-theme/src/index.ts
+    modifications:
+      - retained the local storefront-theme.v1 contract and original Ozzyl colour defaults
+      - reduced the upstream theme surface to the locally approved colour, density, corner and container fields
+      - adapted safe hex, CSS colour-function, named-colour and allowlisted CSS-variable validation
+      - adapted control-character, style-breakout, url, import, expression and javascript rejection
+      - added local invalid-entry reporting and CSS token generation
+      - omitted upstream palettes, font families, component styles, product terminology and branding
+    authority_boundary:
+      - presentation_only
+      - no_D1
+      - no_upstream_API_or_core_service
+      - no_price_stock_order_payment_or_accounting_logic
+    tests:
+      - tests/unit/storefront-foundation.test.mjs
+      - Foundation CI typecheck build tests secret licence SBOM dependency audit
+    local_owner: MOD-H-storefront-commerce
+
 planned_candidates:
   - upstream_glob: apps/storefront/src/layouts/**
     proposed_mode: adapt
@@ -63,11 +89,6 @@ planned_candidates:
     conditions:
       - add tenant storefront host locale currency price-list scope
       - preserve fail-closed private-route and generation behavior
-  - upstream_glob: packages/shared/src/storefront-theme.ts
-    proposed_mode: adapt
-    conditions:
-      - retain sanitisation tests
-      - map defaults to local product identity
 
 rejected_families:
   - path: packages/database/**
