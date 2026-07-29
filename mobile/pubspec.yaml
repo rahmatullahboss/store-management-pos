@@ -9,5 +9,6 @@ workspace:
   - packages/api_client
   - packages/app_core
   - packages/design_system
+  - packages/runtime_config
   - packages/session_core
   - packages/sync_engine
