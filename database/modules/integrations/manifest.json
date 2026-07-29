@@ -27,6 +27,16 @@
       "id": "INT-0005",
       "file": "INT-0005-saas-platform-foundation.sql",
       "sha256": "dfdc696c42ebe057658224bafc5dad5e379add6f61d6ce03b4395724a5448fea"
+    },
+    {
+      "id": "INT-0006",
+      "file": "INT-0006-saas-platform-commands.sql",
+      "sha256": "ab87796c89fc11acd859c29c1a2051adcddbcd1531c88d6bab499ac63b2621fe"
+    },
+    {
+      "id": "INT-0007",
+      "file": "INT-0007-saas-support-controls.sql",
+      "sha256": "853bac160c1020065fdb365151f35ff275409ac95fdc9ffe74b57e692dd1d16c"
     }
   ]
 }
