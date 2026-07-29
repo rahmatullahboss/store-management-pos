@@ -71,6 +71,7 @@ test("MOD-F Neon migration chain enforces replay, fiscal state and tenant isolat
       ) VALUES ($1,$2,$3,$4,'MOD-F Alpha Store','Asia/Dhaka','active')`,
       [ids.storeAlpha, ids.tenantAlpha, ids.legalEntityAlpha, `STORE-${suffix}`],
     );
+    await setContext(client, ids.tenantAlpha, ids.actorAlpha, `${requestId}-fixture`);
 
     await client.query(
       `INSERT INTO localization.country_pack_versions(
@@ -158,6 +159,27 @@ test("MOD-F Neon migration chain enforces replay, fiscal state and tenant isolat
     );
     assert.equal(unknown.rows[0].status, "unknown");
     assert.equal(accepted.rows[0].status, "accepted");
+
+    const evidence = await client.query(
+      `SELECT event_type, count(*)::int AS count
+         FROM platform.audit_events
+        WHERE tenant_id = $1::uuid AND event_type LIKE 'localization.%'
+        GROUP BY event_type
+        ORDER BY event_type`,
+      [ids.tenantAlpha],
+    );
+    const eventCounts = Object.fromEntries(evidence.rows.map((row) => [row.event_type, row.count]));
+    assert.equal(eventCounts["localization.country_pack.published.v1"], 1);
+    assert.equal(eventCounts["localization.country_pack.activated.v1"], 1);
+    assert.equal(eventCounts["localization.legal_number.allocated.v1"], 1);
+    assert.equal(eventCounts["localization.legal_document.published.v1"], 1);
+    assert.equal(eventCounts["localization.fiscal_submission.created.v1"], 1);
+    assert.equal(eventCounts["localization.fiscal_submission.status_observed.v1"], 2);
+    const outbox = await client.query(
+      "SELECT count(*)::int AS count FROM platform.outbox_events WHERE tenant_id = $1::uuid AND event_type LIKE 'localization.%'",
+      [ids.tenantAlpha],
+    );
+    assert.equal(outbox.rows[0].count, 7);
 
     await client.query("SAVEPOINT direct_write_denied");
     await assert.rejects(
