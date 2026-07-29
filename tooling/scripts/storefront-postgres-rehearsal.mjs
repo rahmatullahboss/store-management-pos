@@ -61,10 +61,12 @@ for (const source of sources) {
   }
 }
 
-await psql([
-  "--file",
-  path.join(root, "tests/integration/storefront-postgres-rehearsal.sql"),
-]);
+for (const fixture of [
+  "tests/integration/storefront-postgres-rehearsal.sql",
+  "tests/integration/storefront-public-host-rehearsal.sql",
+]) {
+  await psql(["--file", path.join(root, fixture)]);
+}
 
 const { stdout } = await execFileAsync(
   "psql",
@@ -93,7 +95,7 @@ if (summary.tables < 16) throw new Error("Storefront table count is incomplete")
 if (summary.forcedRlsTables !== summary.tables) {
   throw new Error("Not every storefront table has forced RLS");
 }
-if (summary.auditEvents < 10 || summary.outboxEvents < 10) {
+if (summary.auditEvents < 12 || summary.outboxEvents < 12) {
   throw new Error("Storefront audit/outbox evidence is incomplete");
 }
 console.log(JSON.stringify(summary));
