@@ -13,6 +13,8 @@ dependencies:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
+  store_companion_api_client:
+    path: ../../packages/api_client
   store_companion_app_core:
     path: ../../packages/app_core
   store_companion_design_system:
