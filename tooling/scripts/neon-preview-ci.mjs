@@ -16,8 +16,9 @@ const artifactsDir = path.join(root, "artifacts", "foundation");
 const benchmarkReportPath = path.join(artifactsDir, "neon-benchmark-report.json");
 const lifecycleReportPath = path.join(artifactsDir, "neon-preview-lifecycle.json");
 const safeRef = (GITHUB_HEAD_REF || "manual").toLowerCase().replace(/[^a-z0-9-]+/g, "-").slice(0, 36);
-const previewBranchPrefix = "preview/pr-";
-const branchName = `${previewBranchPrefix}${safeRef}-${GITHUB_RUN_ID || Date.now()}`;
+const previewBranchPrefix = `preview/pr-${safeRef}-`;
+const branchName = `${previewBranchPrefix}${GITHUB_RUN_ID || Date.now()}`;
+const coldWakeRetryLimit = 6;
 const apiBase = `https://console.neon.tech/api/v2/projects/${NEON_PROJECT_ID}`;
 const headers = { Authorization: `Bearer ${NEON_API_KEY}`, "Content-Type": "application/json" };
 
@@ -88,7 +89,7 @@ async function createPreviewBranch() {
     return { created: await api("/branches", request), branchLimitRetry: false };
   } catch (error) {
     if (!isBranchLimitError(error)) throw error;
-    console.warn("Neon branch limit reached; cleaning stale preview branches and retrying once");
+    console.warn("Neon branch limit reached; cleaning stale branches for this pull request and retrying once");
     await cleanupStalePreviewBranches();
     await sleep(2_000);
     return { created: await api("/branches", request), branchLimitRetry: true };
@@ -110,11 +111,37 @@ async function suspendEndpointAndWaitForIdle(endpointId) {
   throw new Error(`Neon endpoint ${endpointId} did not become idle within ${timeoutMs}ms after suspension`);
 }
 
+function isRetryableColdWakeError(error) {
+  const message = error instanceof Error ? error.message : String(error);
+  const retryable = error && typeof error === "object" ? Reflect.get(error, "neon:retryable") : false;
+  return retryable === true || /neon:retryable|couldn(?:'|’)t connect to compute node|endpoint cannot be found|connection terminated|server error \(http status 500\)|fetch failed|network/i.test(message);
+}
+
+async function executeColdWake(connectionString) {
+  const sql = neon(connectionString);
+  let lastError;
+  for (let attempt = 1; attempt <= coldWakeRetryLimit; attempt += 1) {
+    try {
+      const result = await sql`SELECT 1 AS ok`;
+      if (result[0]?.ok !== 1) throw new Error("Neon cold-wake query did not return the expected result");
+      return { attempts: attempt };
+    } catch (error) {
+      lastError = error;
+      if (!isRetryableColdWakeError(error) || attempt === coldWakeRetryLimit) throw error;
+      const delayMs = Math.min(1_000 * (2 ** (attempt - 1)), 8_000);
+      console.warn(`Neon cold-wake attempt ${attempt} failed transiently; retrying in ${delayMs}ms`);
+      await sleep(delayMs);
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error("Neon cold-wake query failed");
+}
+
 await mkdir(artifactsDir, { recursive: true });
 let branchId;
 let endpointId;
 let initialConnectMs = null;
 let coldWakeMs = null;
+let coldWakeAttempts = 0;
 let idleObservedAt = null;
 let cleanupDeleted = false;
 let staleBranchesDeleted = 0;
@@ -161,11 +188,10 @@ try {
   });
 
   idleObservedAt = await suspendEndpointAndWaitForIdle(endpointId);
-  const coldSql = neon(connectionString);
   const coldStarted = performance.now();
-  const coldResult = await coldSql`SELECT 1 AS ok`;
+  const coldWake = await executeColdWake(connectionString);
   coldWakeMs = performance.now() - coldStarted;
-  if (coldResult[0]?.ok !== 1) throw new Error("Neon cold-wake query did not return the expected result");
+  coldWakeAttempts = coldWake.attempts;
 
   await run("npm", ["run", "benchmark:neon"], {
     ...process.env,
@@ -210,6 +236,8 @@ try {
     initialComputeConnectMs: initialConnectMs === null ? null : Number(initialConnectMs.toFixed(2)),
     idleObservedAt,
     coldWakeMs: coldWakeMs === null ? null : Number(coldWakeMs.toFixed(2)),
+    coldWakeRetryLimit,
+    coldWakeAttempts,
     cleanupDeleted,
     failure
   };
