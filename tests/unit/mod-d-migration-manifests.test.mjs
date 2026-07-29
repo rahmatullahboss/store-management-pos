@@ -25,6 +25,7 @@ test("MOD-D migrations run after the complete Wave 1 finance chain", async () =>
     "POS-0005",
     "POS-0006",
     "POS-0007",
+    "POS-0008",
     "CSH-0001",
     "CSH-0002",
     "CSH-0003",
