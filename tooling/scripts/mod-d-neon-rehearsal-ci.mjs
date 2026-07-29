@@ -20,6 +20,23 @@ const reportPath = path.join(artifactsDirectory, "neon-rehearsal.json");
 const apiBase = `https://console.neon.tech/api/v2/projects/${NEON_PROJECT_ID}`;
 const headers = { Authorization: `Bearer ${NEON_API_KEY}`, "Content-Type": "application/json" };
 
+const migrationSources = [
+  { name: "FOUNDATION", manifest: "database/foundation/manifest.json" },
+  { name: "MOD-A-CATALOG", manifest: "database/migrations/catalog/manifest.json" },
+  { name: "MOD-A-PRICING", manifest: "database/migrations/pricing/manifest.json" },
+  { name: "MOD-A-TAX", manifest: "database/migrations/tax/manifest.json" },
+  { name: "MOD-B-INVENTORY", manifest: "database/modules/inventory/manifest.json" },
+  { name: "MOD-B-PROCUREMENT", manifest: "database/modules/procurement/manifest.json" },
+  { name: "MOD-C-CUSTOMER", manifest: "database/modules/customer/manifest.json" },
+  { name: "MOD-C-SALES", manifest: "database/modules/sales/manifest.json" },
+  { name: "MOD-C-FULFILLMENT", manifest: "database/modules/fulfillment/manifest.json" },
+  { name: "MOD-E-PAYMENT", manifest: "database/modules/payments/manifest.json" },
+  { name: "MOD-E-ACCOUNTING", manifest: "database/modules/accounting/manifest.json" },
+  { name: "MOD-E-BANKING", manifest: "database/modules/banking/manifest.json" },
+  { name: "MOD-D-POS", manifest: "database/modules/pos/manifest.json" },
+  { name: "MOD-D-CASH", manifest: "database/modules/cash/manifest.json" },
+];
+
 async function api(pathname) {
   const response = await fetch(`${apiBase}${pathname}`, { headers });
   const text = await response.text();
@@ -37,14 +54,10 @@ function run(command, args, env) {
 }
 
 async function expectedMigrationIds() {
-  const sources = [
-    "database/foundation/manifest.json",
-    "database/modules/pos/manifest.json",
-    "database/modules/cash/manifest.json",
-  ];
   const ids = [];
-  for (const source of sources) {
-    const manifest = JSON.parse(await readFile(path.join(root, source), "utf8"));
+  for (const source of migrationSources) {
+    const manifest = JSON.parse(await readFile(path.join(root, source.manifest), "utf8"));
+    if (manifest.module !== source.name) throw new Error(`${source.manifest} module identity does not match ${source.name}`);
     ids.push(...manifest.migrations.map((migration) => migration.id));
   }
   return ids;
@@ -82,7 +95,7 @@ try {
   await run("node", ["tooling/scripts/apply-migrations.mjs"], {
     ...process.env,
     DATABASE_URL: connectionString,
-    MIGRATION_MODULES: "FOUNDATION,MOD-D-POS,MOD-D-CASH",
+    MIGRATION_MODULES: migrationSources.map((source) => source.name).join(","),
   });
 
   const expectedIds = await expectedMigrationIds();
