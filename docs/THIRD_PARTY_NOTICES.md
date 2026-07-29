@@ -42,12 +42,12 @@ The vendored tooling remains governed by the upstream Apache-2.0 licence and not
 
 The dependency remains governed by its upstream Apache-2.0 licence and notices.
 
-## axe-core 4.10.3
+## axe-core 4.12.1
 
 - Project: axe-core
 - Source: https://github.com/dequelabs/axe-core
 - Licence: MPL-2.0
-- Use: Development-only WCAG 2 A/AA and WCAG 2.1 AA checks against synthetic Foundation UI fixtures.
+- Use: Development-only WCAG 2 A/AA and WCAG 2.1 AA checks against synthetic Foundation, localization, reporting, SaaS and marketing UI fixtures.
 - Modification: None. The exact-pinned package is injected unmodified into local browser pages and excluded from runtime deployment.
 
 The dependency remains governed by its upstream MPL-2.0 licence and notices.

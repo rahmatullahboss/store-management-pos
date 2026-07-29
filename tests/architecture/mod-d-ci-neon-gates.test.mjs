@@ -62,3 +62,16 @@ test("database-free marketing PRs preserve recovery gates without consuming a pr
   assert.match(cloudflareJob, /needs: verify/u);
   assert.match(cloudflareJob, /npm run ci:cloudflare-preview/u);
 });
+
+test("dependency PRs retain recovery and runtime gates without allocating a Neon preview branch", async () => {
+  const source = await workflow();
+  const previewJob = jobSection(source, "neon-preview", "neon-recovery");
+  const recoveryJob = jobSection(source, "neon-recovery", "mod-d-neon-rehearsal");
+  const cloudflareJob = jobSection(source, "cloudflare-preview", "mod-g-final-readiness");
+
+  assert.match(previewJob, /!startsWith\(github\.event\.pull_request\.head\.ref, 'deps\/'\)/u);
+  assert.match(recoveryJob, /needs: verify/u);
+  assert.match(recoveryJob, /npm run ci:neon-recovery/u);
+  assert.match(cloudflareJob, /needs: verify/u);
+  assert.match(cloudflareJob, /npm run ci:cloudflare-preview/u);
+});
