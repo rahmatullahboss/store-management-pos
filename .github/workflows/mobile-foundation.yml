@@ -76,23 +76,6 @@ jobs:
           assert data["dartSdkVersion"].startswith(os.environ["DART_VERSION"]), data
           PY
 
-      - name: Apply reviewed late-sequence backfill patch
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-
-          path = Path("mobile/packages/local_data/lib/store_companion_sync_database.dart")
-          source = path.read_text()
-          old = "      if (current < 1) {\n        _backfillSequences();\n        _database.execute("
-          new = "      _backfillSequences();\n      if (current < 1) {\n        _database.execute("
-          if source.count(old) == 1:
-              path.write_text(source.replace(old, new, 1))
-          elif source.count(new) != 1:
-              raise SystemExit("reviewed late-sequence backfill source boundary changed")
-          PY
-
       - name: Resolve workspace
         working-directory: mobile
         run: |
@@ -174,23 +157,6 @@ jobs:
           echo "${flutter_dir}/bin" >> "${GITHUB_PATH}"
           "${flutter_dir}/bin/flutter" config --no-analytics
 
-      - name: Apply reviewed late-sequence backfill patch
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-
-          path = Path("mobile/packages/local_data/lib/store_companion_sync_database.dart")
-          source = path.read_text()
-          old = "      if (current < 1) {\n        _backfillSequences();\n        _database.execute("
-          new = "      _backfillSequences();\n      if (current < 1) {\n        _database.execute("
-          if source.count(old) == 1:
-              path.write_text(source.replace(old, new, 1))
-          elif source.count(new) != 1:
-              raise SystemExit("reviewed late-sequence backfill source boundary changed")
-          PY
-
       - name: Resolve and format reviewed mobile source
         working-directory: mobile
         run: |
@@ -227,5 +193,5 @@ jobs:
             echo "Mobile source and lockfile are already canonical."
             exit 0
           fi
-          git commit -m "fix(mobile): backfill late pending operation sequences"
+          git commit -m "style(mobile): apply canonical Dart formatting"
           git push origin HEAD:module/store-companion-mobile-v1
