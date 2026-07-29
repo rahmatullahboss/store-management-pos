@@ -10,6 +10,11 @@ export default defineConfig({
     inlineStylesheets: "always",
   },
   vite: {
+    define: {
+      "import.meta.env.STOREFRONT_EVIDENCE_MODE": JSON.stringify(
+        process.env.STOREFRONT_EVIDENCE_MODE ?? "0",
+      ),
+    },
     ssr: {
       resolve: {
         conditions: ["workerd", "worker", "browser"],
