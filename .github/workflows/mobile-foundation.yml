@@ -1,0 +1,94 @@
+name: Mobile Foundation CI
+
+on:
+  pull_request:
+    branches:
+      - program/integration-v1
+      - main
+    paths:
+      - "mobile/**"
+      - "docs/mobile/**"
+      - "docs/architecture/mobile/**"
+      - "docs/agent-workpacks/MOB-01-STORE-COMPANION.md"
+      - "docs/contracts/change-requests/CCR-0003-MOBILE-FIRST-PARTY-CONTRACTS.md"
+      - ".github/workflows/mobile-foundation.yml"
+  push:
+    branches:
+      - module/store-companion-mobile-v1
+      - program/integration-v1
+      - main
+    paths:
+      - "mobile/**"
+      - ".github/workflows/mobile-foundation.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: mobile-foundation-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  FLUTTER_VERSION: 3.44.8
+  FLUTTER_COMMIT: 058e0af2c2b57e369d905a03ac9748b0ebf543c6
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Install exact official Flutter SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter_dir="${RUNNER_TEMP}/flutter"
+          git clone \
+            --filter=blob:none \
+            --no-checkout \
+            https://github.com/flutter/flutter.git \
+            "${flutter_dir}"
+          git -C "${flutter_dir}" checkout --detach "${FLUTTER_COMMIT}"
+          actual_commit="$(git -C "${flutter_dir}" rev-parse HEAD)"
+          test "${actual_commit}" = "${FLUTTER_COMMIT}"
+          echo "${flutter_dir}/bin" >> "${GITHUB_PATH}"
+          "${flutter_dir}/bin/flutter" config --no-analytics
+          "${flutter_dir}/bin/flutter" --version
+
+      - name: Verify pinned toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter --version --machine > "${RUNNER_TEMP}/flutter-version.json"
+          dart --version
+          grep -F '"frameworkVersion":"3.44.8"' "${RUNNER_TEMP}/flutter-version.json"
+          grep -F '"dartSdkVersion":"3.12.2"' "${RUNNER_TEMP}/flutter-version.json"
+
+      - name: Resolve workspace
+        working-directory: mobile
+        run: |
+          flutter pub get
+          dart pub workspace list
+
+      - name: Format
+        working-directory: mobile
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Analyze
+        working-directory: mobile
+        run: flutter analyze
+
+      - name: Unit and widget tests
+        working-directory: mobile/apps/store_companion
+        run: flutter test --coverage
+
+      - name: Upload non-production coverage evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mobile-foundation-coverage-${{ github.run_id }}
+          path: mobile/apps/store_companion/coverage/lcov.info
+          if-no-files-found: warn
+          retention-days: 14
