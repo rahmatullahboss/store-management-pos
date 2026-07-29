@@ -48,7 +48,7 @@ jobs:
       - name: Run browser, accessibility and deterministic design evidence
         run: npm run design:verify
       - name: Upload Impeccable evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: foundation-impeccable-evidence-${{ github.run_id }}
           path: |

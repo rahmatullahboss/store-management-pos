@@ -62,7 +62,7 @@ jobs:
       - run: npm run ci:neon-preview
       - name: Upload Neon preview evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: neon-foundation-${{ github.run_id }}
           path: |
@@ -87,7 +87,7 @@ jobs:
       - run: npm run ci:neon-recovery
       - name: Upload Neon recovery evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: neon-recovery-${{ github.run_id }}
           path: artifacts/foundation/neon-recovery-report.json
@@ -115,7 +115,7 @@ jobs:
         run: npm run cleanup:cloudflare-preview
       - name: Upload Cloudflare Foundation evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: cloudflare-foundation-${{ github.run_id }}
           path: artifacts/foundation/cloudflare-*.json
