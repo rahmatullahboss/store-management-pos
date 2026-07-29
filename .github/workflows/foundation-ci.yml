@@ -50,7 +50,9 @@ jobs:
         run: npm audit --audit-level=high
 
   neon-preview:
-    if: ${{ github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]') }}
+    # MOD-D has a persistent assigned branch and a stricter full-chain rehearsal below.
+    # Avoid consuming an extra ephemeral branch on the quota-limited non-production project.
+    if: ${{ (github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]')) && (github.event_name != 'pull_request' || github.event.pull_request.head.ref != 'module/pos-cash-offline-v1') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: verify
