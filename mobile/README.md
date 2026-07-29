@@ -21,10 +21,15 @@ The repository currently contains:
 - Dart pub workspace;
 - strict analysis policy;
 - dependency-free application core package;
+- versioned mobile API-contract package;
+- deterministic operation sync-state package;
+- dependency-free OAuth/session/workspace-isolation package;
 - Operations Ledger Flutter design-system package;
 - synthetic Store Companion application shell;
-- unit/widget tests;
+- OAuth redirect/state, session revocation, workspace isolation, contract, sync, unit and widget tests;
 - public CI using the exact official Flutter commit.
+
+The session package stores no access token, refresh credential, PKCE verifier, password or provider secret. It validates reviewed OAuth request/callback metadata, represents only opaque session/device/workspace references, stops sync after revocation and requires restricted-cache purge or locking before reuse.
 
 Android and iOS generated platform directories are deliberately not claimed at this connector-created checkpoint. In an executable worktree with the pinned Flutter SDK, M1 must generate and review them with the approved identifiers, then commit the generated files and platform/flavour configuration.
 
