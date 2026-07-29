@@ -17,6 +17,7 @@ const sources = [
   { module: "MOD-D", manifest: "database/modules/cash/manifest.json", directory: "database/modules/cash/migrations" },
 ];
 const ids = new Set();
+const databaseMarkers = new Map();
 const counts = new Map();
 for (const source of sources) {
   const manifest = JSON.parse(await readFile(path.join(root, source.manifest), "utf8"));
@@ -30,6 +31,22 @@ for (const source of sources) {
     if (!sql.includes(`VALUES ('${migration.id}'`)) throw new Error(`${migration.id} does not record its schema migration marker`);
     if (/CREATE TABLE/u.test(sql) && (!/ENABLE ROW LEVEL SECURITY/u.test(sql) || !/FORCE ROW LEVEL SECURITY/u.test(sql))) throw new Error(`${migration.id} creates tables without forced RLS`);
     if (!/BEGIN;/u.test(sql) || !/COMMIT;/u.test(sql)) throw new Error(`${migration.id} must be transactional`);
+
+    const canonicalMarker = `manifest:${migration.file}`;
+    const legacyMarkers = migration.legacyMarkers ?? [];
+    if (!Array.isArray(legacyMarkers)) throw new Error(`${migration.id} legacyMarkers must be an array`);
+    for (const marker of [canonicalMarker, ...legacyMarkers]) {
+      if (typeof marker !== "string" || !/^manifest:[A-Za-z0-9][A-Za-z0-9._-]*\.sql$/u.test(marker)) {
+        throw new Error(`${migration.id} contains an invalid database checksum marker`);
+      }
+      if (marker !== canonicalMarker && marker === canonicalMarker) throw new Error(`${migration.id} repeats its canonical checksum marker`);
+      const owner = databaseMarkers.get(marker);
+      if (owner) throw new Error(`${migration.id} reuses database checksum marker ${marker} owned by ${owner}`);
+      databaseMarkers.set(marker, migration.id);
+    }
+    if (new Set(legacyMarkers).size !== legacyMarkers.length || legacyMarkers.includes(canonicalMarker)) {
+      throw new Error(`${migration.id} contains duplicate legacy checksum markers`);
+    }
   }
 }
 const inventory = await readFile(path.join(root, "database/modules/inventory/migrations/INV-0001-core.sql"), "utf8");
