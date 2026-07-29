@@ -27,8 +27,8 @@ upstream:
   product_branding_reuse: prohibited
   provenance_recording: required
   wholesale_import: prohibited
-  imported_source_batches: 2
-  latest_import_batch: SF-UP-002
+  imported_source_batches: 3
+  latest_import_batch: SF-UP-003
 
 checkpoints:
   H0:
@@ -51,7 +51,7 @@ checkpoints:
       - internal_source_adaptation_notice_created
       - upstream_file_manifest_baseline_created
       - module_boundary_registered
-      - file_level_adaptation_manifests_SF_UP_001_and_SF_UP_002
+      - file_level_adaptation_manifests_SF_UP_001_SF_UP_002_and_SF_UP_003
     remaining:
       - create_or_verify_dev_module_storefront_commerce_when_neon_branch_slot_available
     blockers:
@@ -61,7 +61,7 @@ checkpoints:
       - proceed_with_repository_owned_migrations_and_run_scoped_validation_until_slot_exists
   H1:
     title: Storefront foundation
-    status: active
+    status: verification_pending
     completed:
       - storefront_exact_money_and_bootstrap_contracts
       - strict_hostname_parser
@@ -85,13 +85,15 @@ checkpoints:
       - Astro_catch_all_bridge_to_local_Worker_runtime
       - safe_Wrangler_config_without_upstream_IDs_domains_or_service_names
       - Storefront_Lockfile_run_30488126211_reproducible_install_root_build_Astro_build_pass
+      - reviewed_public_product_card_adaptation_SF_UP_003
+      - publication_only_product_card_contract_with_exact_money
+      - storefront_specific_CI_verify_PostgreSQL_and_browser_jobs
+      - synthetic_English_desktop_mobile_and_Arabic_RTL_evidence_harness
     remaining:
-      - add_storefront_specific_CI_path_and_browser_accessibility_evidence
-      - execute_first_reviewed_upstream_product_card_UI_adaptation_batch_with_file_provenance
-      - complete_H1_exact_head_foundation_design_cloudflare_and_neon_recovery_evidence
+      - complete_H1_exact_head_storefront_CI_foundation_design_cloudflare_and_neon_recovery_evidence
   H2:
     title: Storefront domain and publishing
-    status: blocked_by_H1
+    status: blocked_by_H1_verification
   H3:
     title: Public catalog and content
     status: blocked_by_H2
@@ -118,8 +120,8 @@ module_authority:
   storefront_publication_presentation_domains: MOD-H
 
 next_action:
-  id: H1-UI-04
-  description: Adapt the reviewed public product-card presentation to local exact-money and publication contracts, then add storefront-specific Astro build and browser accessibility evidence without importing upstream API or commerce authority.
+  id: H1-VERIFY-05
+  description: Run exact-head storefront verify, local PostgreSQL migration rehearsal and browser accessibility evidence; then close H1 and activate H2 without deleting or repurposing any Neon branch.
 
 last_commits:
   - sha: d339573024c94e5db32739888469f89d04f8efa9
@@ -130,6 +132,8 @@ last_commits:
     purpose: CI generated exact package lockfile after root and Astro build verification
   - sha: de87422284a7a0e4aa500991f9bb3d7abb0bc285
     purpose: SF-UP-002 Astro Cloudflare provenance
+  - sha: 4756b3a4913c4ad47492891e6a71e166ce086082
+    purpose: SF-UP-003 reviewed product-card provenance
 
 evidence:
   github:
@@ -141,7 +145,7 @@ evidence:
     lockfile_generation_run: 30488126211
     lockfile_generation_job: 90698848850
     lockfile_generated_head: 2fa53d30558241a401d5fca5ed9abfca7e330511
-    current_exact_head_ci: pending_after_tracker_commit
+    current_exact_head_ci: pending_after_H1_provenance_reconciliation
   neon:
     project_id: twilight-boat-26805962
     postgres_version: 17
@@ -150,19 +154,19 @@ evidence:
     requested_branch: dev/module-storefront-commerce
     result: not_created_to_preserve_existing_work
   adaptation:
-    latest_batch: SF-UP-002
+    latest_batch: SF-UP-003
     upstream_paths:
-      - apps/storefront/package.json
-      - apps/storefront/astro.config.mjs
-      - apps/storefront/tsconfig.json
-      - apps/storefront/wrangler.jsonc
+      - apps/storefront/src/components/cards/ProductCard.astro
+    upstream_blob_shas:
+      apps/storefront/src/components/cards/ProductCard.astro: 68bc025696a3e36dbf316d64f2e026ac719ddcf9
     local_paths:
-      - apps/storefront-web/package.json
-      - apps/storefront-web/astro.config.mjs
-      - apps/storefront-web/tsconfig.json
-      - apps/storefront-web/wrangler.jsonc
-      - apps/storefront-web/src/pages/[...path].ts
-      - package-lock.json
+      - apps/storefront-web/src/components/ProductCard.astro
+      - apps/storefront-web/src/pages/evidence/storefront.astro
+      - apps/storefront-web/public/evidence/linen-shirt.svg
+      - packages/storefront-contracts/src/index.ts
+      - tests/unit/storefront-product-card-contract.test.mjs
+      - tooling/scripts/storefront-design-evidence.mjs
+      - .github/workflows/storefront-ci.yml
     product_facing_upstream_branding: none
     upstream_business_authority_imported: false
   known_risks:
