@@ -138,13 +138,25 @@ export function transitionSupportIncident(
   if (observed < parseTimestamp(incident.openedAt, "Support incident openedAt")) {
     throw new TypeError("Support incident transition precedes opening");
   }
-  return Object.freeze({
-    ...incident,
+  const result: SupportIncidentV1 = {
+    schemaVersion: incident.schemaVersion,
+    incidentId: incident.incidentId,
+    tenantId: incident.tenantId,
+    incidentCode: incident.incidentCode,
+    severity: incident.severity,
     status: next,
+    summary: incident.summary,
+    openedAt: incident.openedAt,
     version: (BigInt(incident.version) + 1n).toString(),
-    ...(next === "resolved" ? { resolvedAt: observedAt } : {}),
-    ...(next === "investigating" && incident.resolvedAt !== undefined ? { resolvedAt: undefined } : {}),
-  });
+    ...(next === "resolved"
+      ? { resolvedAt: observedAt }
+      : next === "investigating"
+        ? {}
+        : incident.resolvedAt === undefined
+          ? {}
+          : { resolvedAt: incident.resolvedAt }),
+  };
+  return Object.freeze(result);
 }
 
 export class TenantLifecycleExecutionError extends Error {
@@ -206,10 +218,10 @@ export async function runTenantLifecycleJob(input: {
     const execution = await input.executor.execute(input.job);
     if ((input.job.operation === "export" || input.job.operation === "offboard")
         && execution.disposition === "completed"
-        && execution.evidenceReference?.trim().length !== 0) {
-      if (execution.evidenceReference === undefined || execution.evidenceReference.length > 2_048) {
-        throw new TenantLifecycleExecutionError("export_evidence_invalid", false, "Lifecycle export evidence is invalid");
-      }
+        && (execution.evidenceReference === undefined
+          || execution.evidenceReference.trim().length === 0
+          || execution.evidenceReference.length > 2_048)) {
+      throw new TenantLifecycleExecutionError("export_evidence_invalid", false, "Lifecycle export evidence is invalid");
     }
     const status = execution.disposition;
     await input.commands.transition({
