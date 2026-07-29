@@ -1,0 +1,17 @@
+{
+  "module": "MOD-E-PAYMENT",
+  "version": 1,
+  "order": 10,
+  "migrations": [
+    {
+      "id": "PAY-0001",
+      "file": "PAY-0001-payment-platform.sql",
+      "sha256": "0336f365bebd8dbcd6fc046f293363cf0d8db9256b19579d76568ae374996b1b"
+    },
+    {
+      "id": "PAY-0002",
+      "file": "PAY-0002-payment-commands.sql",
+      "sha256": "f84da3ecbfd5cca799c0a14d34de6c5092fc5de3b4d60a1401ef7b501618eebb"
+    }
+  ]
+}

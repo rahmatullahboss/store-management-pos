@@ -1,0 +1,43 @@
+{
+  "schemaVersion": "1.0",
+  "source": "MOD-E approved local simulators",
+  "modB": {
+    "stockMovementPosted": {
+      "eventType": "stock.posted.v1",
+      "movementId": "movement-synthetic-001",
+      "postingGroupId": "posting-synthetic-001",
+      "legalEntityId": "018f0000-0000-7000-8000-000000000010",
+      "businessDate": "2026-07-28",
+      "inventoryValue": { "amountMinor": "4200", "currency": "GBP", "scale": 2 },
+      "costingRuleVersion": "fifo-simulator-v1"
+    },
+    "supplierBillPosted": {
+      "eventType": "supplier_bill.posted.v1",
+      "supplierBillId": "supplier-bill-synthetic-001",
+      "supplierId": "supplier-synthetic-001",
+      "postingGroupId": "posting-synthetic-002",
+      "amount": { "amountMinor": "12000", "currency": "GBP", "scale": 2 },
+      "documentVersion": "1"
+    }
+  },
+  "modC": {
+    "invoicePosted": {
+      "eventType": "sale.completed.v1",
+      "invoiceId": "invoice-synthetic-001",
+      "customerId": "customer-synthetic-001",
+      "postingGroupId": "posting-synthetic-003",
+      "net": { "amountMinor": "10000", "currency": "GBP", "scale": 2 },
+      "tax": { "amountMinor": "2000", "currency": "GBP", "scale": 2 },
+      "gross": { "amountMinor": "12000", "currency": "GBP", "scale": 2 },
+      "documentVersion": "1"
+    },
+    "creditNotePosted": {
+      "eventType": "sale.returned.v1",
+      "creditNoteId": "credit-note-synthetic-001",
+      "sourceInvoiceId": "invoice-synthetic-001",
+      "postingGroupId": "posting-synthetic-004",
+      "gross": { "amountMinor": "3000", "currency": "GBP", "scale": 2 },
+      "documentVersion": "1"
+    }
+  }
+}

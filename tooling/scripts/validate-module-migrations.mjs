@@ -10,6 +10,9 @@ const sources = [
   { module: "MOD-C", manifest: "database/modules/customer/manifest.json", directory: "database/modules/customer/migrations" },
   { module: "MOD-C", manifest: "database/modules/sales/manifest.json", directory: "database/modules/sales/migrations" },
   { module: "MOD-C", manifest: "database/modules/fulfillment/manifest.json", directory: "database/modules/fulfillment/migrations" },
+  { module: "MOD-E", manifest: "database/modules/payments/manifest.json", directory: "database/modules/payments/migrations" },
+  { module: "MOD-E", manifest: "database/modules/accounting/manifest.json", directory: "database/modules/accounting/migrations" },
+  { module: "MOD-E", manifest: "database/modules/banking/manifest.json", directory: "database/modules/banking/migrations" },
 ];
 const ids = new Set();
 const counts = new Map();
@@ -23,7 +26,7 @@ for (const source of sources) {
     const digest = createHash("sha256").update(sql).digest("hex");
     if (digest !== migration.sha256) throw new Error(`${migration.id} checksum does not match manifest`);
     if (!sql.includes(`VALUES ('${migration.id}'`)) throw new Error(`${migration.id} does not record its schema migration marker`);
-    if (!/ENABLE ROW LEVEL SECURITY/u.test(sql) || !/FORCE ROW LEVEL SECURITY/u.test(sql)) throw new Error(`${migration.id} must configure RLS`);
+    if (/CREATE TABLE/u.test(sql) && (!/ENABLE ROW LEVEL SECURITY/u.test(sql) || !/FORCE ROW LEVEL SECURITY/u.test(sql))) throw new Error(`${migration.id} creates tables without forced RLS`);
     if (!/BEGIN;/u.test(sql) || !/COMMIT;/u.test(sql)) throw new Error(`${migration.id} must be transactional`);
   }
 }

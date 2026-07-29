@@ -18,6 +18,9 @@ const availableModules = [
   { name: "MOD-C-CUSTOMER", manifest: "database/modules/customer/manifest.json", migrations: "database/modules/customer/migrations" },
   { name: "MOD-C-SALES", manifest: "database/modules/sales/manifest.json", migrations: "database/modules/sales/migrations" },
   { name: "MOD-C-FULFILLMENT", manifest: "database/modules/fulfillment/manifest.json", migrations: "database/modules/fulfillment/migrations" },
+  { name: "MOD-E-PAYMENT", manifest: "database/modules/payments/manifest.json", migrations: "database/modules/payments/migrations" },
+  { name: "MOD-E-ACCOUNTING", manifest: "database/modules/accounting/manifest.json", migrations: "database/modules/accounting/migrations" },
+  { name: "MOD-E-BANKING", manifest: "database/modules/banking/manifest.json", migrations: "database/modules/banking/migrations" },
 ];
 
 const dependencies = new Map([
@@ -29,15 +32,16 @@ const dependencies = new Map([
   ["MOD-C-CUSTOMER", ["FOUNDATION"]],
   ["MOD-C-SALES", ["FOUNDATION", "MOD-A-CATALOG", "MOD-A-PRICING", "MOD-A-TAX", "MOD-B-INVENTORY", "MOD-C-CUSTOMER"]],
   ["MOD-C-FULFILLMENT", ["FOUNDATION", "MOD-B-INVENTORY", "MOD-C-SALES"]],
+  ["MOD-E-PAYMENT", ["FOUNDATION", "MOD-C-SALES"]],
+  ["MOD-E-ACCOUNTING", ["FOUNDATION", "MOD-C-SALES", "MOD-E-PAYMENT"]],
+  ["MOD-E-BANKING", ["FOUNDATION", "MOD-E-PAYMENT", "MOD-E-ACCOUNTING"]],
 ]);
 
 const requested = new Set((process.env.MIGRATION_MODULES ?? availableModules.map((item) => item.name).join(",")).split(",").map((item) => item.trim()).filter(Boolean));
 const unknown = [...requested].filter((name) => !availableModules.some((item) => item.name === name));
 if (unknown.length > 0) throw new Error(`Unknown migration module(s): ${unknown.join(", ")}`);
 for (const name of requested) {
-  for (const dependency of dependencies.get(name) ?? []) {
-    if (!requested.has(dependency)) throw new Error(`${name} requires ${dependency}`);
-  }
+  for (const dependency of dependencies.get(name) ?? []) if (!requested.has(dependency)) throw new Error(`${name} requires ${dependency}`);
 }
 
 const client = new Client({ connectionString });
