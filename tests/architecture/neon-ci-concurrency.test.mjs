@@ -14,13 +14,21 @@ test("Neon branch lifecycle and persistent MOD-D rehearsal jobs are serialized",
   assert.ok((workflow.match(/cancel-in-progress: false/gu) ?? []).length >= 3);
 });
 
-test("Neon preview creation isolates cleanup per pull request and retries exact branch-limit failure once", async () => {
+test("Neon preview cleanup isolates normal runs and reclaims only aged preview branches at quota", async () => {
   const source = await readFile(previewScriptUrl, "utf8");
-  assert.match(source, /const previewBranchPrefix = `preview\/pr-\$\{safeRef\}-`/u);
-  assert.match(source, /branch\.name\.startsWith\(previewBranchPrefix\)/u);
+  assert.match(source, /const previewBranchRootPrefix = "preview\/pr-"/u);
+  assert.match(source, /const previewBranchPrefix = `\$\{previewBranchRootPrefix\}\$\{safeRef\}-`/u);
+  assert.match(source, /const globalStaleAgeMs = 45 \* 60 \* 1000/u);
+  assert.match(
+    source,
+    /branch\.name\.startsWith\(allPreviewBranches \? previewBranchRootPrefix : previewBranchPrefix\)/u,
+  );
+  assert.match(source, /now - timestamp >= globalStaleAgeMs/u);
+  assert.match(source, /branch\.id === NEON_PARENT_BRANCH_ID/u);
+  assert.match(source, /branch\.name === branchName/u);
   assert.match(source, /error\.payload\?\.code === "BRANCHES_LIMIT_EXCEEDED"/u);
-  assert.match(source, /cleaning stale branches for this pull request and retrying once/u);
-  assert.match(source, /branchLimitRetry/u);
+  assert.match(source, /cleaning only preview\/pr-\* branches older than 45 minutes and retrying once/u);
+  assert.match(source, /branchLimitCleanupDeleted/u);
   assert.doesNotMatch(source, /DELETE.*dev\/module/isu);
 });
 
