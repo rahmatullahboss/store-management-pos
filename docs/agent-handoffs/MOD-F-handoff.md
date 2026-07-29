@@ -15,7 +15,7 @@
 ## Activation and sync evidence
 
 - MOD-F was synchronized to the integrated MOD-D baseline through a two-parent merge without reset, rebase, force push or loss of prior commits.
-- The programme board and shared CI/tooling are inherited from the integration tree; module work remains in MOD-F-owned paths and approved additive API composition points.
+- The programme board and shared CI/tooling are inherited from the integration tree; module work remains in MOD-F-owned paths and approved additive composition points.
 - The assigned Neon branch is isolated and non-production.
 - One owner retains the complete workpack; no small implementation agents were created.
 
@@ -36,34 +36,30 @@
 - Legal documents, number allocations, fiscal events and retention policies retain append-only evidence.
 - Explicit business dates, row locks and advisory locks remove process-clock and concurrency ambiguity.
 
-## Completed: application and API checkpoint
+## Completed: application, API and operations checkpoint
 
 - Permission-scoped localization service and Neon repository for country-pack activation, effective configuration reads and legal-number allocation.
 - Compliance service and Neon repository for legal-document publication, fiscal submission/state and privacy requests/transitions.
 - Deterministic fiscal provider abstraction and simulator covering accepted, rejected, unknown and lost-response-after-effect outcomes.
 - Unknown provider results are recorded as `unknown`; blind provider retries are not issued on an idempotent database replay.
-- Authenticated API routes:
-  - `POST /v1/localization/activations`
-  - `GET /v1/localization/effective-configuration`
-  - `POST /v1/localization/legal-number-scopes/:id/allocations`
-  - `POST /v1/compliance/legal-documents`
-  - `POST /v1/compliance/fiscal-submissions`
-  - `POST /v1/compliance/privacy-operations`
-  - `POST /v1/compliance/privacy-operations/:id/{approve|start|complete|partial|reject}`
+- Authenticated localization and compliance API routes are composed into the Worker API.
 - Fiscal providers are injected; the default registry is empty and fails closed rather than enabling a simulator in production.
+- Compliance worker-job adapters classify accepted work as complete, rejected work as failed, and unknown or replayed-pending fiscal work as explicit review instead of automatic resubmission.
+- Metrics `mod_f.compliance.job` and `mod_f.compliance.job.duration_ms` contain only safe type/status attributes.
+- `docs/modules/localization-compliance/README.md` documents activation, legal numbering, immutable evidence, fiscal unknown-state recovery, privacy retention, monitoring, rollback and security procedures.
 
 ## Verification evidence
 
 - PR #29 remains open, draft and mergeable.
-- Foundation CI run `30447914861`, verify job `90562729856`, passed format, lint, architecture boundaries, strict TypeScript, migration validation, build/tests, secret scan, licence register, SBOM and dependency audit.
-- Foundation Design CI run `30447914885` passed.
-- Dedicated MOD-F Neon rehearsal job `90562813537` passed the complete migration chain, runtime integration workflow and deterministic replay on `dev/module-localization-compliance`.
-- Neon recovery job `90562813621` passed.
+- Foundation CI run `30448200829`, verify job `90563643542`, passed format, lint, architecture boundaries, strict TypeScript, migration validation, build/tests, secret scan, licence register, SBOM and dependency audit.
+- Foundation Design CI run `30448201861`, evidence job `90563649585`, passed Foundation context loading and browser/accessibility/design evidence.
+- Dedicated MOD-F Neon rehearsal job `90563760527` passed the complete migration chain, runtime integration workflow and deterministic replay on `dev/module-localization-compliance`.
+- Neon recovery job `90563760781` passed.
+- Cloudflare preview/runtime/cleanup job `90563760351` passed.
 - The Neon rehearsal seeds synthetic Foundation scope inside a transaction and rolls it back, so persistent branch data is not polluted.
-- Cloudflare preview/runtime/cleanup remains the final infrastructure gate for the current application checkpoint.
 
 ## Remaining work
 
 1. Admin country-pack/compliance control UI and POS locale/offline-capability integration using the existing Operations Ledger design system.
-2. Audit/event publication, module observability, worker-job adapters, performance/recovery evidence and operational runbooks.
-3. Final country-pack limitation documentation, complete handoff, review-ready transition and serial integration after MOD-D.
+2. Audit/outbox event publication and final performance/recovery evidence.
+3. Final country-pack limitation documentation, complete handoff, review-ready transition and controlled serial integration after MOD-D.
