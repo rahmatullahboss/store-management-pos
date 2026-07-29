@@ -14,6 +14,7 @@ export {
   type StorefrontHostResolver,
   type StorefrontResolveOptions,
 } from "./host-resolver.js";
+export { formatStorefrontMoneyV1 } from "./money.js";
 export {
   storefrontShellResponse,
   type StorefrontShellRenderOptions,
