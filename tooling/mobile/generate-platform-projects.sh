@@ -98,6 +98,10 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    buildFeatures {
+        resValues = true
+    }
+
     defaultConfig {
         applicationId = "com.ozzyl.storecompanion"
         minSdk = flutter.minSdkVersion
