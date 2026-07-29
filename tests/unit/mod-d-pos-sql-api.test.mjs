@@ -61,20 +61,40 @@ function checkoutBody(mode = "online") {
   };
 }
 
+function offlineOperation() {
+  return {
+    deviceId: IDS.device,
+    registerId: IDS.register,
+    authorizationId: IDS.authorization,
+    operationId: "operation-1",
+    deviceSequence: "1",
+    operationType: "checkout",
+    aggregateId: IDS.cart,
+    aggregateVersion: "1",
+    payload: { checkoutId: "checkout-1" },
+    payloadHash: "payload-hash-1",
+    recordedAt: "2026-07-29T08:00:00.000Z",
+    localSchemaVersion: "1",
+    appVersion: "1.0.0",
+  };
+}
+
 test("MOD-D cart repository preserves an arbitrarily large exact decimal quantity", async () => {
   const calls = [];
   const client = {
     async query(text, values = []) {
       calls.push({ text, values });
-      if (text.includes("FROM pos.register_sessions")) return result([{
-        id: IDS.session,
-        store_id: IDS.store,
-        register_id: IDS.register,
-        device_id: IDS.device,
-        status: "open",
-        business_date: "2026-07-29",
-        version: "1",
-      }]);
+      if (text.includes("FROM pos.register_sessions")) {
+        return result([{
+          id: IDS.session,
+          store_id: IDS.store,
+          register_id: IDS.register,
+          device_id: IDS.device,
+          status: "open",
+          business_date: "2026-07-29",
+          version: "1",
+        }]);
+      }
       if (text.includes("FROM pos.carts")) return result();
       return result();
     },
@@ -126,14 +146,16 @@ test("MOD-D checkout rejects inconsistent exact totals before database access", 
 test("MOD-D checkout idempotency rejects a changed replay hash", async () => {
   const client = {
     async query(text) {
-      if (text.includes("FROM pos.checkout_operations")) return result([{
-        id: "checkout-1",
-        operation_id: "operation-1",
-        request_hash: "original-hash",
-        payment_state: "accepted",
-        status: "pending",
-        version: "1",
-      }]);
+      if (text.includes("FROM pos.checkout_operations")) {
+        return result([{
+          id: "checkout-1",
+          operation_id: "operation-1",
+          request_hash: "original-hash",
+          payment_state: "accepted",
+          status: "pending",
+          version: "1",
+        }]);
+      }
       return result();
     },
   };
@@ -156,21 +178,7 @@ test("MOD-D offline upload returns an explicit rejection for invalid authorizati
     },
   };
   const repository = new PosSqlRepository();
-  const outcomes = await repository.uploadOfflineOperations(client, context(), [{
-    deviceId: IDS.device,
-    registerId: IDS.register,
-    authorizationId: IDS.authorization,
-    operationId: "operation-1",
-    deviceSequence: "1",
-    operationType: "checkout",
-    aggregateId: IDS.cart,
-    aggregateVersion: "1",
-    payload: { checkoutId: "checkout-1" },
-    payloadHash: "payload-hash-1",
-    recordedAt: "2026-07-29T08:00:00.000Z",
-    localSchemaVersion: "1",
-    appVersion: "1.0.0",
-  }]);
+  const outcomes = await repository.uploadOfflineOperations(client, context(), [offlineOperation()]);
 
   assert.deepEqual(outcomes, [{
     operationId: "operation-1",
@@ -180,29 +188,30 @@ test("MOD-D offline upload returns an explicit rejection for invalid authorizati
   assert.equal(calls.some(({ text }) => text.includes("INSERT INTO pos.offline_operations")), false);
 });
 
-test("MOD-D offline duplicate replay returns the original operation without another insert", async () => {
+test("MOD-D offline duplicate replay requires the full immutable envelope", async () => {
+  const operation = offlineOperation();
   const client = {
     async query(text) {
-      if (text.includes("FROM pos.offline_operations")) return result([{ id: "offline-1", payload_hash: "payload-hash-1" }]);
+      if (text.includes("FROM pos.offline_operations")) {
+        return result([{
+          id: "offline-1",
+          register_id: operation.registerId,
+          authorization_id: operation.authorizationId,
+          device_sequence: operation.deviceSequence,
+          operation_type: operation.operationType,
+          aggregate_id: operation.aggregateId,
+          aggregate_version: operation.aggregateVersion,
+          payload_hash: operation.payloadHash,
+          recorded_at: operation.recordedAt,
+          local_schema_version: operation.localSchemaVersion,
+          app_version: operation.appVersion,
+        }]);
+      }
       throw new Error(`unexpected query: ${text}`);
     },
   };
   const repository = new PosSqlRepository();
-  const outcomes = await repository.uploadOfflineOperations(client, context(), [{
-    deviceId: IDS.device,
-    registerId: IDS.register,
-    authorizationId: IDS.authorization,
-    operationId: "operation-1",
-    deviceSequence: "1",
-    operationType: "checkout",
-    aggregateId: IDS.cart,
-    aggregateVersion: "1",
-    payload: { checkoutId: "checkout-1" },
-    payloadHash: "payload-hash-1",
-    recordedAt: "2026-07-29T08:00:00.000Z",
-    localSchemaVersion: "1",
-    appVersion: "1.0.0",
-  }]);
+  const outcomes = await repository.uploadOfflineOperations(client, context(), [operation]);
 
   assert.deepEqual(outcomes, [{ operationId: "operation-1", status: "duplicate", offlineOperationId: "offline-1" }]);
 });
