@@ -9,13 +9,13 @@ const modules = [
     identity: "MOD-G-REPORTING",
     manifestPath: new URL("../../database/modules/reporting/manifest.json", import.meta.url),
     migrationsDirectory: new URL("../../database/modules/reporting/migrations/", import.meta.url),
-    expectedIds: ["RPT-0001"],
+    expectedIds: ["RPT-0001", "RPT-0002"],
   },
   {
     identity: "MOD-G-INTEGRATION",
     manifestPath: new URL("../../database/modules/integrations/manifest.json", import.meta.url),
     migrationsDirectory: new URL("../../database/modules/integrations/migrations/", import.meta.url),
-    expectedIds: ["INT-0001"],
+    expectedIds: ["INT-0001", "INT-0002"],
   },
 ];
 
@@ -54,7 +54,7 @@ test("MOD-G manifests are deterministic, complete and ordered after MOD-F", asyn
   assert.ok(identities.indexOf("MOD-G-REPORTING") < identities.indexOf("MOD-G-INTEGRATION"));
 });
 
-test("MOD-G tables use forced tenant RLS and runtime roles are read-only", async () => {
+test("MOD-G tables use forced tenant RLS and runtime roles are command-only", async () => {
   for (const source of modules) {
     const { migrations } = await loadModule(source);
     const sql = migrations.map((migration) => migration.sql).join("\n");
@@ -63,6 +63,9 @@ test("MOD-G tables use forced tenant RLS and runtime roles are read-only", async
     assert.match(sql, /platform\.current_tenant_id\(\)/u);
     assert.match(sql, /REVOKE INSERT, UPDATE, DELETE ON ALL TABLES/u);
     assert.doesNotMatch(sql, /GRANT (?:INSERT|UPDATE|DELETE) ON/u);
+    assert.match(sql, /SECURITY DEFINER/u);
+    assert.match(sql, /REVOKE ALL ON FUNCTION/u);
+    assert.match(sql, /GRANT EXECUTE ON FUNCTION/u);
   }
 });
 
@@ -80,6 +83,20 @@ test("reporting migration preserves exact, rebuildable and auditable projection 
   assert.match(sql, /metric_snapshots_append_only/u);
   assert.match(sql, /projection_reconciliations_append_only/u);
   assert.match(sql, /export_events_append_only/u);
+  for (const command of [
+    "publish_metric_definition",
+    "consume_projection_event",
+    "record_metric_snapshot",
+    "request_export",
+    "transition_export",
+  ]) assert.match(sql, new RegExp(`reporting\\.${command}`, "u"));
+  assert.match(sql, /pg_advisory_xact_lock/u);
+  assert.match(sql, /projection event replay payload differs/u);
+  assert.match(sql, /metric snapshot replay payload differs/u);
+  assert.match(sql, /export transition replay payload differs/u);
+  assert.match(sql, /INSERT INTO platform\.audit_events/u);
+  assert.match(sql, /INSERT INTO platform\.outbox_events/u);
+  assert.doesNotMatch(sql, /CURRENT_DATE/u);
 });
 
 test("integration migration preserves webhook replay evidence and connector loop ownership", async () => {
@@ -99,4 +116,19 @@ test("integration migration preserves webhook replay evidence and connector loop
   assert.match(sql, /connector_sync_outcomes_append_only/u);
   assert.match(sql, /credential_reference/u);
   assert.doesNotMatch(sql, /credential_(?:secret|value)|api_key_value|access_token_value/u);
+  for (const command of [
+    "create_webhook_subscription",
+    "enqueue_webhook_delivery",
+    "record_webhook_attempt",
+    "request_webhook_replay",
+    "register_connector_connection",
+    "add_connector_mapping",
+    "record_connector_sync_outcome",
+  ]) assert.match(sql, new RegExp(`integration\\.${command}`, "u"));
+  assert.match(sql, /only dead-letter webhook deliveries can be replayed/u);
+  assert.match(sql, /webhook attempt replay payload differs/u);
+  assert.match(sql, /connector sync replay payload differs/u);
+  assert.match(sql, /INSERT INTO platform\.audit_events/u);
+  assert.match(sql, /INSERT INTO platform\.outbox_events/u);
+  assert.doesNotMatch(sql, /signing_key_reference[^\n]*metadata|credential_reference[^\n]*metadata/u);
 });
