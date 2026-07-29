@@ -1,5 +1,7 @@
 BEGIN;
 
+CREATE SCHEMA IF NOT EXISTS pos;
+
 CREATE TABLE pos.devices (
   id uuid PRIMARY KEY,
   tenant_id uuid NOT NULL REFERENCES platform.tenants(id),
