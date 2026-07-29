@@ -26,7 +26,7 @@ for (const source of sources) {
     counts.set(source.module, (counts.get(source.module) ?? 0) + 1);
     const sql = await readFile(path.join(root, source.directory, migration.file), "utf8");
     const digest = createHash("sha256").update(sql).digest("hex");
-    if (digest !== migration.sha256) throw new Error(`${migration.id} checksum does not match manifest`);
+    if (digest !== migration.sha256) throw new Error(`${migration.id} checksum does not match manifest: expected ${migration.sha256}, computed ${digest}`);
     if (!sql.includes(`VALUES ('${migration.id}'`)) throw new Error(`${migration.id} does not record its schema migration marker`);
     if (/CREATE TABLE/u.test(sql) && (!/ENABLE ROW LEVEL SECURITY/u.test(sql) || !/FORCE ROW LEVEL SECURITY/u.test(sql))) throw new Error(`${migration.id} creates tables without forced RLS`);
     if (!/BEGIN;/u.test(sql) || !/COMMIT;/u.test(sql)) throw new Error(`${migration.id} must be transactional`);
