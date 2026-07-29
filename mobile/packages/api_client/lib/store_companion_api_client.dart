@@ -263,9 +263,10 @@ final class MobileBootstrapContract {
       MobileBootstrapContract(
         contractVersion: _requiredString(json, 'contract_version'),
         serverTime: DateTime.parse(_requiredString(json, 'server_time')),
-        workspaces: _requiredMapList(json, 'workspaces')
-            .map(MobileWorkspaceContract.fromJson)
-            .toList(growable: false),
+        workspaces: _requiredMapList(
+          json,
+          'workspaces',
+        ).map(MobileWorkspaceContract.fromJson).toList(growable: false),
         activeWorkspace: _requiredString(json, 'active_workspace'),
         capabilities: _requiredStringList(json, 'capabilities').toSet(),
         localisation: MobileLocalisationContract.fromJson(
@@ -443,10 +444,7 @@ final class MobileOperationResultContract {
       status == 'requires_online_confirmation';
 }
 
-Map<String, Object?> _requiredMap(
-  Map<String, Object?> source,
-  String key,
-) {
+Map<String, Object?> _requiredMap(Map<String, Object?> source, String key) {
   final value = source[key];
   if (value case final Map<Object?, Object?> map) {
     return _stringKeyedMap(map);
@@ -454,10 +452,7 @@ Map<String, Object?> _requiredMap(
   throw MobileContractException('Expected "$key" to be an object.', source);
 }
 
-Map<String, Object?>? _optionalMap(
-  Map<String, Object?> source,
-  String key,
-) {
+Map<String, Object?>? _optionalMap(Map<String, Object?> source, String key) {
   final value = source[key];
   if (value == null) {
     return null;
@@ -474,15 +469,17 @@ List<Map<String, Object?>> _requiredMapList(
 ) {
   final value = source[key];
   if (value case final List<Object?> values) {
-    return values.map((Object? item) {
-      if (item case final Map<Object?, Object?> map) {
-        return _stringKeyedMap(map);
-      }
-      throw MobileContractException(
-        'Expected every "$key" item to be an object.',
-        source,
-      );
-    }).toList(growable: false);
+    return values
+        .map((Object? item) {
+          if (item case final Map<Object?, Object?> map) {
+            return _stringKeyedMap(map);
+          }
+          throw MobileContractException(
+            'Expected every "$key" item to be an object.',
+            source,
+          );
+        })
+        .toList(growable: false);
   }
   throw MobileContractException('Expected "$key" to be a list.', source);
 }
@@ -544,10 +541,7 @@ int _requiredInt(Map<String, Object?> source, String key) {
   throw MobileContractException('Expected "$key" to be an integer.', source);
 }
 
-List<String> _requiredStringList(
-  Map<String, Object?> source,
-  String key,
-) {
+List<String> _requiredStringList(Map<String, Object?> source, String key) {
   final value = source[key];
   if (value case final List<Object?> values) {
     final result = <String>[];
@@ -565,10 +559,7 @@ List<String> _requiredStringList(
   throw MobileContractException('Expected "$key" to be a list.', source);
 }
 
-List<String> _optionalStringList(
-  Map<String, Object?> source,
-  String key,
-) {
+List<String> _optionalStringList(Map<String, Object?> source, String key) {
   if (!source.containsKey(key) || source[key] == null) {
     return const <String>[];
   }
