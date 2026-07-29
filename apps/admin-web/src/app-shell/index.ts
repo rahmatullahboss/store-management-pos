@@ -7,6 +7,8 @@ import { CATALOG_ADMIN_ROUTES } from "../modules/catalog/routes.js";
 import { renderCustomerWorkspace, type CustomerWorkspaceInput } from "../modules/customer/surface.js";
 import { renderFulfillmentWorkspace, type FulfillmentWorkspaceInput } from "../modules/fulfillment/surface.js";
 import { renderInventoryOperationsPage, type InventoryDashboardFixture } from "../modules/inventory/index.js";
+import { renderLocalizationControlPage, type LocalizationControlPage } from "../modules/localization/page.js";
+import { LOCALIZATION_COMPLIANCE_ADMIN_ROUTES } from "../modules/localization/routes.js";
 import { renderPaymentOperationsPage, type PaymentOperationsPage } from "../modules/payments/page.js";
 import { renderPosReconciliationPage, type PosReconciliationPage } from "../modules/pos/reconciliation-page.js";
 import { PRICING_TAX_ADMIN_ROUTES } from "../modules/pricing/routes.js";
@@ -37,7 +39,15 @@ const MOD_D_ADMIN_ROUTES: readonly AdminRouteDescriptor[] = Object.freeze([
   Object.freeze({ id: "pos.reconciliation", path: "/pos/reconciliation", navigationLabel: "POS reconciliation", permission: "pos.sync.read", module: "pos", order: 510, exact: true }),
 ]);
 
-const integratedAdminRoutes = composeAdminRoutes([CATALOG_ADMIN_ROUTES, PRICING_TAX_ADMIN_ROUTES, MOD_B_ADMIN_ROUTES, MOD_C_ADMIN_ROUTES, MOD_E_ADMIN_ROUTES, MOD_D_ADMIN_ROUTES]);
+const integratedAdminRoutes = composeAdminRoutes([
+  CATALOG_ADMIN_ROUTES,
+  PRICING_TAX_ADMIN_ROUTES,
+  MOD_B_ADMIN_ROUTES,
+  MOD_C_ADMIN_ROUTES,
+  MOD_E_ADMIN_ROUTES,
+  MOD_D_ADMIN_ROUTES,
+  LOCALIZATION_COMPLIANCE_ADMIN_ROUTES,
+]);
 
 export interface AdminShellInput {
   readonly displayName: string;
@@ -113,4 +123,20 @@ export function renderFinanceReadinessAdminPage(input: Omit<AdminShellInput, "co
 
 export function renderPosReconciliationAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page: PosReconciliationPage): string {
   return renderAdminShell({ ...input, currentPath: "/pos/reconciliation", content: renderPosReconciliationPage(page) });
+}
+
+export function renderLocalizationAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page: LocalizationControlPage): string {
+  return renderAdminShell({
+    ...input,
+    currentPath: "/localization",
+    content: renderLocalizationControlPage({ ...page, focus: "country_packs" }),
+  });
+}
+
+export function renderComplianceAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page: LocalizationControlPage): string {
+  return renderAdminShell({
+    ...input,
+    currentPath: "/compliance",
+    content: renderLocalizationControlPage({ ...page, focus: "compliance" }),
+  });
 }
