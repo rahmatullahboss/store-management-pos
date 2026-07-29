@@ -38,7 +38,7 @@ export interface CashShiftSummary {
   readonly eventCount: number;
 }
 
-const POSITIVE_EVENTS: ReadonlySet<CashEventKind> = new Set([
+const POSITIVE_EVENTS: ReadonlySet<CashEventKind> = new Set<CashEventKind>([
   "opening_float",
   "cash_sale",
   "paid_in",
