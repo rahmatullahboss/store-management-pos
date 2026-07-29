@@ -1,4 +1,5 @@
 export * from "./domain.js";
+export * from "./ledger.js";
 export type {
   BlindCashCountV1,
   CashEventV1,
