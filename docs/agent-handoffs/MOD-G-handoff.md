@@ -4,7 +4,7 @@
 **Git branch:** `module/reporting-integrations-saas-v1`  
 **Worktree:** `.worktrees/reporting-integrations-saas`  
 **Approved Wave 2 release:** `93f8d98164dc105141a71b85dd2af5a98e9e31e9`  
-**Neon branch:** `dev/module/reporting-integrations` (`br-mute-band-axbhmsky`)  
+**Neon branch:** `dev/module-reporting-integrations` (`br-mute-band-axbhmsky`)  
 **Review PR:** `#45`  
 **State:** `active`
 
@@ -64,31 +64,39 @@
 
 Checkpoint evidence is recorded in `docs/architecture/mod-g/worker-orchestration-checkpoint.md`.
 
+## Completed checkpoint 3 — public API control plane
+
+- Added API-client validation, tenant/client binding, explicit and namespace-wildcard scopes, status/expiry checks and fail-closed mutation idempotency requirements.
+- Added deterministic per-client/per-minute rate-limit windows with duplicate request protection and reset metadata.
+- Added exact SHA-256 idempotency state handling for new, in-progress, replay, failed and payload-conflict requests.
+- Added bounded opaque-cursor pagination and safe deterministic sort validation, including camelCase API fields.
+- Added database-free OpenAPI 3.1 and capabilities discovery routes before OIDC/database initialization.
+- Documented API-key and OAuth2 client-credentials conventions without exposing credential values.
+- Preserved every existing internal OIDC-authenticated business route unchanged.
+
+Checkpoint evidence is recorded in `docs/architecture/mod-g/public-api-control-plane-checkpoint.md`.
+
 ## Verification evidence
 
 ### Contracts and migration foundation
 
-GitHub run `30463780467` passed:
-
-- core verification, tests and supply-chain/security gates;
-- Foundation Design CI;
-- dedicated MOD-G Neon full-chain and replay job `90616506836`;
-- Neon recovery;
-- Cloudflare preview, runtime metrics and cleanup.
-
-The assigned-branch artifact reports 48 applied migrations, 7 reporting tables, 9 integration tables, forced RLS on all 16 MOD-G tables, zero direct runtime writes, zero `PUBLIC` function execution and zero unsafe credential-value columns.
+GitHub run `30463780467` passed core, Design, MOD-G Neon full-chain/replay, Neon recovery and Cloudflare preview/runtime/cleanup gates. The assigned-branch artifact reports 48 applied migrations, 7 reporting tables, 9 integration tables, forced RLS on all 16 MOD-G tables, zero direct runtime writes, zero `PUBLIC` function execution and zero unsafe credential-value columns.
 
 ### Runtime commands and workers
 
-Implementation head `abae858f7861c49b3de0397971af9d21bd3c56c6` passed Foundation CI run `30478165369`, verify job `90665021102`:
+Implementation head `abae858f7861c49b3de0397971af9d21bd3c56c6` passed Foundation CI run `30478165369`, verify job `90665021102`, including format, lint, boundaries, strict TypeScript, `306/306` tests, secret scan, licence register, SBOM and dependency audit. Its Design run encountered an isolated Chrome startup timeout; the next exact public-API head passed Design without source changes to existing visual surfaces.
 
-- format, lint and architecture boundaries;
-- strict TypeScript typecheck;
-- build and `306/306` unit and architecture tests;
-- secret scan, licence register, SBOM and dependency audit.
+### Public API control plane
 
-The exact checkpoint run also executes MOD-G Neon replay, Neon recovery and Cloudflare preview/runtime gates. Foundation Design CI run `30478174548` covers the unchanged visual surfaces.
+Implementation head `b308f5f1653e9c6a41b6e10bab849a59866893ef` passed:
+
+- Foundation CI run `30479261530`;
+- verify job `90668729127` with `311/311` tests and all repository/security/supply-chain checks;
+- MOD-G Neon full-chain and replay job `90668845254`;
+- Neon recovery job `90668845181`;
+- Cloudflare preview, runtime metrics and cleanup job `90668845158`;
+- Foundation Design CI run `30479261178`.
 
 ## Current checkpoint
 
-Runtime commands and core projection/export/webhook/connector worker orchestration are implemented. The next coherent checkpoint is the public REST/OpenAPI layer with client scopes, rate limits, pagination and idempotency, followed by concrete generic connector adapters, SaaS lifecycle orchestration and the reporting/integration/SaaS admin web surfaces.
+Core runtime commands/workers and the public API authorization/discovery control plane are complete. The next coherent checkpoint is persistent API-client/service-principal commands and credential verification, followed by scoped partner data routes, generic CSV/REST connectors, SaaS lifecycle orchestration and the reporting/integration/SaaS admin web surfaces.
