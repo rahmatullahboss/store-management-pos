@@ -5,7 +5,9 @@ void main() {
   test('builds reviewed OAuth authorization request without verifier', () {
     final redirect = Uri.parse('com.ozzyl.storecompanion://oauth/callback');
     final request = AuthorizationRequest(
-      authorizationEndpoint: Uri.parse('https://identity.example.test/authorize'),
+      authorizationEndpoint: Uri.parse(
+        'https://identity.example.test/authorize',
+      ),
       clientId: 'store-companion-mobile',
       redirectUri: redirect,
       scopes: const <String>['openid', 'profile', 'offline_access'],
@@ -18,7 +20,10 @@ void main() {
     expect(request.requestUri.scheme, 'https');
     expect(request.requestUri.queryParameters['response_type'], 'code');
     expect(request.requestUri.queryParameters['code_challenge_method'], 'S256');
-    expect(request.requestUri.queryParameters.containsKey('code_verifier'), isFalse);
+    expect(
+      request.requestUri.queryParameters.containsKey('code_verifier'),
+      isFalse,
+    );
   });
 
   test('rejects OAuth redirect outside exact allowlist', () {
