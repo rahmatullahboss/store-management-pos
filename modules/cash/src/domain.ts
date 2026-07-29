@@ -82,20 +82,20 @@ export class CashShiftLedger {
   }
 
   append(input: CashEventInput): AppendCashEventResult {
-    if (this.#summary) throw new TypeError(`Cash shift ${this.shiftId} is closed`);
     assertRequired(input.eventId, "eventId");
     assertRequired(input.requestHash, "requestHash");
     assertRequired(input.occurredAt, "occurredAt");
     if (input.shiftId !== this.shiftId) throw new TypeError("Cash event belongs to another shift");
-    addMoney(money(0n, this.currency, this.scale), input.amount);
-    cashEventEffect(input);
 
     const existing = this.#byId.get(input.eventId);
     if (existing) {
       if (!sameEvent(existing, input)) throw new TypeError(`Cash event ${input.eventId} was replayed with different content`);
       return Object.freeze({ event: existing, replayed: true });
     }
+    if (this.#summary) throw new TypeError(`Cash shift ${this.shiftId} is closed`);
 
+    addMoney(money(0n, this.currency, this.scale), input.amount);
+    cashEventEffect(input);
     const event: CashEventRecord = Object.freeze({
       ...input,
       sequence: BigInt(this.#events.length + 1),
