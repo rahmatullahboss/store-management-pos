@@ -368,7 +368,34 @@ export class ProcurementSqlRepository {
     return result.rows;
   }
 
-  private async auditAndPublish(client: TransactionClient, context: RequestContext, eventType: string, aggregateType: string, aggregateId: string, payload: Readonly<Record<string, unknown>>): Promise<void> {
+  async operationalHealth(client: TransactionClient, context: RequestContext): Promise<Record<string, unknown>> {
+    const result = await client.query<{
+      active_suppliers: string;
+      open_purchase_orders: string;
+      unmatched_bills: string;
+      receipt_exceptions: string;
+    } & Record<string, unknown>>(
+      `SELECT
+         COALESCE((SELECT COUNT(*) FROM procurement.suppliers WHERE tenant_id = $1::uuid AND status = 'active'), 0)::text AS active_suppliers,
+         COALESCE((SELECT COUNT(*) FROM procurement.purchase_orders WHERE tenant_id = $1::uuid AND state IN ('submitted','approved','partially_received')), 0)::text AS open_purchase_orders,
+         COALESCE((SELECT COUNT(*) FROM procurement.supplier_bills WHERE tenant_id = $1::uuid AND state IN ('unmatched','variance')), 0)::text AS unmatched_bills,
+         COALESCE((SELECT COUNT(*) FROM procurement.goods_receipt_lines WHERE tenant_id = $1::uuid AND disposition IN ('quarantine','damaged','rejected')), 0)::text AS receipt_exceptions`,
+      [context.tenantId],
+    );
+    const row = result.rows[0]!;
+    const unmatchedBills = BigInt(row.unmatched_bills);
+    const receiptExceptions = BigInt(row.receipt_exceptions);
+    return {
+      status: unmatchedBills === 0n && receiptExceptions === 0n ? "healthy" : "degraded",
+      activeSuppliers: row.active_suppliers,
+      openPurchaseOrders: row.open_purchase_orders,
+      unmatchedBills: row.unmatched_bills,
+      receiptExceptions: row.receipt_exceptions,
+      checkedAt: new Date().toISOString(),
+    };
+  }
+
+  protected async auditAndPublish(client: TransactionClient, context: RequestContext, eventType: string, aggregateType: string, aggregateId: string, payload: Readonly<Record<string, unknown>>): Promise<void> {
     const eventId = uuidV7();
     await client.query(
       `INSERT INTO platform.audit_events(

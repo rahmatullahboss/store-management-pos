@@ -7,7 +7,6 @@ import { InventorySqlRepository } from "./sql-repository.js";
 import type { StockPostingLine, StockStatus } from "./types.js";
 
 const DECIMAL = /^-?\d+(?:\.\d+)?$/u;
-function factor(scale: number): bigint { if (!Number.isInteger(scale) || scale < 0 || scale > 18) throw new PlatformError("VALIDATION_FAILED", "Invalid quantity scale", 400); return 10n ** BigInt(scale); }
 function parseQuantity(quantity: QuantityV1): bigint {
   const raw = quantity.amount.trim();
   if (!DECIMAL.test(raw)) throw new PlatformError("VALIDATION_FAILED", "Quantity must be an exact decimal string", 400);

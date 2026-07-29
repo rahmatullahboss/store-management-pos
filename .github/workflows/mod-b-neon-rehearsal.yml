@@ -27,7 +27,7 @@ jobs:
     timeout-minutes: 20
     env:
       NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
-      NEON_PROJECT_ID: ${{ secrets.NEON_PROJECT_ID }}
+      NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
       NEON_BRANCH_NAME: dev/module-inventory-procurement
       MIGRATION_MODULES: FOUNDATION,MOD-B-INVENTORY,MOD-B-PROCUREMENT
     steps:
