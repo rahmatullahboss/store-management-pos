@@ -21,10 +21,7 @@ void main() {
     final bootstrap = CompanionBootstrap.synthetic();
 
     expect(bootstrap.isSynthetic, isTrue);
-    expect(
-      bootstrap.activeWorkspace.can('catalog.barcode.lookup'),
-      isTrue,
-    );
+    expect(bootstrap.activeWorkspace.can('catalog.barcode.lookup'), isTrue);
     expect(bootstrap.activeWorkspace.can('inventory.count.post'), isFalse);
   });
 
