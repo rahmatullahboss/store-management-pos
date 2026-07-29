@@ -6,59 +6,63 @@ import 'package:store_companion_local_data/store_companion_local_database.dart';
 import 'package:store_companion_local_data/store_companion_sync_database.dart';
 
 void main() {
-  test('reopening sync storage backfills operations created after migration', () {
-    final directory = Directory.systemTemp.createTempSync(
-      'store-companion-late-backfill-test-',
-    );
-    final databasePath = '${directory.path}/store-companion.sqlite3';
-    final key = LocalEncryptionKey.fromSecureStorage('04' * 32);
-
-    try {
-      final initialSync = _openSync(databasePath, key);
-      expect(initialSync.syncSchemaVersion, 1);
-      initialSync.close();
-
-      final firstBase = _openBase(databasePath, key);
-      _commitBase(
-        firstBase,
-        operationId: 'operation-001',
-        idempotencyKey: 'idempotency-001',
-        committedAt: _time(0),
+  test(
+    'reopening sync storage backfills operations created after migration',
+    () {
+      final directory = Directory.systemTemp.createTempSync(
+        'store-companion-late-backfill-test-',
       );
-      firstBase.close();
+      final databasePath = '${directory.path}/store-companion.sqlite3';
+      final key = LocalEncryptionKey.fromSecureStorage('04' * 32);
 
-      final firstReopen = _openSync(databasePath, key);
-      final firstBatch = firstReopen.readDispatchableOperations(now: _time(10));
-      expect(firstBatch.map((value) => value.localSequence), <int>[1]);
-      expect(
-        firstBatch.map((value) => value.operation.operationId),
-        <String>['operation-001'],
-      );
-      firstReopen.close();
+      try {
+        final initialSync = _openSync(databasePath, key);
+        expect(initialSync.syncSchemaVersion, 1);
+        initialSync.close();
 
-      final secondBase = _openBase(databasePath, key);
-      _commitBase(
-        secondBase,
-        operationId: 'operation-002',
-        idempotencyKey: 'idempotency-002',
-        committedAt: _time(1),
-      );
-      secondBase.close();
+        final firstBase = _openBase(databasePath, key);
+        _commitBase(
+          firstBase,
+          operationId: 'operation-001',
+          idempotencyKey: 'idempotency-001',
+          committedAt: _time(0),
+        );
+        firstBase.close();
 
-      final secondReopen = _openSync(databasePath, key);
-      final secondBatch = secondReopen.readDispatchableOperations(
-        now: _time(10),
-      );
-      expect(secondBatch.map((value) => value.localSequence), <int>[1, 2]);
-      expect(
-        secondBatch.map((value) => value.operation.operationId),
-        <String>['operation-001', 'operation-002'],
-      );
-      secondReopen.close();
-    } finally {
-      directory.deleteSync(recursive: true);
-    }
-  });
+        final firstReopen = _openSync(databasePath, key);
+        final firstBatch = firstReopen.readDispatchableOperations(
+          now: _time(10),
+        );
+        expect(firstBatch.map((value) => value.localSequence), <int>[1]);
+        expect(firstBatch.map((value) => value.operation.operationId), <String>[
+          'operation-001',
+        ]);
+        firstReopen.close();
+
+        final secondBase = _openBase(databasePath, key);
+        _commitBase(
+          secondBase,
+          operationId: 'operation-002',
+          idempotencyKey: 'idempotency-002',
+          committedAt: _time(1),
+        );
+        secondBase.close();
+
+        final secondReopen = _openSync(databasePath, key);
+        final secondBatch = secondReopen.readDispatchableOperations(
+          now: _time(10),
+        );
+        expect(secondBatch.map((value) => value.localSequence), <int>[1, 2]);
+        expect(
+          secondBatch.map((value) => value.operation.operationId),
+          <String>['operation-001', 'operation-002'],
+        );
+        secondReopen.close();
+      } finally {
+        directory.deleteSync(recursive: true);
+      }
+    },
+  );
 }
 
 StoreCompanionLocalDatabase _openBase(

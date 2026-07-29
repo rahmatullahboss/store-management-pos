@@ -538,8 +538,8 @@ final class StoreCompanionSyncDatabase {
           'schema $_currentSyncSchemaVersion.',
         );
       }
+      _backfillSequences();
       if (current < 1) {
-        _backfillSequences();
         _database.execute(
           '''
           INSERT INTO local_sync_schema_migrations (version, applied_at)
