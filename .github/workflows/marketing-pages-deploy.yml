@@ -80,7 +80,7 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           wranglerVersion: "4.114.0"
           preCommands: |
-            npx wrangler pages project list --json | grep -Eq '"name"[[:space:]]*:[[:space:]]*"store-operating-system"' || npx wrangler pages project create store-operating-system --production-branch=main
+            npx wrangler pages project list --json | grep -Eq '"(Project Name|name)"[[:space:]]*:[[:space:]]*"store-operating-system"' || npx wrangler pages project create store-operating-system --production-branch=main
           command: pages deploy apps/marketing-web/src --project-name=store-operating-system --branch=${{ github.event.pull_request.head.ref || github.ref_name }}
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
 
