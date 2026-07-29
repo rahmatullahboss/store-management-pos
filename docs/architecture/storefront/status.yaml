@@ -1,0 +1,111 @@
+workpack:
+  id: MOD-H
+  title: Storefront Commerce and Custom Domains
+  status: active
+  current_checkpoint: H0
+  updated_at: 2026-07-30
+  owner_model: one_agent_complete_workpack
+
+coordinates:
+  repository: rahmatullahboss/store-management-pos
+  base_branch: program/integration-v1
+  branch: module/storefront-commerce-v1
+  worktree: .worktrees/storefront-commerce
+  neon_branch: dev/module-storefront-commerce
+  integration_target: program/integration-v1
+
+upstream:
+  repository: https://github.com/scaliuslabs/scalius-commerce-lite
+  branch: mono-repo
+  commit: 4cb83aecb6d27483951618dcf8398592e662f241
+  use_mode: selective_owner_authorised_adaptation
+  product_branding_reuse: prohibited
+  provenance_recording: required
+  wholesale_import: prohibited
+
+checkpoints:
+  H0:
+    title: Activation and provenance
+    status: active
+    completed:
+      - git_branch_created
+      - workpack_created
+      - initial_repository_audit_completed
+      - adaptation_categories_defined
+      - continuation_hub_created
+    remaining:
+      - programme_board_update
+      - parallel_execution_update
+      - product_and_roadmap_update
+      - reuse_register_update
+      - upstream_file_manifest_baseline
+      - neon_branch_create_or_verify
+      - activation_checkpoint_commit_ci
+  H1:
+    title: Storefront foundation
+    status: ready_after_H0
+    remaining:
+      - scaffold_apps_storefront_web
+      - scaffold_storefront_contracts
+      - scaffold_storefront_client
+      - scaffold_storefront_theme
+      - add_runtime_hostname_context
+      - add_health_and_unavailable_states
+      - add_boundary_tests
+      - add_ci_path_coverage
+  H2:
+    title: Storefront domain and publishing
+    status: blocked_by_H1
+  H3:
+    title: Public catalog and content
+    status: blocked_by_H2
+  H4:
+    title: Exact cart and checkout
+    status: blocked_by_H3
+  H5:
+    title: Customer and order experience
+    status: blocked_by_H4
+  H6:
+    title: Custom domains and SaaS operations
+    status: blocked_by_H2_and_shared_control_plane_contract
+  H7:
+    title: Hardening and handoff
+    status: blocked_by_H1_to_H6
+
+module_authority:
+  catalog_pricing_tax: MOD-A
+  inventory_reservations: MOD-B
+  customer_sales_fulfillment: MOD-C
+  payments_accounting: MOD-E
+  localization_country_support: MOD-F
+  saas_integration_control_plane: MOD-G
+  storefront_publication_presentation_domains: MOD-H
+
+next_action:
+  id: H0-DOCS-01
+  description: Complete shared programme, product, roadmap and provenance documentation, then create or verify the non-production Neon branch.
+
+last_commits:
+  - sha: 049edcccfe860d53585e4c099f4b3070c63dfa4f
+    purpose: MOD-H workpack activation
+  - sha: e1736687ad134807ebebd46d15ae815022dc9b78
+    purpose: continuation hub
+  - sha: 5be8594dd62621871880e96c615b8bdd3c52b86f
+    purpose: selective adaptation plan
+
+evidence:
+  audit_sources:
+    - upstream README and architecture
+    - upstream storefront README
+    - upstream API client
+    - upstream product types and cart store
+    - upstream cache middleware and edge cache
+    - upstream theme model
+    - upstream product public eligibility
+    - local PRODUCT.md, DESIGN.md and programme policies
+  known_risks:
+    - exact_money_rewrite_required
+    - multi_tenant_domain_control_plane_not_present_upstream
+    - sales_channel_publication_model_not_present_upstream
+    - customer_auth_and_checkout_contract_rewrite_required
+    - source_rights_and_provenance_must_remain_auditable
