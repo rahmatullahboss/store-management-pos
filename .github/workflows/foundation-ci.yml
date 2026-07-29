@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: foundation-ci-${{ github.event.pull_request.head.ref == 'module/localization-compliance-v1' && github.sha || (github.event.pull_request.number || github.ref) }}
+  group: foundation-ci-${{ (github.event.pull_request.head.ref == 'module/localization-compliance-v1' || github.event.pull_request.head.ref == 'module/reporting-integrations-saas-v1') && github.sha || (github.event.pull_request.number || github.ref) }}
   cancel-in-progress: true
 
 permissions:
@@ -50,9 +50,9 @@ jobs:
         run: npm audit --audit-level=high
 
   neon-preview:
-    # MOD-D and MOD-F use persistent assigned branches with stricter full-chain rehearsals below.
+    # MOD-D, MOD-F and MOD-G use persistent assigned branches with stricter full-chain rehearsals below.
     # Avoid consuming extra ephemeral branches on the quota-limited non-production project.
-    if: ${{ (github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]')) && (github.event_name != 'pull_request' || (github.event.pull_request.head.ref != 'module/pos-cash-offline-v1' && github.event.pull_request.head.ref != 'module/localization-compliance-v1')) }}
+    if: ${{ (github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]')) && (github.event_name != 'pull_request' || (github.event.pull_request.head.ref != 'module/pos-cash-offline-v1' && github.event.pull_request.head.ref != 'module/localization-compliance-v1' && github.event.pull_request.head.ref != 'module/reporting-integrations-saas-v1')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs:
@@ -171,6 +171,38 @@ jobs:
         with:
           name: neon-mod-f-${{ github.run_id }}
           path: artifacts/mod-f/neon-rehearsal.json
+          if-no-files-found: error
+          retention-days: 14
+
+  mod-g-neon-rehearsal:
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'module/reporting-integrations-saas-v1' && github.actor != 'dependabot[bot]' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    needs: verify
+    concurrency:
+      group: mod-g-neon-rehearsal-${{ github.repository }}
+      cancel-in-progress: false
+    env:
+      NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+      NEON_PROJECT_ID: twilight-boat-26805962
+      MOD_G_NEON_BRANCH_ID: br-mute-band-axbhmsky
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts
+      - name: Apply and verify complete chain through MOD-G
+        run: npm run ci:neon-mod-g
+      - name: Verify deterministic migration replay
+        run: npm run ci:neon-mod-g
+      - name: Upload MOD-G Neon rehearsal evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: neon-mod-g-${{ github.run_id }}
+          path: artifacts/mod-g/neon-rehearsal.json
           if-no-files-found: error
           retention-days: 14
 
