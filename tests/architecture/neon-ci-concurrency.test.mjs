@@ -25,11 +25,35 @@ test("Neon preview cleanup isolates normal runs and reclaims only aged preview b
   );
   assert.match(source, /now - timestamp >= globalStaleAgeMs/u);
   assert.match(source, /branch\.id === NEON_PARENT_BRANCH_ID/u);
+  assert.match(source, /branch\.id === NEON_FALLBACK_BRANCH_ID/u);
   assert.match(source, /branch\.name === branchName/u);
   assert.match(source, /error\.payload\?\.code === "BRANCHES_LIMIT_EXCEEDED"/u);
   assert.match(source, /cleaning only preview\/pr-\* branches older than 45 minutes and retrying once/u);
   assert.match(source, /branchLimitCleanupDeleted/u);
   assert.doesNotMatch(source, /DELETE.*dev\/module/isu);
+});
+
+test("Neon preview uses a disposable database when the branch quota remains full", async () => {
+  const [workflow, source] = await Promise.all([
+    readFile(workflowUrl, "utf8"),
+    readFile(previewScriptUrl, "utf8"),
+  ]);
+
+  assert.match(workflow, /NEON_FALLBACK_BRANCH_ID: br-autumn-pine-axuo502u/u);
+  assert.match(workflow, /NEON_FALLBACK_ENDPOINT_ID: ep-blue-moon-axw07qmr/u);
+  assert.match(workflow, /NEON_FALLBACK_ROLE_NAME: neondb_owner/u);
+  assert.match(source, /const databaseName = `ci_preview_/u);
+  assert.match(source, /async function createFallbackDatabase\(\)/u);
+  assert.match(source, /\/databases`, \{/u);
+  assert.match(source, /owner_name: NEON_FALLBACK_ROLE_NAME/u);
+  assert.match(source, /isolationMode: "database"/u);
+  assert.match(source, /shared fallback compute must not be suspended by preview CI/u);
+  assert.match(
+    source,
+    /\/databases\/\$\{encodeURIComponent\(activeDatabaseName\)\}`, \{ method: "DELETE" \}/u,
+  );
+  assert.match(source, /databaseCleanupDeleted = true/u);
+  assert.match(source, /schemaVersion: 2/u);
 });
 
 test("persistent MOD-D rehearsal holds a database advisory lock across migration and verification", async () => {
