@@ -68,10 +68,7 @@ void main() {
       ),
     );
 
-    expect(
-      reduction.record.state,
-      LocalOperationState.unknownExternalState,
-    );
+    expect(reduction.record.state, LocalOperationState.unknownExternalState);
     expect(reduction.retryDisposition, RetryDisposition.requireUserAction);
     expect(reduction.record.nextRetryAt, isNull);
   });
@@ -99,14 +96,8 @@ void main() {
       connectivityAvailable: false,
     );
 
-    expect(
-      reduction.record.state,
-      LocalOperationState.waitingForConnectivity,
-    );
-    expect(
-      reduction.retryDisposition,
-      RetryDisposition.waitForConnectivity,
-    );
+    expect(reduction.record.state, LocalOperationState.waitingForConnectivity);
+    expect(reduction.retryDisposition, RetryDisposition.waitForConnectivity);
     expect(reduction.record.nextRetryAt, isNull);
   });
 
@@ -123,7 +114,7 @@ void main() {
     expect(reduction.record.nextRetryAt, isNull);
   });
 
-  test('terminal operation cannot transition back to upload', () {
+  test('terminal operation cannot transition back to submission', () {
     expect(
       LocalOperationTransitions.allows(
         LocalOperationState.accepted,
