@@ -1,0 +1,82 @@
+source:
+  repository: https://github.com/scaliuslabs/scalius-commerce-lite
+  branch: mono-repo
+  commit: 4cb83aecb6d27483951618dcf8398592e662f241
+
+rules:
+  allowed_modes: [copy, adapt, concept_only, reject]
+  manifest_before_or_with_import: true
+  product_facing_upstream_branding: prohibited
+  internal_provenance: required
+  d1_or_upstream_business_authority: prohibited
+  exact_money_replacement: required
+
+batches:
+  - id: SF-UP-000
+    status: reviewed_baseline
+    purpose: Architecture audit and adaptation classification only; no source imported.
+    upstream_paths:
+      - README.md
+      - docs/ARCHITECTURE.md
+      - apps/storefront/README.md
+      - apps/storefront/package.json
+      - apps/storefront/wrangler.jsonc
+      - apps/storefront/src/lib/api/client.ts
+      - apps/storefront/src/lib/api/types.ts
+      - apps/storefront/src/lib/api/products.ts
+      - apps/storefront/src/lib/api/storefront.ts
+      - apps/storefront/src/store/cart.ts
+      - apps/storefront/src/lib/edge-cache.ts
+      - apps/storefront/src/middleware.ts
+      - apps/storefront/src/pages/index.astro
+      - apps/storefront/src/pages/api/checkout/create-order.ts
+      - apps/storefront/src/components/cards/ProductCard.astro
+      - packages/shared/src/storefront-theme.ts
+      - packages/core/src/modules/products/products.storefront.ts
+      - packages/core/src/modules/products/products.public-eligibility.ts
+    mode: concept_only
+    local_paths: []
+    modifications: Initial audit only.
+    decision: Establish selective adaptation boundaries; no code copied in this batch.
+    tests: []
+
+planned_candidates:
+  - upstream_glob: apps/storefront/src/layouts/**
+    proposed_mode: adapt
+    conditions:
+      - remove upstream branding and environment constants
+      - replace API and layout types
+      - map to local accessibility and design requirements
+  - upstream_glob: apps/storefront/src/components/**
+    proposed_mode: adapt
+    conditions:
+      - review each component individually
+      - replace number money fields
+      - remove branding, demo copy and unsafe assumptions
+  - upstream_glob: apps/storefront/src/pages/**
+    proposed_mode: adapt
+    conditions:
+      - public composition only
+      - checkout/account proxy routes require local rewrite
+  - upstream_glob: apps/storefront/src/lib/edge-cache.ts
+    proposed_mode: adapt
+    conditions:
+      - add tenant storefront host locale currency price-list scope
+      - preserve fail-closed private-route and generation behavior
+  - upstream_glob: packages/shared/src/storefront-theme.ts
+    proposed_mode: adapt
+    conditions:
+      - retain sanitisation tests
+      - map defaults to local product identity
+
+rejected_families:
+  - path: packages/database/**
+    reason: D1 and Drizzle canonical persistence are incompatible with Neon authority.
+  - path: packages/core/**
+    reason: Upstream domain services must not replace MOD-A/B/C/E/F authority.
+  - path: apps/api/**
+    reason: Upstream business API and queue consumer are not used.
+  - path: apps/admin-v2/**
+    reason: Do not introduce a parallel admin design system; selected workflow concepts may be independently implemented.
+  - path: apps/storefront/wrangler.jsonc
+    reason: Fixed IDs, service names and domains must not be copied; local config is authored separately.
