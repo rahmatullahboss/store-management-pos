@@ -111,6 +111,42 @@ batches:
       - tests/unit/storefront-worker-shell.test.mjs
     local_owner: MOD-H-storefront-commerce
 
+  - id: SF-UP-003
+    status: adapted
+    purpose: Adapt the reviewed public product-card presentation structure to local publication-only, exact-money and accessibility contracts.
+    upstream_paths:
+      - apps/storefront/src/components/cards/ProductCard.astro
+    upstream_blob_sha: 68bc025696a3e36dbf316d64f2e026ac719ddcf9
+    mode: adapt
+    local_paths:
+      - apps/storefront-web/src/components/ProductCard.astro
+      - apps/storefront-web/src/pages/evidence/storefront.astro
+      - apps/storefront-web/public/evidence/linen-shirt.svg
+      - packages/storefront-contracts/src/index.ts
+      - tests/unit/storefront-product-card-contract.test.mjs
+      - tooling/scripts/storefront-design-evidence.mjs
+      - .github/workflows/storefront-ci.yml
+    modifications:
+      - replaced the upstream Product API type with the local storefront-product-card.v1 publication contract
+      - replaced floating-point number pricing and symbol concatenation with integer minor-unit exact-money formatting
+      - rejected every non-published product state at the contract boundary
+      - replaced upstream discount-engine, media-service and availability authority with bounded presentation fields supplied by owning modules
+      - removed lucide-react, Tailwind classes, upstream aliases, branding, API imports and commerce authority
+      - authored original semantic CSS, visible keyboard focus, reduced-motion handling and responsive LTR/RTL layouts
+      - added synthetic-only English desktop/mobile and Arabic RTL browser evidence with 200 percent text scaling, clipping and overflow detection
+    authority_boundary:
+      - public_presentation_only
+      - MOD_A_owns_product_price_promotion_and_tax
+      - MOD_B_owns_availability_and_reservation
+      - MOD_C_owns_order_and_fulfilment
+      - no_D1_Drizzle_or_upstream_API
+      - no_browser_authoritative_money_stock_or_checkout
+    tests:
+      - tests/unit/storefront-product-card-contract.test.mjs
+      - npm run storefront:design:verify
+      - Storefront CI verify browser-evidence and PostgreSQL rehearsal jobs
+    local_owner: MOD-H-storefront-commerce
+
 planned_candidates:
   - upstream_glob: apps/storefront/src/layouts/**
     proposed_mode: adapt
