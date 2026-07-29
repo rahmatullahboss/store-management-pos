@@ -73,7 +73,10 @@ final class ExactMoney {
         'Cannot add $currency and ${other.currency} monetary values.',
       );
     }
-    return ExactMoney(currency: currency, minorUnits: minorUnits + other.minorUnits);
+    return ExactMoney(
+      currency: currency,
+      minorUnits: minorUnits + other.minorUnits,
+    );
   }
 
   /// Subtracts values that use the same currency.
@@ -83,7 +86,10 @@ final class ExactMoney {
         'Cannot subtract ${other.currency} from $currency monetary values.',
       );
     }
-    return ExactMoney(currency: currency, minorUnits: minorUnits - other.minorUnits);
+    return ExactMoney(
+      currency: currency,
+      minorUnits: minorUnits - other.minorUnits,
+    );
   }
 
   @override
@@ -101,7 +107,11 @@ final class ExactMoney {
   static String _validateCurrency(String currency) {
     final normalized = currency.toUpperCase();
     if (!RegExp(r'^[A-Z]{3}$').hasMatch(normalized)) {
-      throw ArgumentError.value(currency, 'currency', 'Expected three letters.');
+      throw ArgumentError.value(
+        currency,
+        'currency',
+        'Expected three letters.',
+      );
     }
     return normalized;
   }
@@ -167,26 +177,6 @@ final class CompanionBootstrap {
     }
   }
 
-  /// Available server-approved workspaces.
-  final List<WorkspaceContext> workspaces;
-
-  /// Active opaque workspace reference.
-  final String activeWorkspaceId;
-
-  /// Current synchronisation condition.
-  final SyncHealth syncHealth;
-
-  /// Last successful authoritative synchronisation time.
-  final DateTime? lastSuccessfulSync;
-
-  /// Whether this bootstrap contains only synthetic development data.
-  final bool isSynthetic;
-
-  /// Resolves the active workspace.
-  WorkspaceContext get activeWorkspace => workspaces.firstWhere(
-    (WorkspaceContext workspace) => workspace.id == activeWorkspaceId,
-  );
-
   /// Creates the deterministic non-production fixture used by M1.
   factory CompanionBootstrap.synthetic() {
     final workspaces = <WorkspaceContext>[
@@ -229,4 +219,24 @@ final class CompanionBootstrap {
       isSynthetic: true,
     );
   }
+
+  /// Available server-approved workspaces.
+  final List<WorkspaceContext> workspaces;
+
+  /// Active opaque workspace reference.
+  final String activeWorkspaceId;
+
+  /// Current synchronisation condition.
+  final SyncHealth syncHealth;
+
+  /// Last successful authoritative synchronisation time.
+  final DateTime? lastSuccessfulSync;
+
+  /// Whether this bootstrap contains only synthetic development data.
+  final bool isSynthetic;
+
+  /// Resolves the active workspace.
+  WorkspaceContext get activeWorkspace => workspaces.firstWhere(
+    (WorkspaceContext workspace) => workspace.id == activeWorkspaceId,
+  );
 }
