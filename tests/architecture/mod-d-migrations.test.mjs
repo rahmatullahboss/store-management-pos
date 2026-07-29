@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import test from "node:test";
 
 const modules = [
@@ -38,6 +38,11 @@ test("MOD-D migrations have deterministic identities and verified checksums", as
     assert.ok(source);
     assert.equal(result.manifest.module, source.identity);
     assert.deepEqual(result.migrations.map(({ id }) => id), source.expectedIds);
+    const declaredFiles = result.manifest.migrations.map(({ file }) => file).sort();
+    const presentFiles = (await readdir(source.migrationsDirectory))
+      .filter((file) => file.endsWith(".sql"))
+      .sort();
+    assert.deepEqual(presentFiles, declaredFiles, `${source.identity} contains unreferenced or missing SQL migrations`);
     for (const migration of result.migrations) {
       assert.equal(migration.digest, migration.sha256, `${migration.id} checksum must match its manifest`);
       assert.match(migration.sql, /^BEGIN;/u);
