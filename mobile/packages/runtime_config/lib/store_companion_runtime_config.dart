@@ -46,6 +46,75 @@ final class MobileRuntimeConfig {
     _validate();
   }
 
+  /// Resolves compile-time flavour values without accepting a runtime host.
+  ///
+  /// Development and staging use deterministic `.test` endpoints when no
+  /// explicit values are supplied. Production requires all reviewed values and
+  /// fails before the application shell is created when any value is missing.
+  factory MobileRuntimeConfig.fromEnvironment({
+    String environmentName = const String.fromEnvironment('APP_ENVIRONMENT'),
+    String apiBaseUri = const String.fromEnvironment('APP_API_BASE_URI'),
+    String authorizationEndpoint = const String.fromEnvironment(
+      'APP_AUTHORIZATION_ENDPOINT',
+    ),
+    String redirectUri = const String.fromEnvironment('APP_REDIRECT_URI'),
+    String deepLinkHosts = const String.fromEnvironment('APP_DEEP_LINK_HOSTS'),
+  }) {
+    final environment = switch (environmentName) {
+      'development' => MobileEnvironment.development,
+      'staging' => MobileEnvironment.staging,
+      'production' => MobileEnvironment.production,
+      _ => throw const RuntimeConfigurationException(
+        'APP_ENVIRONMENT must be development, staging, or production.',
+      ),
+    };
+
+    final supplied = <String>[
+      apiBaseUri,
+      authorizationEndpoint,
+      redirectUri,
+      deepLinkHosts,
+    ];
+    final hasAnyReviewedValue = supplied.any(
+      (String value) => value.trim().isNotEmpty,
+    );
+    final hasAllReviewedValues = supplied.every(
+      (String value) => value.trim().isNotEmpty,
+    );
+
+    if (!hasAnyReviewedValue) {
+      return switch (environment) {
+        MobileEnvironment.development =>
+          MobileRuntimeConfig.syntheticDevelopment(),
+        MobileEnvironment.staging => MobileRuntimeConfig.syntheticStaging(),
+        MobileEnvironment.production =>
+          throw const RuntimeConfigurationException(
+            'Production requires explicit reviewed endpoint configuration.',
+          ),
+      };
+    }
+    if (!hasAllReviewedValues) {
+      throw const RuntimeConfigurationException(
+        'Runtime endpoint configuration must be supplied as one complete set.',
+      );
+    }
+
+    final identity = _identityFor(environment);
+    return MobileRuntimeConfig(
+      environment: environment,
+      applicationId: identity.applicationId,
+      displayName: identity.displayName,
+      apiBaseUri: Uri.parse(apiBaseUri),
+      authorizationEndpoint: Uri.parse(authorizationEndpoint),
+      redirectUri: Uri.parse(redirectUri),
+      allowedDeepLinkHosts: deepLinkHosts
+          .split(',')
+          .map((String host) => host.trim())
+          .where((String host) => host.isNotEmpty)
+          .toSet(),
+    );
+  }
+
   /// Creates a deterministic synthetic development configuration.
   factory MobileRuntimeConfig.syntheticDevelopment() => MobileRuntimeConfig(
     environment: MobileEnvironment.development,
@@ -57,6 +126,23 @@ final class MobileRuntimeConfig {
     ),
     redirectUri: Uri.parse('com.ozzyl.storecompanion.dev://oauth/callback'),
     allowedDeepLinkHosts: const <String>{'links.store-companion.dev.test'},
+  );
+
+  /// Creates a deterministic synthetic staging configuration.
+  factory MobileRuntimeConfig.syntheticStaging() => MobileRuntimeConfig(
+    environment: MobileEnvironment.staging,
+    applicationId: 'com.ozzyl.storecompanion.staging',
+    displayName: 'Store Companion Staging',
+    apiBaseUri: Uri.parse('https://api.store-companion.staging.test/v1/'),
+    authorizationEndpoint: Uri.parse(
+      'https://identity.store-companion.staging.test/authorize',
+    ),
+    redirectUri: Uri.parse(
+      'com.ozzyl.storecompanion.staging://oauth/callback',
+    ),
+    allowedDeepLinkHosts: const <String>{
+      'links.store-companion.staging.test',
+    },
   );
 
   static final RegExp _applicationIdPattern = RegExp(
@@ -184,6 +270,23 @@ final class MobileRuntimeConfig {
       }
     }
   }
+
+  static ({String applicationId, String displayName}) _identityFor(
+    MobileEnvironment environment,
+  ) => switch (environment) {
+    MobileEnvironment.development => (
+      applicationId: 'com.ozzyl.storecompanion.dev',
+      displayName: 'Store Companion Dev',
+    ),
+    MobileEnvironment.staging => (
+      applicationId: 'com.ozzyl.storecompanion.staging',
+      displayName: 'Store Companion Staging',
+    ),
+    MobileEnvironment.production => (
+      applicationId: 'com.ozzyl.storecompanion',
+      displayName: 'Store Companion',
+    ),
+  };
 
   static void _validateHttpsEndpoint(Uri uri, String label) {
     if (uri.scheme != 'https' ||
