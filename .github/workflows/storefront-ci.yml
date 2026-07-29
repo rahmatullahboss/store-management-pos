@@ -23,6 +23,7 @@ on:
   push:
     branches:
       - program/integration-v1
+      - module/storefront-commerce-v1
     paths:
       - "apps/storefront-web/**"
       - "packages/storefront-client/**"
@@ -150,5 +151,64 @@ jobs:
           path: |
             artifacts/storefront/impeccable-context.txt
             docs/architecture/storefront/design-evidence/
+          if-no-files-found: warn
+          retention-days: 14
+
+  neon-recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: verify
+    concurrency:
+      group: neon-preview-lifecycle-${{ github.repository }}
+      cancel-in-progress: false
+    env:
+      NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: Run non-destructive Neon recovery evidence
+        run: npm run ci:neon-recovery
+      - name: Upload Neon recovery evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: storefront-neon-recovery-${{ github.run_id }}
+          path: artifacts/foundation/neon-recovery-report.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  cloudflare-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: verify
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: Deploy application preview
+        run: npm run ci:cloudflare-preview
+      - name: Verify runtime metrics
+        run: npm run metrics:cloudflare-runtime
+      - name: Cleanup Cloudflare preview Worker
+        if: always()
+        run: npm run cleanup:cloudflare-preview
+      - name: Upload Cloudflare evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: storefront-cloudflare-${{ github.run_id }}
+          path: artifacts/foundation/cloudflare-*.json
           if-no-files-found: warn
           retention-days: 14
