@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: foundation-ci-${{ github.event.pull_request.head.sha || github.sha }}
+  group: foundation-ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 permissions:
