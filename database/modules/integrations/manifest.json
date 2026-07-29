@@ -7,6 +7,11 @@
       "id": "INT-0001",
       "file": "INT-0001-integration-foundation.sql",
       "sha256": "d54709eac1ff64f3ca3124fb748a455e36187743ba2b5e3a22337229a04936ec"
+    },
+    {
+      "id": "INT-0002",
+      "file": "INT-0002-integration-commands.sql",
+      "sha256": "90d9a39dbe59fe818ab14193dbde7840b93d3605466e3b674a08966a21723a34"
     }
   ]
 }
