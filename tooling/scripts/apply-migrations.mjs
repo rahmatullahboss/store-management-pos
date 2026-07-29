@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { Client } from "@neondatabase/serverless";
 import { fileURLToPath } from "node:url";
+import { executeSqlStatements } from "./sql-statements.mjs";
 
 const root = fileURLToPath(new URL("../..", import.meta.url));
 const connectionString = process.env.DATABASE_URL;
@@ -65,14 +66,14 @@ try {
         console.log(`verified ${migration.id}`);
         continue;
       }
-      await client.query(sql);
+      await executeSqlStatements(client, sql);
       const applied = await client.query("SELECT checksum FROM platform.schema_migrations WHERE migration_id = $1", [migration.id]);
       if (applied.rows[0]?.checksum !== marker) throw new Error(`${migration.id} did not record the expected checksum marker`);
       console.log(`applied ${migration.id}`);
     }
   }
   if (process.env.LOAD_SYNTHETIC_SEED === "1") {
-    await client.query(await readFile(path.join(root, "database/foundation/seeds/dev.sql"), "utf8"));
+    await executeSqlStatements(client, await readFile(path.join(root, "database/foundation/seeds/dev.sql"), "utf8"));
     console.log("loaded synthetic development seed");
   }
 } finally {
