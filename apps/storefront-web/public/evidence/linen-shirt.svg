@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" role="img" aria-labelledby="title description">
+  <title id="title">Synthetic linen shirt illustration</title>
+  <desc id="description">A neutral line illustration used only for storefront browser evidence.</desc>
+  <rect width="800" height="1000" fill="#edf2ee"/>
+  <path d="M270 210 170 315l92 115 58-49v400h160V381l58 49 92-115-100-105-78 48H348l-78-48Z" fill="#fffefa" stroke="#1f6a51" stroke-width="18" stroke-linejoin="round"/>
+  <path d="M348 258c8 42 28 63 52 63s44-21 52-63" fill="none" stroke="#1f6a51" stroke-width="18" stroke-linecap="round"/>
+  <path d="M320 520h160M320 590h160" stroke="#d7ddd8" stroke-width="14" stroke-linecap="round"/>
+</svg>
