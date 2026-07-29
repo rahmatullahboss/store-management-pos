@@ -62,6 +62,17 @@ export interface AdminShellInput {
   readonly offline?: boolean;
 }
 
+function renderEmbeddedLocalizationControlPage(page: LocalizationControlPage): string {
+  const rendered = renderLocalizationControlPage(page);
+  const opening = '<main class="modf-control"';
+  const openingIndex = rendered.indexOf(opening);
+  const closingIndex = rendered.lastIndexOf("</main>");
+  if (openingIndex < 0 || closingIndex < openingIndex) {
+    throw new Error("Localization control page root contract is invalid");
+  }
+  return `${rendered.slice(0, openingIndex)}<section class="modf-control"${rendered.slice(openingIndex + opening.length, closingIndex)}</section>${rendered.slice(closingIndex + 7)}`;
+}
+
 export function renderAdminShell(input: AdminShellInput): string {
   return renderAppShell({
     title: "Store Management Admin",
@@ -129,7 +140,7 @@ export function renderLocalizationAdminPage(input: Omit<AdminShellInput, "conten
   return renderAdminShell({
     ...input,
     currentPath: "/localization",
-    content: renderLocalizationControlPage({ ...page, focus: "country_packs" }),
+    content: renderEmbeddedLocalizationControlPage({ ...page, focus: "country_packs" }),
   });
 }
 
@@ -137,6 +148,6 @@ export function renderComplianceAdminPage(input: Omit<AdminShellInput, "content"
   return renderAdminShell({
     ...input,
     currentPath: "/compliance",
-    content: renderLocalizationControlPage({ ...page, focus: "compliance" }),
+    content: renderEmbeddedLocalizationControlPage({ ...page, focus: "compliance" }),
   });
 }
