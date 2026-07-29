@@ -46,8 +46,21 @@ if (!branch) {
 }
 if (!branch?.id) throw new Error("Neon branch response did not include an id");
 
+const endpointPayload = await request(
+  `/projects/${encodeURIComponent(projectId)}/branches/${encodeURIComponent(branch.id)}/endpoints`,
+);
+let endpoint = (endpointPayload.endpoints ?? []).find((candidate) => candidate.type === "read_write");
+if (!endpoint) {
+  const createdEndpointPayload = await request(`/projects/${encodeURIComponent(projectId)}/endpoints`, {
+    method: "POST",
+    body: JSON.stringify({ endpoint: { branch_id: branch.id, type: "read_write" } }),
+  });
+  endpoint = createdEndpointPayload.endpoint;
+}
+if (!endpoint?.id) throw new Error("Neon branch does not have a read-write compute endpoint");
+
 const uriPayload = await request(
-  `/projects/${encodeURIComponent(projectId)}/connection_uri?branch_id=${encodeURIComponent(branch.id)}&database_name=${encodeURIComponent(databaseName)}&role_name=${encodeURIComponent(roleName)}&pooled=false`,
+  `/projects/${encodeURIComponent(projectId)}/connection_uri?branch_id=${encodeURIComponent(branch.id)}&endpoint_id=${encodeURIComponent(endpoint.id)}&database_name=${encodeURIComponent(databaseName)}&role_name=${encodeURIComponent(roleName)}&pooled=false`,
 );
 const databaseUrl = uriPayload.uri;
 if (typeof databaseUrl !== "string" || !databaseUrl.startsWith("postgres")) throw new Error("Neon connection URI was not returned");
