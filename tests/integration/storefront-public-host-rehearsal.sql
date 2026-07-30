@@ -9,23 +9,30 @@ SELECT platform.set_request_context(
   NULL, NULL, DATE '2026-07-30', 'storefront-public-host-seed', 'trace-public-host-seed'
 );
 INSERT INTO pricing.price_lists(
-  id, tenant_id, code, name, currency, status, active_version, created_by, updated_by
+  id, tenant_id, code, display_name, currency, money_scale,
+  current_version, active_version, status, created_by, updated_by
 ) VALUES (
   '10000000-0000-4000-8000-000000000120',
   '10000000-0000-4000-8000-000000000001',
-  'ONLINE-GBP', 'Online GBP', 'GBP', 'draft', NULL,
+  'ONLINE-GBP', 'Online GBP', 'GBP', 2,
+  3, NULL, 'draft',
   '30000000-0000-4000-8000-000000000001',
   '30000000-0000-4000-8000-000000000001'
 );
 INSERT INTO pricing.price_list_versions(
-  price_list_id, tenant_id, version, effective_from, effective_to,
-  status, business_date, created_by, approved_by
+  id, tenant_id, price_list_id, version, status, priority,
+  legal_entity_id, store_id, channel, customer_group_id,
+  effective_from, effective_until, reason, created_by
 ) VALUES (
-  '10000000-0000-4000-8000-000000000120',
+  '10000000-0000-4000-8000-000000000121',
   '10000000-0000-4000-8000-000000000001',
-  3, TIMESTAMPTZ '2026-07-30 00:00:00+00', NULL,
-  'active', DATE '2026-07-30',
-  '30000000-0000-4000-8000-000000000001',
+  '10000000-0000-4000-8000-000000000120',
+  3, 'active', 0,
+  '10000000-0000-4000-8000-000000000010',
+  '10000000-0000-4000-8000-000000000020',
+  'web', NULL,
+  TIMESTAMPTZ '2026-07-30 00:00:00+00', NULL,
+  'Storefront public-host rehearsal',
   '30000000-0000-4000-8000-000000000001'
 );
 UPDATE pricing.price_lists
