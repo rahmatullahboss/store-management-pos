@@ -16,7 +16,8 @@ on:
       - "tests/unit/persistent-admin-pos-staging.test.mjs"
       - "tests/unit/staging-auth-origin.test.mjs"
       - "tooling/scripts/apply-migrations.mjs"
-      - "tooling/scripts/deploy-persistent-staging.mjs"
+      - "tooling/scripts/deploy-custom-auth-staging.mjs"
+      - "tooling/scripts/run-custom-auth-staging.mjs"
       - "docs/architecture/staging/**"
       - "package.json"
       - "package-lock.json"
@@ -35,7 +36,8 @@ on:
       - "tests/unit/persistent-admin-pos-staging.test.mjs"
       - "tests/unit/staging-auth-origin.test.mjs"
       - "tooling/scripts/apply-migrations.mjs"
-      - "tooling/scripts/deploy-persistent-staging.mjs"
+      - "tooling/scripts/deploy-custom-auth-staging.mjs"
+      - "tooling/scripts/run-custom-auth-staging.mjs"
       - "docs/architecture/staging/**"
       - "package.json"
       - "package-lock.json"
@@ -91,8 +93,10 @@ jobs:
             `- Git SHA: ${report.gitSha}`,
             `- Persistent: ${report.persistent === true ? 'yes' : 'not confirmed'}`,
             `- Browser data: ${report.syntheticOnly === true ? 'synthetic only' : 'not confirmed'}`,
-            `- Authentication: ${report.authentication?.required === true ? 'Neon Auth required' : 'not confirmed'}`,
+            `- Authentication: ${report.authentication?.provider ?? 'not confirmed'}`,
+            `- Password hashing: ${report.authentication?.passwordHash ?? 'not confirmed'}`,
             `- Synthetic auth account cleanup: ${report.authentication?.syntheticAccountCleaned === true ? 'passed' : 'not confirmed'}`,
+            `- Legacy Neon Auth removed: ${report.authentication?.legacyNeonAuthRemoved === true ? 'yes' : 'not confirmed'}`,
             `- Authoritative browser writes: ${report.authoritativeBrowserWritesEnabled === true ? 'enabled' : 'disabled'}`,
             `- Live browser scenarios: ${browser.filter((item) => item.passed === true).length}/${browser.length}`,
             `- Axe violations: ${browser.reduce((total, item) => total + (item.violations?.length ?? 0), 0)}`,
