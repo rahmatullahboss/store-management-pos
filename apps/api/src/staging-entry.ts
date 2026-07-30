@@ -1,12 +1,17 @@
 import stagingWorker, { type StagingEnvironment } from "./staging.js";
 import {
+  handleOperationalStagingRequest,
+  type OperationalStagingEnvironment,
+} from "./staging-operational-worker.js";
+import {
   handleStagingReadContext,
   type StagingReadContextEnvironment,
 } from "./staging-read-context.js";
 
 export interface PersistentStagingEnvironment
   extends StagingEnvironment,
-    StagingReadContextEnvironment {}
+    StagingReadContextEnvironment,
+    OperationalStagingEnvironment {}
 
 function statusHeaders(): HeadersInit {
   return {
@@ -39,16 +44,20 @@ export default {
               service: "persistent-admin-pos-staging",
               version: env.STAGING_GIT_SHA?.slice(0, 12) || "local",
               database: "dedicated-neon-staging",
-              browserMode: "synthetic-read-only",
+              browserMode: "operational-release-candidate",
+              dataMode: "deterministic-synthetic-module-records",
               authentication:
                 env.STAGING_AUTH_REQUIRED === "1"
                   ? "custom-auth-required"
                   : "not-required",
               authorization: "database-resolved-read-only",
+              authoritativeWrites: false,
             }),
         { status: 200, headers: statusHeaders() },
       );
     }
+    const operational = await handleOperationalStagingRequest(request, env);
+    if (operational) return operational;
     return await stagingWorker.fetch(request, env);
   },
 };
