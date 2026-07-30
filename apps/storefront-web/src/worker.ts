@@ -4,6 +4,12 @@ import {
   type StorefrontTransport,
 } from "../../../packages/storefront-client/src/index.js";
 import { StorefrontContractError } from "../../../packages/storefront-contracts/src/index.js";
+import type { StorefrontPublicContentBundleV1 } from "../../../packages/storefront-contracts/src/public-content.js";
+import {
+  createStorefrontContentResolver,
+  createStorefrontContentTransportResolver,
+  type StorefrontContentResolver,
+} from "./content-resolver.js";
 import {
   parseStorefrontRuntimeEnvironment,
   StorefrontEnvironmentError,
@@ -16,6 +22,7 @@ import {
 } from "./host-resolver.js";
 import { storefrontShellResponse } from "./render.js";
 import {
+  storefrontContentNotFoundResponse,
   storefrontHealthResponse,
   storefrontRequestHostname,
   storefrontServiceUnavailableResponse,
@@ -36,8 +43,14 @@ export type StorefrontResolverFactory = (
   environment: StorefrontRuntimeEnvironment,
 ) => StorefrontHostResolver;
 
+export type StorefrontContentResolverFactory = (
+  bindings: StorefrontWorkerBindings,
+  environment: StorefrontRuntimeEnvironment,
+) => StorefrontContentResolver;
+
 export interface StorefrontWorkerOptions {
   readonly resolverFactory?: StorefrontResolverFactory;
+  readonly contentResolverFactory?: StorefrontContentResolverFactory;
   readonly theme?: unknown;
 }
 
@@ -66,6 +79,21 @@ function defaultResolverFactory(
   }
 
   return createStorefrontHostResolver(
+    createStorefrontClient({ baseUrl: environment.apiBaseUrl }),
+  );
+}
+
+function defaultContentResolverFactory(
+  bindings: StorefrontWorkerBindings,
+  environment: StorefrontRuntimeEnvironment,
+): StorefrontContentResolver {
+  if (isStorefrontTransport(bindings.STOREFRONT_API)) {
+    return createStorefrontContentTransportResolver({
+      baseUrl: environment.apiBaseUrl,
+      transport: bindings.STOREFRONT_API,
+    });
+  }
+  return createStorefrontContentResolver(
     createStorefrontClient({ baseUrl: environment.apiBaseUrl }),
   );
 }
@@ -121,10 +149,52 @@ function asHeadResponse(request: Request, response: Response): Response {
   return request.method === "HEAD" ? withoutBody(response) : response;
 }
 
+function publicContentSlug(url: URL): string | undefined {
+  const match = url.pathname.match(/^\/pages\/([^/]+)$/u);
+  if (!match?.[1]) return undefined;
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(match[1]);
+  } catch {
+    throw new StorefrontContractError("Storefront content path is invalid.");
+  }
+  if (decoded.includes("/") || decoded.includes("\\")) {
+    throw new StorefrontContractError("Storefront content path is invalid.");
+  }
+  return decoded;
+}
+
+function assertContentScope(
+  bootstrap: Parameters<typeof storefrontShellResponse>[1],
+  content: StorefrontPublicContentBundleV1,
+): void {
+  const expected = bootstrap.context;
+  const actual = content.context;
+  if (
+    actual.tenantId !== expected.tenantId ||
+    actual.storefrontId !== expected.storefrontId ||
+    actual.salesChannelId !== expected.salesChannelId ||
+    actual.requestHostname !== expected.requestHostname ||
+    actual.canonicalHostname !== expected.canonicalHostname ||
+    actual.locale !== expected.locale ||
+    actual.currency !== expected.currency ||
+    actual.priceListRevision !== expected.priceListRevision ||
+    actual.publicationGeneration !== expected.publicationGeneration ||
+    content.themeRevision !== bootstrap.themeRevision ||
+    content.layoutRevision !== bootstrap.layoutRevision
+  ) {
+    throw new StorefrontContractError("Storefront public content scope mismatch.");
+  }
+}
+
 export function createStorefrontWorker(
   options: StorefrontWorkerOptions = {},
 ): StorefrontWorker {
   const resolverFactory = options.resolverFactory ?? defaultResolverFactory;
+  const shouldResolveContent =
+    options.contentResolverFactory !== undefined || options.resolverFactory === undefined;
+  const contentResolverFactory =
+    options.contentResolverFactory ?? defaultContentResolverFactory;
 
   return Object.freeze({
     async fetch(
@@ -164,10 +234,32 @@ export function createStorefrontWorker(
           );
         }
 
-        const renderOptions =
-          options.theme === undefined
-            ? { buildId: environment.buildId, headOnly }
-            : { buildId: environment.buildId, headOnly, theme: options.theme };
+        let content: StorefrontPublicContentBundleV1 | undefined;
+        if (shouldResolveContent) {
+          const slug = publicContentSlug(url);
+          const contentResolver = contentResolverFactory(bindings, environment);
+          const resolved = await contentResolver.resolve(hostname, {
+            signal: request.signal,
+            ...(slug === undefined ? {} : { slug }),
+          });
+          if (!resolved) {
+            return asHeadResponse(
+              request,
+              slug === undefined
+                ? storefrontUnavailableResponse()
+                : storefrontContentNotFoundResponse(),
+            );
+          }
+          assertContentScope(bootstrap, resolved);
+          content = resolved;
+        }
+
+        const renderOptions = {
+          buildId: environment.buildId,
+          headOnly,
+          ...(content ? { content } : {}),
+          ...(options.theme === undefined ? {} : { theme: options.theme }),
+        };
         return await storefrontShellResponse(request, bootstrap, renderOptions);
       } catch (error: unknown) {
         if (error instanceof StorefrontContractError) {
