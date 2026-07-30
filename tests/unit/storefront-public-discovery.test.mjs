@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
@@ -215,12 +216,28 @@ test("public discovery migrations are read-only, literal-search bounded and runt
 });
 
 test("storefront manifest registers discovery migrations in deterministic order", async () => {
-  const manifest = JSON.parse(
-    await readFile(
-      new URL("../../database/modules/storefront/manifest.json", import.meta.url),
-      "utf8",
+  const manifestUrl = new URL(
+    "../../database/modules/storefront/manifest.json",
+    import.meta.url,
+  );
+  const migrationFiles = [
+    "STF-0011-public-category-collection-resolution.sql",
+    "STF-0012-public-search-resolution.sql",
+  ];
+  const diagnostics = Object.fromEntries(
+    await Promise.all(
+      migrationFiles.map(async (file) => {
+        const sql = await readFile(
+          new URL(`../../database/modules/storefront/migrations/${file}`, import.meta.url),
+          "utf8",
+        );
+        return [file, createHash("sha256").update(sql).digest("hex")];
+      }),
     ),
   );
+  console.log(`storefront discovery migration digests ${JSON.stringify(diagnostics)}`);
+
+  const manifest = JSON.parse(await readFile(manifestUrl, "utf8"));
   const ids = manifest.migrations.map((migration) => migration.id);
   assert.deepEqual(ids.slice(-2), ["STF-0011", "STF-0012"]);
 });
