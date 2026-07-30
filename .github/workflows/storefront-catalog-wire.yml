@@ -75,3 +75,5 @@ jobs:
           git add apps/storefront-web/src/render.ts tests/unit/storefront-public-content.test.mjs
           git commit -m "fix(storefront): preserve CMS SEO and migration evidence"
           git push origin HEAD:module/storefront-commerce-v1
+
+# retrigger after catalog tests were committed
