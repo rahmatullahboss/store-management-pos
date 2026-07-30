@@ -1,4 +1,7 @@
-import { PlatformError } from "../../../packages/foundation/src/errors.js";
+import {
+  errorResponse,
+  PlatformError,
+} from "../../../packages/foundation/src/errors.js";
 
 export interface StagingAuthEnvironment {
   readonly NEON_AUTH_URL?: string;
@@ -63,19 +66,27 @@ function exactOrigin(request: Request): string {
 }
 
 function validateActionOrigin(request: Request): void {
+  const expected = exactOrigin(request);
   const origin = request.headers.get("origin");
-  if (origin !== exactOrigin(request)) {
+  const fetchSite = request.headers.get("sec-fetch-site");
+  if (origin !== null && origin !== expected) {
     throw new PlatformError(
       "AUTHENTICATION_REQUIRED",
       "Staging authentication request origin is invalid",
       403,
     );
   }
-  const fetchSite = request.headers.get("sec-fetch-site");
-  if (fetchSite && fetchSite !== "same-origin") {
+  if (fetchSite !== null && fetchSite !== "same-origin") {
     throw new PlatformError(
       "AUTHENTICATION_REQUIRED",
       "Cross-site staging authentication is not allowed",
+      403,
+    );
+  }
+  if (origin === null && fetchSite !== "same-origin") {
+    throw new PlatformError(
+      "AUTHENTICATION_REQUIRED",
+      "Staging authentication request origin evidence is missing",
       403,
     );
   }
@@ -84,7 +95,9 @@ function validateActionOrigin(request: Request): void {
 function safeReturnTo(value: FormDataEntryValue | null): string {
   if (typeof value !== "string") return "/admin";
   const normalized = value.trim();
-  return /^\/(?:admin|pos)(?:\/|$)/u.test(normalized) ? normalized : "/admin";
+  return /^\/(?:admin|pos)(?:\/|$)/u.test(normalized)
+    ? normalized
+    : "/admin";
 }
 
 function localizedCookie(value: string): string {
@@ -177,20 +190,34 @@ async function providerAction(
 ): Promise<Response> {
   validateActionOrigin(request);
   const form = await request.formData();
-  const email = typeof form.get("email") === "string"
-    ? String(form.get("email")).trim().toLowerCase()
-    : "";
-  const password = typeof form.get("password") === "string"
-    ? String(form.get("password"))
-    : "";
+  const email =
+    typeof form.get("email") === "string"
+      ? String(form.get("email")).trim().toLowerCase()
+      : "";
+  const password =
+    typeof form.get("password") === "string"
+      ? String(form.get("password"))
+      : "";
   const returnTo = safeReturnTo(form.get("returnTo"));
-  const name = typeof form.get("name") === "string"
-    ? String(form.get("name")).trim()
-    : "";
-  if (!EMAIL_PATTERN.test(email) || password.length < 8 || password.length > 128) {
-    return authFailureRedirect(request, "Email or password is invalid.", returnTo);
+  const name =
+    typeof form.get("name") === "string"
+      ? String(form.get("name")).trim()
+      : "";
+  if (
+    !EMAIL_PATTERN.test(email) ||
+    password.length < 8 ||
+    password.length > 128
+  ) {
+    return authFailureRedirect(
+      request,
+      "Email or password is invalid.",
+      returnTo,
+    );
   }
-  if (endpoint === "/sign-up/email" && (name.length < 2 || name.length > 80)) {
+  if (
+    endpoint === "/sign-up/email" &&
+    (name.length < 2 || name.length > 80)
+  ) {
     return authFailureRedirect(request, "Name is invalid.", returnTo);
   }
 
@@ -202,7 +229,8 @@ async function providerAction(
       Accept: "application/json",
       "Content-Type": "application/json",
       Origin: exactOrigin(request),
-      "User-Agent": request.headers.get("user-agent") ?? "Ozzyl-Staging-Auth",
+      "User-Agent":
+        request.headers.get("user-agent") ?? "Ozzyl-Staging-Auth",
     },
     body: JSON.stringify({
       email,
@@ -215,12 +243,14 @@ async function providerAction(
   if (!response.ok || cookies.length === 0) {
     let message = "Authentication failed.";
     try {
-      const body = await response.json() as {
+      const body = (await response.json()) as {
         readonly message?: unknown;
         readonly error?: { readonly message?: unknown };
       };
       const candidate = body.error?.message ?? body.message;
-      if (typeof candidate === "string" && candidate.length > 0) message = candidate;
+      if (typeof candidate === "string" && candidate.length > 0) {
+        message = candidate;
+      }
     } catch {
       // Keep the bounded generic failure.
     }
@@ -244,12 +274,13 @@ export async function getStagingAuthSession(
       Accept: "application/json",
       Cookie: cookie,
       Origin: exactOrigin(request),
-      "User-Agent": request.headers.get("user-agent") ?? "Ozzyl-Staging-Auth",
+      "User-Agent":
+        request.headers.get("user-agent") ?? "Ozzyl-Staging-Auth",
     },
     redirect: "manual",
   });
   if (!response.ok) return null;
-  const value = await response.json() as unknown;
+  const value = (await response.json()) as unknown;
   if (typeof value !== "object" || value === null) return null;
   const record = value as Record<string, unknown>;
   const user = record.user;
@@ -259,7 +290,9 @@ export async function getStagingAuthSession(
     user === null ||
     typeof session !== "object" ||
     session === null
-  ) return null;
+  ) {
+    return null;
+  }
   const userRecord = user as Record<string, unknown>;
   const sessionRecord = session as Record<string, unknown>;
   if (
@@ -268,7 +301,9 @@ export async function getStagingAuthSession(
     typeof userRecord.name !== "string" ||
     typeof sessionRecord.id !== "string" ||
     typeof sessionRecord.expiresAt !== "string"
-  ) return null;
+  ) {
+    return null;
+  }
   return {
     user: {
       id: userRecord.id,
@@ -291,44 +326,60 @@ export async function handleStagingAuthRequest(
   url: URL,
   env: StagingAuthEnvironment,
 ): Promise<Response | null> {
-  if (url.pathname === "/login" && (request.method === "GET" || request.method === "HEAD")) {
-    if (authRequired(env) && await getStagingAuthSession(request, env)) {
-      return Response.redirect(new URL("/admin", request.url).toString(), 302);
+  try {
+    if (
+      url.pathname === "/login" &&
+      (request.method === "GET" || request.method === "HEAD")
+    ) {
+      if (authRequired(env) && (await getStagingAuthSession(request, env))) {
+        return Response.redirect(
+          new URL("/admin", request.url).toString(),
+          302,
+        );
+      }
+      return loginPage(request);
     }
-    return loginPage(request);
-  }
-  if (url.pathname === "/auth/sign-in" && request.method === "POST") {
-    return await providerAction(request, env, "/sign-in/email");
-  }
-  if (url.pathname === "/auth/sign-up" && request.method === "POST") {
-    return await providerAction(request, env, "/sign-up/email");
-  }
-  if (url.pathname === "/auth/session" && request.method === "GET") {
-    const session = await getStagingAuthSession(request, env);
-    return Response.json(
-      session
-        ? { authenticated: true, user: session.user }
-        : { authenticated: false },
-      { status: session ? 200 : 401, headers: { "Cache-Control": "no-store" } },
+    if (url.pathname === "/auth/sign-in" && request.method === "POST") {
+      return await providerAction(request, env, "/sign-in/email");
+    }
+    if (url.pathname === "/auth/sign-up" && request.method === "POST") {
+      return await providerAction(request, env, "/sign-up/email");
+    }
+    if (url.pathname === "/auth/session" && request.method === "GET") {
+      const session = await getStagingAuthSession(request, env);
+      return Response.json(
+        session
+          ? { authenticated: true, user: session.user }
+          : { authenticated: false },
+        {
+          status: session ? 200 : 401,
+          headers: { "Cache-Control": "no-store" },
+        },
+      );
+    }
+    if (url.pathname === "/auth/sign-out" && request.method === "POST") {
+      validateActionOrigin(request);
+      const target = new URL(authBaseUrl(env));
+      target.pathname += "/sign-out";
+      const response = await authFetcher(env)(target, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          Cookie: request.headers.get("cookie") ?? "",
+          Origin: exactOrigin(request),
+          "Content-Type": "application/json",
+        },
+        body: "{}",
+        redirect: "manual",
+      });
+      const cookies = providerCookies(response);
+      return redirectWithCookies(request, "/login", cookies);
+    }
+    return null;
+  } catch (error) {
+    return errorResponse(
+      error,
+      request.headers.get("x-request-id") ?? crypto.randomUUID(),
     );
   }
-  if (url.pathname === "/auth/sign-out" && request.method === "POST") {
-    validateActionOrigin(request);
-    const target = new URL(authBaseUrl(env));
-    target.pathname += "/sign-out";
-    const response = await authFetcher(env)(target, {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        Cookie: request.headers.get("cookie") ?? "",
-        Origin: exactOrigin(request),
-        "Content-Type": "application/json",
-      },
-      body: "{}",
-      redirect: "manual",
-    });
-    const cookies = providerCookies(response);
-    return redirectWithCookies(request, "/login", cookies);
-  }
-  return null;
 }
