@@ -167,6 +167,7 @@ export async function handleStagingProtectedApi(
     headers.delete("cookie");
     headers.set("authorization", `Bearer ${token}`);
     headers.set("x-request-id", id);
+    headers.set("accept-language", "en-GB");
     headers.set("x-time-zone", "Asia/Dhaka");
     headers.set("x-business-date", new Date().toISOString().slice(0, 10));
     const internalRequest = new Request(internalUrl, {
