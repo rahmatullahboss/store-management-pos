@@ -1,6 +1,7 @@
 {
   "module": "MOD-A-CATALOG",
   "version": 1,
+  "order": 1,
   "migrations": [
     {
       "id": "CAT-0001",

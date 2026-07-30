@@ -1,6 +1,7 @@
 {
   "module": "MOD-C-CUSTOMER",
   "version": 1,
+  "order": 6,
   "migrations": [
     {
       "id": "CUS-0001",

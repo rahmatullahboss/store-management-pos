@@ -52,9 +52,26 @@ Required rehearsal:
 7. prove application health against the recovery target;
 8. destroy only the temporary recovery target after evidence is retained.
 
+Implemented in disposable CI on 2026-07-31:
+
+- one shared executor verifies checksums for all 17 manifests and 64 registered migrations before database access;
+- generic preview and recovery use the same exact ordered migration and marker contract;
+- the recovery drill creates immutable synthetic marker, audit, outbox and idempotency evidence, records a checkpoint, proves destructive mutation and performs an exact PITR restore;
+- schema-v2 evidence records restore-ready, reconciliation and total recovery timing plus cleanup deletion;
+- GitHub summary output is bounded and omits disposable resource IDs, credentials, row values and raw failure payloads;
+- `docs/architecture/staging/backup-restore-acceptance.md` defines candidate objectives and production acceptance gates.
+
+Still required for production acceptance:
+
+- approved production PITR/retention window and resource ownership;
+- encrypted provider-independent logical exports and isolated import proof;
+- approved RPO/RTO, regional recovery and evidence-retention policy;
+- production monitoring, paging and two-person restore authorization;
+- full production-class isolated rehearsal with inventory, finance, identity and application reconciliation.
+
 Launch blocker:
 
-- no production launch until one full restore rehearsal passes and an owner accepts the measured RPO/RTO.
+- no production launch until the production policy is approved, one production-class isolated restore rehearsal passes and the accountable owners accept measured RPO/RTO.
 
 ## Gate 3 — authentication and MFA recovery governance
 

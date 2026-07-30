@@ -112,11 +112,13 @@ test("persistent staging workflow publishes bounded operability summary and evid
 });
 
 test("operability documentation fixes ownership while preserving production blockers", async () => {
-  const [runbook, plan, status, checkpoint] = await Promise.all([
+  const [runbook, plan, status, checkpoint, backupAcceptance, financeRecovery] = await Promise.all([
     source("docs/architecture/staging/operability-alerts-runbook.md"),
     source("docs/architecture/staging/production-operability-plan.md"),
     source("docs/architecture/staging/status.yaml"),
     source("docs/architecture/staging/usable-release-candidate-checkpoint.md"),
+    source("docs/architecture/staging/backup-restore-acceptance.md"),
+    source("docs/modules/payments-accounting-banking/migration-and-recovery-runbook.md"),
   ]);
   for (const metric of [
     "http_probe_failures",
@@ -133,7 +135,7 @@ test("operability documentation fixes ownership while preserving production bloc
   assert.match(plan, /twelve fixed low-cardinality aggregate signals/u);
   assert.match(plan, /schema-v7 atomic report enrichment/u);
   assert.match(plan, /production monitoring backend, alert delivery, paging and approved SLOs/u);
-  assert.match(status, /schema_version: 12/u);
+  assert.match(status, /schema_version: 13/u);
   assert.match(status, /report_schema_version: 7/u);
   assert.match(status, /signal_count: 12/u);
   assert.match(status, /live_evidence_state: exact_head_verified/u);
@@ -151,4 +153,16 @@ test("operability documentation fixes ownership while preserving production bloc
   assert.match(checkpoint, /synthetic outbox publisher live evidence complete; operability gate clear/u);
   assert.match(checkpoint, /outbox batches \/ claimed \/ delivered \/ replayed: `2 \/ 44 \/ 44 \/ 0`/u);
   assert.match(checkpoint, /Production message transport, alert delivery, paging, dead-letter ownership and approved SLOs are not configured/u);
+  assert.match(plan, /shared executor verifies checksums for all 17 manifests and 64 registered migrations/u);
+  assert.match(status, /backup_restore_rehearsal:/u);
+  assert.match(status, /status: implementation_complete_live_evidence_pending/u);
+  assert.match(status, /registered_migration_count: 64/u);
+  assert.match(status, /production_acceptance: false/u);
+  assert.match(status, /production_class_rehearsal_accepted: false/u);
+  assert.match(backupAcceptance, /it is not a production backup policy/u);
+  assert.match(backupAcceptance, /all 17 manifests and 64 registered migrations/u);
+  assert.match(backupAcceptance, /Production backup\/restore remains \*\*not accepted\*\*/u);
+  assert.match(backupAcceptance, /two-person authorization/u);
+  assert.match(financeRecovery, /shared 17-manifest\/64-migration registry/u);
+  assert.match(financeRecovery, /it is not production backup acceptance/u);
 });

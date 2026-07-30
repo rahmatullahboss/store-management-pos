@@ -1,6 +1,7 @@
 {
   "module": "MOD-A-TAX",
   "version": 1,
+  "order": 3,
   "migrations": [
     {
       "id": "TAX-0001",
