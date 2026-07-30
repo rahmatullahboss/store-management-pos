@@ -66,6 +66,11 @@
       "id": "STF-0013",
       "file": "STF-0013-public-search-filters.sql",
       "sha256": "a8eb6a04efd02afddcb75c8ae184f2eb7c29ae7faa2adc4023fe6a8fd1ae7000"
+    },
+    {
+      "id": "STF-0014",
+      "file": "STF-0014-public-seo-resolution.sql",
+      "sha256": "b690300e930e78772690fe75fabacb0d0901548d39f8c7b4ce02d4964f5934fd"
     }
   ]
 }
