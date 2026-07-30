@@ -1,91 +1,83 @@
 # Staging identity and controlled-write plan
 
-Status: read-only identity complete; token exchange active
+Status: custom read-only identity complete; business authorization pending
 Depends on: `persistent-admin-pos-staging-checkpoint.md`
 Verified checkpoint: `staging-identity-checkpoint.md`
 
 ## Goal
 
-Add a real staging login and authenticated API smoke path without weakening the production OIDC, tenant, permission, MFA, revocation or audit boundaries.
+Provide first-party account creation, login and session management for the persistent staging web software without weakening the production OIDC, tenant, permission, MFA, revocation or audit boundaries.
 
-## Provider
+## Provider decision
 
-Neon Auth is provisioned only on the dedicated staging Neon project and branch:
+The staging browser no longer depends on Neon Auth or another external identity provider. Ozzyl custom authentication runs inside the existing Cloudflare Worker and stores only controlled authentication state in the dedicated staging PostgreSQL database:
 
 - project: `morning-flower-46531465`;
 - branch: `br-empty-sound-afkx5vkj`;
 - database: `neondb`;
-- trusted browser origin: the persistent staging Workers URL only.
+- browser host: the persistent staging Workers URL.
 
-Neon Auth provides user and session authentication. It does not become the source of business permissions, tenant membership, store scope, warehouse scope, register scope or device authority.
+The legacy `neon_auth` schema is removed during persistent staging deployment after the custom migrations are verified.
 
-## Required boundary
+## Custom authentication design
 
-The existing production OIDC verifier requires:
+1. Account creation validates normalized email, display name and password length at the Worker and database boundaries.
+2. `platform.custom_auth_register` creates the internal platform user, bcrypt credential, active synthetic-tenant membership, initial session and audit event atomically.
+3. Passwords are hashed in PostgreSQL with `pgcrypto` bcrypt cost 12; plaintext passwords are never stored.
+4. The browser receives a 32-byte opaque random session token in a host-only `Secure`, `HttpOnly`, `SameSite=Lax` cookie.
+5. PostgreSQL stores only the SHA-256 token hash, not the plaintext session token.
+6. Sessions expire after eight hours and can be revoked explicitly on logout.
+7. Active session resolution requires an active user, active tenant and active membership.
+8. Login failures are rate-limited by hashed email/IP key; repeated user failures cause a 15-minute credential lock.
+9. Authentication events record sign-up, sign-in, sign-out, rejected and blocked outcomes without credentials.
+10. Exact-origin and Fetch Metadata checks reject cross-site form posts. Opaque or omitted Origin is accepted only with `Sec-Fetch-Site: same-origin`.
 
-- HTTPS issuer and JWKS;
-- RS256 and an accepted JWT type;
-- audience, expiry and maximum token age;
-- UUID `tenant_id` and `user_id`;
-- session ID;
+## Preserved business authority boundary
+
+A valid custom browser session currently permits only read-only synthetic Admin and POS presentation. It does not grant:
+
+- business API bearer authority;
+- role or permission grants;
 - MFA evidence;
-- revocation lookup;
-- bounded permissions and optional legal-entity/store/warehouse/register/device scope.
+- legal-entity, store, warehouse, register or device scope;
+- payment, order, inventory, accounting, banking or fiscal authority.
 
-A raw provider token must not be accepted merely because its signature is valid. Provider identity must be mapped to an internal platform user, active tenant membership, active role grants and approved staging scope.
+The production OIDC verifier remains strict. Protected `/api/*` business routes still fail closed until a server-side role/scope resolver and short-lived internal business token are implemented.
 
-## Adapter design
+## Completed read-only journey
 
-1. Neon Auth authenticates the staging user and creates a provider session. **Complete.**
-2. The staging Worker validates the provider session against the branch-local Auth service. **Complete.**
-3. The Worker resolves the provider subject to a dedicated synthetic platform user. **Pending.**
-4. Tenant membership, role grants and resource scope are loaded from the staging database. **Pending.**
-5. A short-lived internal staging access token is issued with the claims required by the existing API verifier. **Pending.**
-6. The signing private key exists only in Cloudflare secrets; the public key is exposed through a staging-only JWKS endpoint. **Pending.**
-7. The browser stores only an HttpOnly, Secure, SameSite session cookie. **Complete.**
-8. `/api/*` converts the validated staging session to the existing Bearer contract internally. **Pending.**
-9. Logout revokes the staging session; existing database revocation checks remain effective. **Provider logout complete; internal token revocation pending.**
-
-## Completed read-only identity journey
-
-- first-party sign-up, sign-in, session and sign-out routes;
+- first-party `/login`, `/auth/sign-up`, `/auth/sign-in`, `/auth/session` and `/auth/sign-out` routes;
 - anonymous Admin/POS redirect to login;
 - authenticated Admin and POS presentation;
-- Secure, HttpOnly, SameSite=Lax host-local session cookie;
-- trusted-origin and Fetch Metadata protection;
-- real mobile login, desktop Admin, mobile POS and logout browser evidence;
-- zero Axe violations and zero horizontal overflow failures;
-- random synthetic account creation and cascade cleanup;
+- secure host-only session cookie;
+- real signup and login through the Cloudflare Worker;
+- Neon HTTP-driver registration and login preflight;
+- mobile login, desktop Admin, mobile POS and logout browser evidence;
+- zero Axe violations and zero page-level horizontal overflow failures;
+- random synthetic account creation and deterministic cleanup;
 - no credential persistence in source, logs, screenshots, reports or artifacts.
 
-## Test users
+## Migrations
 
-- No password, recovery secret, OAuth credential or private signing key may be committed.
-- Test accounts use clearly synthetic addresses and names.
-- Automated credentials exist only in workflow memory and are deleted with the synthetic account after evidence collection.
-- A future retained human test user must receive credentials through a separately controlled secret channel, not a public artifact.
-- The first mapped user receives only the minimum permissions needed for selected smoke journeys.
+- `FND-0006-custom-auth.sql`: credentials, sessions, rate limits, auth events and initial custom auth functions;
+- `FND-0007-custom-auth-login-fix.sql`: qualified login function references and deterministic login behavior.
+
+Applied migration files are immutable. The login correction is a separate migration rather than an edit to the already-applied FND-0006.
+
+## Test accounts
+
+- Automated credentials exist only in workflow memory.
+- Test addresses use the `staging-smoke-* @example.com` pattern.
+- The user, membership, credentials and sessions are deleted after evidence collection.
+- Human staging users may create their own staging-only credentials on the login page.
+- Production passwords must not be reused.
 
 ## Next authenticated journeys
 
-- read current tenant/store context through the strict business API;
-- read inventory availability for the synthetic store;
-- read procurement overview;
-- open the POS register context through mapped internal scope;
-- execute one low-risk, idempotent synthetic command only after rollback/reversal and audit evidence are defined.
+- resolve minimum role grants for the internal staging user and active membership;
+- issue an audience-bound, short-lived internal business token;
+- prove inactive membership, revoked session, expired token and cross-tenant failures;
+- read tenant/store context, inventory availability and procurement overview through the strict business API;
+- enable one low-risk, idempotent and reversible synthetic command with audit and outbox evidence.
 
 Payments, captures, refunds, journal posting, period close, bank reconciliation, fiscal submission and destructive operations remain outside the first controlled-write milestone.
-
-## Remaining acceptance gates
-
-- provider subject cannot inject internal tenant IDs or permissions;
-- inactive memberships and revoked sessions fail closed;
-- internal access tokens are short-lived, audience-bound and MFA-policy compliant;
-- unauthorized, expired and cross-tenant calls return bounded failures;
-- authenticated business reads pass in a real browser;
-- any controlled write is idempotent, audited and reversible;
-- secrets do not appear in repository files, logs, screenshots or artifacts.
-
-## Provider decision
-
-Neon Auth is accepted as the staging browser identity and session provider. It is not accepted as the business authorization authority. A local server-side subject mapping and token exchange must enforce the existing internal contract. The production verifier will not be loosened to accommodate staging.
