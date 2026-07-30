@@ -237,7 +237,7 @@ BEGIN
   SELECT count(*) INTO v_count
   FROM storefront.command_receipts
   WHERE tenant_id = '10000000-0000-4000-8000-000000000001'
-    AND command_scope IN (
+    AND command_type IN (
       'storefront.variant_publication.set',
       'storefront.category_publication.set',
       'storefront.collection.set',
