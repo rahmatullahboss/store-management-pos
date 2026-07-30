@@ -99,7 +99,7 @@ const { stdout } = await execFileAsync(
   { cwd: root, maxBuffer: 1024 * 1024 },
 );
 const summary = JSON.parse(stdout.trim());
-if (summary.migrations !== 9) throw new Error("Storefront migration count is invalid");
+if (summary.migrations !== 10) throw new Error("Storefront migration count is invalid");
 if (summary.tables < 16) throw new Error("Storefront table count is incomplete");
 if (summary.forcedRlsTables !== summary.tables) {
   throw new Error("Not every storefront table has forced RLS");
