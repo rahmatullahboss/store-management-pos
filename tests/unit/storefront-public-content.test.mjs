@@ -220,13 +220,13 @@ test("worker fails closed on content scope mismatch and returns bounded CMS not-
   assert.equal((await missing.json()).error.code, "CONTENT_NOT_FOUND");
 });
 
-test("STF-0006 through STF-0013 preserve safe public execution boundaries", async () => {
+test("STF-0006 through STF-0014 preserve safe public execution boundaries", async () => {
   const manifest = JSON.parse(
     await readFile(new URL("../../database/modules/storefront/manifest.json", import.meta.url), "utf8"),
   );
   assert.ok(manifest.migrations.some(({ id }) => id === "STF-0006"));
   assert.ok(manifest.migrations.some(({ id }) => id === "STF-0007"));
-  assert.equal(manifest.migrations.at(-1).id, "STF-0013");
+  assert.equal(manifest.migrations.at(-1).id, "STF-0014");
   const contentSql = await readFile(
     new URL("../../database/modules/storefront/migrations/STF-0006-public-content-resolution.sql", import.meta.url),
     "utf8",
@@ -265,4 +265,15 @@ test("STF-0006 through STF-0013 preserve safe public execution boundaries", asyn
     assert.match(commandSql, new RegExp(`REVOKE ALL ON FUNCTION storefront\\.${functionName}`, "u"));
     assert.match(commandSql, new RegExp(`GRANT EXECUTE ON FUNCTION storefront\\.${functionName}`, "u"));
   }
+  const seoSql = await readFile(
+    new URL("../../database/modules/storefront/migrations/STF-0014-public-seo-resolution.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(seoSql, /publication\.publication_state = 'published'/u);
+  assert.match(seoSql, /category\.status = 'active'/u);
+  assert.match(seoSql, /collection\.publication_state = 'published'/u);
+  assert.match(seoSql, /content\.status = 'published'/u);
+  assert.match(seoSql, /LIMIT 5000/u);
+  assert.match(seoSql, /REVOKE ALL ON FUNCTION storefront\.resolve_public_seo\(text\) FROM PUBLIC/u);
+  assert.match(seoSql, /GRANT EXECUTE ON FUNCTION storefront\.resolve_public_seo\(text\) TO store_app_runtime/u);
 });
