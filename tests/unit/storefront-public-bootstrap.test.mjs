@@ -39,7 +39,7 @@ test("public repository resolves only the narrow database function", async () =>
   assert.equal(bootstrap?.context.requestHostname, "shop.example.com");
   assert.equal(bootstrap?.context.canonicalHostname, "www.example.com");
   assert.equal(bootstrap?.context.priceListRevision, row.priceListRevision);
-  assert.deepEqual(bootstrap?.capabilities, row.capabilities);
+  assert.deepEqual(bootstrap?.capabilities, [...row.capabilities, "content.read"]);
   assert.equal(fake.calls.length, 1);
   assert.match(fake.calls[0].text, /storefront\.resolve_public_host/);
   assert.doesNotMatch(fake.calls[0].text, /storefront\.domains/);
