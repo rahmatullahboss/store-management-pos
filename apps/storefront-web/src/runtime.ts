@@ -52,6 +52,19 @@ function unavailableHeaders(): HeadersInit {
   };
 }
 
+function publicNotFoundResponse(code: string, message: string): Response {
+  return Response.json(
+    { error: { code, message } },
+    {
+      status: 404,
+      headers: {
+        ...unavailableHeaders(),
+        "Cache-Control": "public, max-age=0, s-maxage=30, stale-while-revalidate=60",
+      },
+    },
+  );
+}
+
 export function storefrontUnavailableResponse(): Response {
   return Response.json(
     {
@@ -68,20 +81,16 @@ export function storefrontUnavailableResponse(): Response {
 }
 
 export function storefrontContentNotFoundResponse(): Response {
-  return Response.json(
-    {
-      error: {
-        code: "CONTENT_NOT_FOUND",
-        message: "Published content was not found.",
-      },
-    },
-    {
-      status: 404,
-      headers: {
-        ...unavailableHeaders(),
-        "Cache-Control": "public, max-age=0, s-maxage=30, stale-while-revalidate=60",
-      },
-    },
+  return publicNotFoundResponse(
+    "CONTENT_NOT_FOUND",
+    "Published content was not found.",
+  );
+}
+
+export function storefrontProductNotFoundResponse(): Response {
+  return publicNotFoundResponse(
+    "PRODUCT_NOT_FOUND",
+    "Published product was not found.",
   );
 }
 
