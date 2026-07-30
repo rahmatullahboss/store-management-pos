@@ -192,13 +192,13 @@ checkpoints:
           - compare_at_price_accessibility_contrast_correction
           - PostgreSQL_browser_Cloudflare_and_recovery_evidence
         exact_head_evidence:
-          head: e5092766ff625e1bbf0f9cff191296e1fb1851a8
+          implementation_head: e5092766ff625e1bbf0f9cff191296e1fb1851a8
           storefront_ci_run: 30519058955
           storefront_verify_job: 90795225080
           postgres_rehearsal_job: 90795311940
           browser_evidence_job: 90795311932
           cloudflare_preview_job: 90795311951
-          neon_recovery_job: 90795311962
+          neon_recovery_job: 90795312040
           repository_tests: 435
           buyer_browser_scenarios: 3
           admin_browser_scenarios: 4
@@ -214,10 +214,26 @@ checkpoints:
           cache_generation_rows: 1
           Cloudflare_requests: 3
           Cloudflare_errors: 0
+          quota_safe_validation_head: f4b9e93a50d60e22e98c5ef80a1542279000095a
+          validation_storefront_ci_run: 30519327515
+          validation_storefront_verify_job: 90796054506
+          validation_postgres_rehearsal_job: 90796166102
+          validation_browser_evidence_job: 90796166119
+          validation_cloudflare_preview_job: 90796166055
+          validation_neon_recovery_job: 90796166135
+          validation_foundation_ci_run: 30519327519
+          validation_foundation_verify_job: 90796102893
+          validation_foundation_cloudflare_job: 90796180051
+          validation_foundation_neon_recovery_job: 90796180328
+          validation_generic_neon_preview_job: 90796340548
+          validation_generic_neon_preview_result: skipped_quota_safe
+          validation_foundation_design_run: 30519327509
+          validation_storefront_lockfile_run: 30519327510
           checkpoint_doc: docs/architecture/storefront/public-catalog-checkpoint.md
     active_slice:
       id: H3-DISCOVERY-03
       description: Add published category and collection projections and pages, then bounded storefront search and facets using the existing authoritative public product composition.
+      plan_doc: docs/architecture/storefront/public-discovery-plan.md
     remaining:
       - category_and_collection_public_projections_and_pages
       - bounded_public_search_and_facets
@@ -248,7 +264,8 @@ module_authority:
 
 next_action:
   id: H3-DISCOVERY-03
-  description: Build published category and collection pages from MOD-H taxonomy selection and the verified authoritative public product composition, then add bounded search and facets without creating a second catalog authority.
+  description: Follow the approved public-discovery plan: build published category and collection pages from MOD-H selection and the verified authoritative public product composition, then add bounded search and facets without creating a second catalog authority.
+  documentation_first: docs/architecture/storefront/public-discovery-plan.md
 
 last_commits:
   - sha: e9dc992ded901452b3633b3d20a261e50668bc88
@@ -258,13 +275,16 @@ last_commits:
   - sha: b5fa25cc6e197c9bb9893ac0194028408fe89940
     purpose: H3 published public content and compatibility migration checkpoint
   - sha: e5092766ff625e1bbf0f9cff191296e1fb1851a8
-    purpose: H3 authoritative public listing and product detail checkpoint
+    purpose: H3 authoritative public listing and product detail implementation checkpoint
+  - sha: f4b9e93a50d60e22e98c5ef80a1542279000095a
+    purpose: quota-safe full validation of the H3 catalog checkpoint
 
 evidence:
   github:
     pr: 48
     base_sha: fd63dfde4d5940112a9c77c2743b281e49ff6b55
-    verified_head: e5092766ff625e1bbf0f9cff191296e1fb1851a8
+    verified_implementation_head: e5092766ff625e1bbf0f9cff191296e1fb1851a8
+    verified_validation_head: f4b9e93a50d60e22e98c5ef80a1542279000095a
     integration_sync_pr: 53
     integration_sync_report: docs/architecture/storefront/integration-conflicts.txt
   neon:
@@ -274,6 +294,8 @@ evidence:
     branch_limit: 10
     requested_branch: dev/module-storefront-commerce
     result: not_created_to_preserve_existing_work
+    generic_preview_policy: skipped_for_MOD_H_until_safe_quota_slot
+    required_evidence: PostgreSQL_17_full_replay_plus_non_destructive_Neon_recovery
   adaptation:
     latest_batch: SF-UP-003
     upstream_product_card_blob: 68bc025696a3e36dbf316d64f2e026ac719ddcf9
