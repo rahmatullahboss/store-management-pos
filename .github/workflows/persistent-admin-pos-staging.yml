@@ -5,7 +5,6 @@ on:
   push:
     branches:
       - main
-      - ops/persistent-admin-pos-staging-v1
     paths:
       - "apps/admin-web/**"
       - "apps/pos-web/**"
@@ -90,6 +89,8 @@ jobs:
             `- Git SHA: ${report.gitSha}`,
             `- Persistent: ${report.persistent === true ? 'yes' : 'not confirmed'}`,
             `- Browser data: ${report.syntheticOnly === true ? 'synthetic only' : 'not confirmed'}`,
+            `- Authentication: ${report.authentication?.required === true ? 'Neon Auth required' : 'not confirmed'}`,
+            `- Synthetic auth account cleanup: ${report.authentication?.syntheticAccountCleaned === true ? 'passed' : 'not confirmed'}`,
             `- Authoritative browser writes: ${report.authoritativeBrowserWritesEnabled === true ? 'enabled' : 'disabled'}`,
             `- Live browser scenarios: ${browser.filter((item) => item.passed === true).length}/${browser.length}`,
             `- Axe violations: ${browser.reduce((total, item) => total + (item.violations?.length ?? 0), 0)}`,
