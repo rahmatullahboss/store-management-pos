@@ -1,9 +1,9 @@
-schema_version: 5
+schema_version: 6
 workstream: persistent-admin-pos-staging
-status: usable_operational_release_candidate_complete
+status: protected_read_release_candidate_complete
 branch: ops/persistent-admin-pos-staging-v1
 base_sha: 3a414363a40f48bd6e526418d9e82679501b170e
-verified_implementation_head: 866e99b69b1ccd8f0789f8328fdbc9437fb3bfec
+verified_implementation_head: 6949b5e39c21203102b1ab51601c334028340d96
 resources:
   cloudflare_worker: store-pos-staging
   base_url: https://store-pos-staging.rahmatullahzisan.workers.dev
@@ -18,6 +18,7 @@ checkpoints:
   documentation_first:
     status: complete
     plan: docs/architecture/staging/usable-release-candidate-plan.md
+    protected_read_plan: docs/architecture/staging/internal-token-read-api-plan.md
   dedicated_neon_project:
     status: complete
   persistent_worker:
@@ -64,6 +65,40 @@ checkpoints:
     scoped_register: true
     inactive_or_missing_context: fail_closed
     live_probe: passed
+  business_api_token_exchange:
+    status: complete
+    lifetime_seconds: 300
+    audience: store-management-api-staging
+    issuer_mode: exact_worker_origin
+    signing_algorithm: HS256_staging_only
+    signing_secret: cloudflare_worker_secret
+    deployment_rotation: enabled
+    browser_exposed: false
+    cookie_persisted: false
+    artifact_persisted: false
+    fresh_database_context_per_verification: true
+    tamper_failure: passed
+    expiry_failure: passed
+    revoked_session_failure: passed
+    permission_drift_failure: passed
+    non_read_permission_rejection: passed
+    production_oidc_verifier_modified: false
+  authoritative_business_api_reads:
+    status: complete
+    methods:
+      - GET
+      - HEAD
+    routes:
+      - /api/v1/inventory/availability
+      - /api/v1/inventory/movements
+      - /api/v1/procurement/suppliers
+      - /api/v1/procurement/purchase-orders
+    request_context_builder: buildRequestContext
+    existing_module_handlers: true
+    rls_transactions: true
+    cross_warehouse_scope_denial: passed
+    unsupported_method_policy: 405
+    unapproved_route_policy: 404
   operational_dataset:
     status: complete
     mode: deterministic_synthetic_module_records
@@ -98,10 +133,11 @@ checkpoints:
     authoritative_writes: false
   http_smoke:
     status: complete
-    routes_passed: 15
-    routes_total: 15
+    routes_passed: 20
+    routes_total: 20
   browser_smoke:
     status: complete
+    fail_closed_gate: enabled
     scenarios_passed: 5
     scenarios_total: 5
     axe_violations: 0
@@ -110,24 +146,26 @@ checkpoints:
     keyboard_skip_navigation: passed
   api_health:
     status: complete
-  business_api_token_exchange:
-    status: pending
-  authoritative_business_api_reads:
-    status: pending
   authoritative_browser_writes:
     status: pending
   custom_domain:
     status: pending
 evidence:
-  workflow_run_id: 30540227545
-  workflow_job_id: 90863023950
-  artifact_id: 8758383720
-  artifact_digest: sha256:5c9404b4b6d10e326cc073a83e9ddf53f21346f1e6c0ec2148c812342beab583
+  implementation_head: 6949b5e39c21203102b1ab51601c334028340d96
+  workflow_run_id: 30549906829
+  workflow_job_id: 90895724482
+  artifact_id: 8762356904
+  artifact_digest: sha256:95328722850cd63c1e6dbc454fea54c0059c871271b25579da45cf8da9ffb032
+  artifact_independent_inspection: passed
+  foundation_ci_run_id: 30549906835
+  foundation_design_run_id: 30549906840
+  marketing_preview_run_id: 30549906804
   identity_checkpoint: docs/architecture/staging/staging-identity-checkpoint.md
   usable_release_checkpoint: docs/architecture/staging/usable-release-candidate-checkpoint.md
+  protected_read_plan: docs/architecture/staging/internal-token-read-api-plan.md
 limitations:
   - this is a production-shaped synthetic staging release candidate, not a production launch
   - repository policy prohibits production credentials, production data and production database branches in this workstream
-  - browser operational reads currently use server-side database context rather than strict business API bearer-token exchange
+  - protected inventory and procurement reads are complete; remaining enabled modules still need protected read integration
   - authoritative business writes remain disabled until idempotency, permissions, audit, outbox, reversal and recovery gates pass
-  - production domain, backup policy, transactional email, password recovery, MFA, monitoring and controlled launch approval remain pending
+  - production domain, backup policy, transactional email, password recovery, MFA, asymmetric token lifecycle, monitoring and controlled launch approval remain pending
