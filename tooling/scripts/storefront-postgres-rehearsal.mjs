@@ -74,6 +74,7 @@ for (const fixture of [
   "tests/integration/storefront-public-discovery-rehearsal.sql",
   "tests/integration/storefront-public-search-filter-rehearsal.sql",
   "tests/integration/storefront-public-seo-rehearsal.sql",
+  "tests/integration/storefront-public-media-rehearsal.sql",
 ]) {
   await psql(["--file", path.join(root, fixture)]);
 }
@@ -102,7 +103,7 @@ const { stdout } = await execFileAsync(
   { cwd: root, maxBuffer: 1024 * 1024 },
 );
 const summary = JSON.parse(stdout.trim());
-if (summary.migrations !== 14) throw new Error("Storefront migration count is invalid");
+if (summary.migrations !== 15) throw new Error("Storefront migration count is invalid");
 if (summary.tables < 16) throw new Error("Storefront table count is incomplete");
 if (summary.forcedRlsTables !== summary.tables) {
   throw new Error("Not every storefront table has forced RLS");
