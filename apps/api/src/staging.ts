@@ -7,8 +7,15 @@ import {
 } from "../../admin-web/src/app-shell/index.js";
 import { renderRegisterWorkspace } from "../../pos-web/src/modules/register/surface.js";
 import apiWorker, { type ApiEnvironment } from "./index.js";
+import {
+  getStagingAuthSession,
+  handleStagingAuthRequest,
+  stagingAuthIsRequired,
+  type StagingAuthEnvironment,
+  type StagingAuthSession,
+} from "./staging-auth.js";
 
-export interface StagingEnvironment extends ApiEnvironment {
+export interface StagingEnvironment extends ApiEnvironment, StagingAuthEnvironment {
   readonly STAGING_GIT_SHA?: string;
 }
 
@@ -90,21 +97,37 @@ function htmlResponse(request: Request, html: string, status = 200): Response {
   });
 }
 
-function stagingNotice(version: string): string {
-  return `<section data-staging-notice role="status" style="margin:0 0 1rem;padding:.8rem 1rem;border:2px solid #8a5a00;background:#fff0c7;color:#4c3100;border-radius:.65rem"><strong>Persistent staging · synthetic data</strong><span style="display:block;margin-top:.2rem">Read-only browser milestone. Authoritative commands remain protected until staging identity and controlled-write journeys are enabled.</span><small style="display:block;margin-top:.35rem">Build ${escapeHtml(version)}</small></section>`;
+function stagingNotice(
+  version: string,
+  session?: StagingAuthSession | null,
+): string {
+  const identity = session
+    ? `<span style="display:block;margin-top:.2rem">Signed in as <strong>${escapeHtml(session.user.name)}</strong> · ${escapeHtml(session.user.email)}</span><form action="/auth/sign-out" method="post" style="margin-top:.55rem"><button type="submit" style="min-height:36px;border:1px solid currentColor;background:transparent;color:inherit;padding:.35rem .7rem;font:700 .85rem system-ui;cursor:pointer">Sign out</button></form>`
+    : "";
+  return `<section data-staging-notice role="status" style="margin:0 0 1rem;padding:.8rem 1rem;border:2px solid #8a5a00;background:#fff0c7;color:#4c3100;border-radius:.65rem"><strong>Persistent staging · synthetic data</strong><span style="display:block;margin-top:.2rem">Read-only browser milestone. Authoritative commands remain protected until controlled-write journeys are enabled.</span>${identity}<small style="display:block;margin-top:.35rem">Build ${escapeHtml(version)}</small></section>`;
 }
 
 function prefixAdminLinks(html: string): string {
   return html.replaceAll('href="/', 'href="/admin/');
 }
 
-function addAdminNotice(html: string, version: string): string {
-  return html.replace('<div class="workspace">', `<div class="workspace">${stagingNotice(version)}`);
+function addAdminNotice(
+  html: string,
+  version: string,
+  session?: StagingAuthSession | null,
+): string {
+  return html.replace(
+    '<div class="workspace">',
+    `<div class="workspace">${stagingNotice(version, session)}`,
+  );
 }
 
-function adminBaseInput(localPath: string): AdminShellInput {
+function adminBaseInput(
+  localPath: string,
+  session?: StagingAuthSession | null,
+): AdminShellInput {
   return {
-    displayName: "Staging Operator",
+    displayName: session?.user.name ?? "Staging Operator",
     tenantName: "Ozzyl Demo Store",
     permissions: ADMIN_PERMISSIONS,
     currentPath: localPath,
@@ -117,18 +140,29 @@ function adminBaseInput(localPath: string): AdminShellInput {
   };
 }
 
-function renderGenericAdminPage(localPath: string, version: string): string {
+function renderGenericAdminPage(
+  localPath: string,
+  version: string,
+  session?: StagingAuthSession | null,
+): string {
   const [title, description] = ADMIN_MODULES.get(localPath) ?? [
     "Admin staging",
     "This route is not part of the current persistent staging navigation.",
   ];
-  const content = `${stagingNotice(version)}<section data-staging-page="admin-module"><header class="page-heading"><div><p class="fixture-notice"><strong>Synthetic fixture</strong><span>No customer or production data</span></p><h1>${escapeHtml(title)}</h1><p>${escapeHtml(description)}</p></div></header><section class="system-state system-state--empty" role="status"><span class="system-state__mark" aria-hidden="true">S</span><div class="system-state__copy"><strong>Browser surface is ready for review</strong><span>Navigation, responsive layout and accessibility can be tested now. Live mutations will be enabled only after staging OIDC and repeatable seed data are verified.</span></div></section></section>`;
-  return prefixAdminLinks(renderAdminShell({ ...adminBaseInput(localPath), content }));
+  const content = `${stagingNotice(version, session)}<section data-staging-page="admin-module"><header class="page-heading"><div><p class="fixture-notice"><strong>Synthetic fixture</strong><span>No customer or production data</span></p><h1>${escapeHtml(title)}</h1><p>${escapeHtml(description)}</p></div></header><section class="system-state system-state--empty" role="status"><span class="system-state__mark" aria-hidden="true">S</span><div class="system-state__copy"><strong>Browser surface is ready for review</strong><span>Navigation, responsive layout and accessibility can be tested now. Live mutations will be enabled only after repeatable seed data and controlled-write authorization are verified.</span></div></section></section>`;
+  return prefixAdminLinks(
+    renderAdminShell({ ...adminBaseInput(localPath, session), content }),
+  );
 }
 
-function renderAdmin(request: Request, pathname: string, version: string): Response {
+function renderAdmin(
+  request: Request,
+  pathname: string,
+  version: string,
+  session?: StagingAuthSession | null,
+): Response {
   const localPath = pathname.slice("/admin".length) || "/";
-  const base = adminBaseInput(localPath);
+  const base = adminBaseInput(localPath, session);
   let html: string;
   if (localPath === "/" || localPath === "") {
     html = renderAdminFoundationPreview(base);
@@ -137,12 +171,22 @@ function renderAdmin(request: Request, pathname: string, version: string): Respo
   } else if (localPath === "/procurement") {
     html = renderProcurementAdminPage(base);
   } else {
-    return htmlResponse(request, renderGenericAdminPage(localPath, version), ADMIN_MODULES.has(localPath) ? 200 : 404);
+    return htmlResponse(
+      request,
+      renderGenericAdminPage(localPath, version, session),
+      ADMIN_MODULES.has(localPath) ? 200 : 404,
+    );
   }
-  return htmlResponse(request, prefixAdminLinks(addAdminNotice(html, version)));
+  return htmlResponse(
+    request,
+    prefixAdminLinks(addAdminNotice(html, version, session)),
+  );
 }
 
-function renderPos(version: string): string {
+function renderPos(
+  version: string,
+  session?: StagingAuthSession | null,
+): string {
   const register = renderRegisterWorkspace({
     locale: "en-GB",
     currency: "BDT",
@@ -151,7 +195,7 @@ function renderPos(version: string): string {
     pendingOperations: 0,
     registerLabel: "Register 01",
     shiftStatus: "open",
-    cashierName: "Staging Cashier",
+    cashierName: session?.user.name ?? "Staging Cashier",
     cartReference: "STG-0001",
     lines: [
       {
@@ -175,16 +219,32 @@ function renderPos(version: string): string {
     payableMinor: 346500n,
     tenders: [],
     canCheckout: false,
-    checkoutBlockReason: "Read-only persistent staging: payment and checkout commands are intentionally disabled.",
+    checkoutBlockReason:
+      "Read-only persistent staging: payment and checkout commands are intentionally disabled.",
   });
-  return `<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>Persistent POS staging</title><style>html,body{max-width:100%;overflow-x:hidden}body{margin:0;background:#f5f3ec}.staging-top{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.75rem 1rem;background:#14251e;color:#fff;font:600 .9rem/1.4 system-ui}.staging-top a{color:#f0d36d}.staging-top small{display:block;color:#bed0c7}.modd-register,.modd-workspace,.modd-cart,.modd-checkout,.modd-table-wrap{min-width:0;max-width:100%}.modd-table-wrap{overflow-x:auto;overscroll-behavior-x:contain}@media(max-width:560px){.staging-top{align-items:flex-start;flex-direction:column}.staging-top nav{width:100%}}</style></head><body><header class="staging-top" data-staging-notice><div><strong>Persistent staging · synthetic POS</strong><small>Build ${escapeHtml(version)} · authoritative checkout disabled</small></div><nav aria-label="Staging"><a href="/admin">Admin</a> · <a href="/api/health">API health</a></nav></header>${register}</body></html>`;
+  const identity = session
+    ? `<span>Signed in as ${escapeHtml(session.user.name)}</span><form action="/auth/sign-out" method="post"><button type="submit">Sign out</button></form>`
+    : "";
+  return `<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>Persistent POS staging</title><style>html,body{max-width:100%;overflow-x:hidden}body{margin:0;background:#f5f3ec}.staging-top{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.75rem 1rem;background:#14251e;color:#fff;font:600 .9rem/1.4 system-ui}.staging-top a{color:#f0d36d}.staging-top small{display:block;color:#bed0c7}.staging-top nav,.staging-top form{display:flex;align-items:center;gap:.5rem}.staging-top button{min-height:36px;border:1px solid #f0d36d;background:transparent;color:#f0d36d;padding:.3rem .65rem;font:700 .85rem system-ui;cursor:pointer}.modd-register,.modd-workspace,.modd-cart,.modd-checkout,.modd-table-wrap{min-width:0;max-width:100%}.modd-table-wrap{overflow-x:auto;overscroll-behavior-x:contain}@media(max-width:560px){.staging-top{align-items:flex-start;flex-direction:column}.staging-top nav{width:100%;flex-wrap:wrap}}</style></head><body><header class="staging-top" data-staging-notice><div><strong>Persistent staging · synthetic POS</strong><small>Build ${escapeHtml(version)} · authoritative checkout disabled</small></div><nav aria-label="Staging"><a href="/admin">Admin</a><a href="/api/health">API health</a>${identity}</nav></header>${register}</body></html>`;
 }
 
 function uiMethodAllowed(request: Request): boolean {
   return request.method === "GET" || request.method === "HEAD";
 }
 
-async function delegateApi(request: Request, env: StagingEnvironment): Promise<Response> {
+function authenticationRedirect(request: Request, pathname: string): Response {
+  const target = new URL("/login", request.url);
+  target.searchParams.set("returnTo", pathname);
+  return new Response(null, {
+    status: 302,
+    headers: { "Cache-Control": "no-store", Location: target.toString() },
+  });
+}
+
+async function delegateApi(
+  request: Request,
+  env: StagingEnvironment,
+): Promise<Response> {
   const source = new URL(request.url);
   source.pathname = source.pathname.slice("/api".length) || "/";
   return await apiWorker.fetch(new Request(source, request), env);
@@ -195,12 +255,20 @@ export default {
     const url = new URL(request.url);
     const version = env.STAGING_GIT_SHA?.slice(0, 12) || "local";
 
-    if (url.pathname.startsWith("/api/")) return await delegateApi(request, env);
+    const authResponse = await handleStagingAuthRequest(request, url, env);
+    if (authResponse) return authResponse;
+
+    if (url.pathname.startsWith("/api/")) {
+      return await delegateApi(request, env);
+    }
 
     if (!uiMethodAllowed(request)) {
       return new Response(null, {
         status: 405,
-        headers: { ...stagingHeaders("text/plain; charset=utf-8"), Allow: "GET, HEAD" },
+        headers: {
+          ...stagingHeaders("text/plain; charset=utf-8"),
+          Allow: "GET, HEAD",
+        },
       });
     }
 
@@ -217,15 +285,39 @@ export default {
               version,
               database: "dedicated-neon-staging",
               browserMode: "synthetic-read-only",
+              authentication: stagingAuthIsRequired(env)
+                ? "neon-auth-required"
+                : "not-required",
             }),
-        { status: 200, headers: stagingHeaders("application/json; charset=utf-8") },
+        {
+          status: 200,
+          headers: stagingHeaders("application/json; charset=utf-8"),
+        },
       );
     }
-    if (url.pathname === "/pos" || url.pathname === "/pos/") {
-      return htmlResponse(request, renderPos(version));
+
+    const protectedUi =
+      url.pathname === "/pos" ||
+      url.pathname === "/pos/" ||
+      url.pathname === "/admin" ||
+      url.pathname === "/admin/" ||
+      url.pathname.startsWith("/admin/");
+    const session = protectedUi && stagingAuthIsRequired(env)
+      ? await getStagingAuthSession(request, env)
+      : null;
+    if (protectedUi && stagingAuthIsRequired(env) && !session) {
+      return authenticationRedirect(request, `${url.pathname}${url.search}`);
     }
-    if (url.pathname === "/admin" || url.pathname === "/admin/" || url.pathname.startsWith("/admin/")) {
-      return renderAdmin(request, url.pathname, version);
+
+    if (url.pathname === "/pos" || url.pathname === "/pos/") {
+      return htmlResponse(request, renderPos(version, session));
+    }
+    if (
+      url.pathname === "/admin" ||
+      url.pathname === "/admin/" ||
+      url.pathname.startsWith("/admin/")
+    ) {
+      return renderAdmin(request, url.pathname, version, session);
     }
 
     return htmlResponse(
