@@ -1,87 +1,13 @@
-name: Storefront SEO Migration Test Boundary Fix
+name: Retired Storefront SEO Migration Test Boundary Fix
 
 on:
-  pull_request:
-    branches:
-      - program/integration-v1
-    paths:
-      - .github/workflows/storefront-seo-test-boundary-fix.yml
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  patch-tests:
+  retired:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          ref: module/storefront-commerce-v1
-          persist-credentials: true
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
-        with:
-          node-version: 22
-          package-manager-cache: false
-      - name: Make historical migration assertions append-only safe
-        shell: bash
-        run: |
-          set -euo pipefail
-          python <<'PY'
-          from pathlib import Path
-          import re
-
-          discovery = Path("tests/unit/storefront-public-discovery.test.mjs")
-          text = discovery.read_text()
-          pattern = re.compile(
-              r'  const registered = manifest\.migrations\.slice\(-3\);\n'
-              r'  assert\.deepEqual\(\n'
-              r'    registered\.map\(\(migration\) => migration\.id\),\n'
-              r'    \["STF-0011", "STF-0012", "STF-0013"\],\n'
-              r'  \);\n'
-          )
-          replacement = '''  const expectedIds = ["STF-0011", "STF-0012", "STF-0013"];
-          const registered = expectedIds.map((id) =>
-            manifest.migrations.find((migration) => migration.id === id)
-          );
-          assert.ok(registered.every(Boolean));
-          assert.deepEqual(
-            registered.map((migration) => migration.id),
-            expectedIds,
-          );
-          '''
-          text, count = pattern.subn(replacement, text, count=1)
-          if count != 1:
-              raise SystemExit(f"Discovery migration assertion regex matched {count} times")
-          discovery.write_text(text)
-
-          filters = Path("tests/unit/storefront-public-search-filters.test.mjs")
-          text = filters.read_text()
-          pattern = re.compile(
-              r'  const migration = manifest\.migrations\.at\(-1\);\n'
-              r'  assert\.equal\(migration\.id, "STF-0013"\);\n'
-              r'  assert\.equal\(migration\.file, "STF-0013-public-search-filters\.sql"\);'
-          )
-          replacement = '''  const migration = manifest.migrations.find(({ id }) => id === "STF-0013");
-          assert.ok(migration);
-          assert.equal(migration.file, "STF-0013-public-search-filters.sql");'''
-          text, count = pattern.subn(replacement, text, count=1)
-          if count != 1:
-              raise SystemExit(f"Search-filter migration assertion regex matched {count} times")
-          filters.write_text(text)
-          PY
-      - name: Verify tests and formatting
-        run: |
-          npm ci --ignore-scripts
-          npm run format:check
-          npm run typecheck
-          npm run test:unit
-      - name: Commit verified historical assertion fix
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name "Storefront Test Bot"
-          git config user.email "storefront-test-bot@users.noreply.github.com"
-          git add tests/unit/storefront-public-discovery.test.mjs tests/unit/storefront-public-search-filters.test.mjs
-          git commit -m "test(storefront): make migration assertions append-only safe"
-          git push origin HEAD:module/storefront-commerce-v1
+      - run: echo "SEO migration assertion maintenance is complete; this workflow is intentionally inert."
