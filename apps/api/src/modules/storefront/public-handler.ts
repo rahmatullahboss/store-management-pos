@@ -68,6 +68,20 @@ function notFound(request: Request, code: string, message: string): Response {
   );
 }
 
+function publicJson(
+  request: Request,
+  value: unknown,
+  cacheControl = "public, max-age=0, s-maxage=60, stale-while-revalidate=180",
+): Response {
+  return withoutBody(
+    request,
+    Response.json(value, {
+      status: 200,
+      headers: publicHeaders(cacheControl),
+    }),
+  );
+}
+
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 const SLUG = /^[a-z0-9](?:[a-z0-9._~-]{0,178}[a-z0-9])?$/u;
@@ -94,19 +108,35 @@ function catalogCursor(url: URL): string | undefined {
   return raw;
 }
 
-function productSlug(pathname: string): string | null {
-  const match = pathname.match(/^\/v1\/storefront\/products\/([^/]+)$/u);
+function routeSlug(pathname: string, route: string, label: string): string | null {
+  const match = pathname.match(new RegExp(`^/v1/storefront/${route}/([^/]+)$`, "u"));
   if (!match?.[1]) return null;
   let decoded: string;
   try {
     decoded = decodeURIComponent(match[1]).trim().toLowerCase();
   } catch {
-    throw new PlatformError("VALIDATION_FAILED", "Product slug is invalid.", 400);
+    throw new PlatformError("VALIDATION_FAILED", `${label} slug is invalid.`, 400);
   }
   if (!SLUG.test(decoded) || decoded === "." || decoded === "..") {
-    throw new PlatformError("VALIDATION_FAILED", "Product slug is invalid.", 400);
+    throw new PlatformError("VALIDATION_FAILED", `${label} slug is invalid.`, 400);
   }
   return decoded;
+}
+
+function searchQuery(url: URL): string {
+  const query = url.searchParams.get("q")?.trim() ?? "";
+  if (
+    query.length < 2 ||
+    query.length > 120 ||
+    /[\u0000-\u001f\u007f]/u.test(query)
+  ) {
+    throw new PlatformError(
+      "VALIDATION_FAILED",
+      "q must contain between 2 and 120 visible characters.",
+      400,
+    );
+  }
+  return query;
 }
 
 export async function handlePublicStorefrontRequest(
@@ -114,12 +144,20 @@ export async function handlePublicStorefrontRequest(
   url: URL,
   database: NeonDatabase,
 ): Promise<Response | null> {
-  const slug = productSlug(url.pathname);
+  const productSlug = routeSlug(url.pathname, "products", "Product");
+  const categorySlug = routeSlug(url.pathname, "categories", "Category");
+  const collectionSlug = routeSlug(url.pathname, "collections", "Collection");
+  const exactRoute = new Set([
+    "/v1/storefront/bootstrap",
+    "/v1/storefront/content",
+    "/v1/storefront/catalog",
+    "/v1/storefront/search",
+  ]).has(url.pathname);
   if (
-    url.pathname !== "/v1/storefront/bootstrap" &&
-    url.pathname !== "/v1/storefront/content" &&
-    url.pathname !== "/v1/storefront/catalog" &&
-    slug === null
+    !exactRoute &&
+    productSlug === null &&
+    categorySlug === null &&
+    collectionSlug === null
   ) {
     return null;
   }
@@ -133,14 +171,10 @@ export async function handlePublicStorefrontRequest(
   if (url.pathname === "/v1/storefront/bootstrap") {
     const bootstrap = await repository.resolveBootstrap(hostname);
     if (!bootstrap) return unavailable(request);
-    return withoutBody(
+    return publicJson(
       request,
-      Response.json(bootstrap, {
-        status: 200,
-        headers: publicHeaders(
-          "public, max-age=0, s-maxage=30, stale-while-revalidate=60",
-        ),
-      }),
+      bootstrap,
+      "public, max-age=0, s-maxage=30, stale-while-revalidate=60",
     );
   }
 
@@ -155,50 +189,82 @@ export async function handlePublicStorefrontRequest(
         "Published content was not found.",
       );
     }
-    return withoutBody(
+    return publicJson(
       request,
-      Response.json(content, {
-        status: 200,
-        headers: publicHeaders(
-          "public, max-age=0, s-maxage=60, stale-while-revalidate=300",
-        ),
-      }),
+      content,
+      "public, max-age=0, s-maxage=60, stale-while-revalidate=300",
     );
   }
+
+  const cursor = catalogCursor(url);
+  const pageOptions = {
+    limit: catalogLimit(url),
+    ...(cursor ? { cursor } : {}),
+  };
 
   if (url.pathname === "/v1/storefront/catalog") {
-    const cursor = catalogCursor(url);
-    const catalog = await repository.resolveCatalog(hostname, {
-      limit: catalogLimit(url),
-      ...(cursor ? { cursor } : {}),
-    });
+    const catalog = await repository.resolveCatalog(hostname, pageOptions);
     if (!catalog) return unavailable(request);
-    return withoutBody(
+    return publicJson(request, catalog);
+  }
+
+  if (url.pathname === "/v1/storefront/search") {
+    const search = await repository.resolveSearch(
+      hostname,
+      searchQuery(url),
+      pageOptions,
+    );
+    if (!search) return unavailable(request);
+    return publicJson(
       request,
-      Response.json(catalog, {
-        status: 200,
-        headers: publicHeaders(
-          "public, max-age=0, s-maxage=60, stale-while-revalidate=180",
-        ),
-      }),
+      search,
+      "public, max-age=0, s-maxage=30, stale-while-revalidate=90",
     );
   }
 
-  const product = await repository.resolveProduct(hostname, slug!);
-  if (!product) {
-    return notFound(
+  if (productSlug !== null) {
+    const product = await repository.resolveProduct(hostname, productSlug);
+    if (!product) {
+      return notFound(
+        request,
+        "PRODUCT_NOT_FOUND",
+        "Published product was not found.",
+      );
+    }
+    return publicJson(
       request,
-      "PRODUCT_NOT_FOUND",
-      "Published product was not found.",
+      product,
+      "public, max-age=0, s-maxage=120, stale-while-revalidate=300",
     );
   }
-  return withoutBody(
-    request,
-    Response.json(product, {
-      status: 200,
-      headers: publicHeaders(
-        "public, max-age=0, s-maxage=120, stale-while-revalidate=300",
-      ),
-    }),
+
+  if (categorySlug !== null) {
+    const category = await repository.resolveCategory(
+      hostname,
+      categorySlug,
+      pageOptions,
+    );
+    if (!category) {
+      return notFound(
+        request,
+        "CATEGORY_NOT_FOUND",
+        "Published category was not found.",
+      );
+    }
+    return publicJson(request, category);
+  }
+
+  const collection = await repository.resolveCollection(
+    hostname,
+    collectionSlug!,
+    pageOptions,
   );
+  if (!collection) {
+    return notFound(
+      request,
+      "COLLECTION_NOT_FOUND",
+      "Published collection was not found.",
+    );
+  }
+  return publicJson(request, collection);
 }
