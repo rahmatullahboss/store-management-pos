@@ -1020,7 +1020,7 @@ GRANT EXECUTE ON FUNCTION storefront.publish_content_page_revision(uuid,uuid,uui
 GRANT EXECUTE ON FUNCTION storefront.publish_homepage_revision(uuid,uuid,uuid,uuid,text,jsonb,jsonb,text,timestamptz,uuid,text,text,text,text,date) TO store_app_runtime;
 
 INSERT INTO platform.schema_migrations(migration_id, module, checksum)
-VALUES ('STF-0004','MOD-H-STOREFRONT','manifest:STF-0004-publication-content-commands.sql')
+VALUES ('STF-0005','MOD-H-STOREFRONT','manifest:STF-0005-publication-content-commands.sql')
 ON CONFLICT (migration_id) DO NOTHING;
 
 COMMIT;
