@@ -64,6 +64,7 @@ for (const source of sources) {
 for (const fixture of [
   "tests/integration/storefront-postgres-rehearsal.sql",
   "tests/integration/storefront-public-host-rehearsal.sql",
+  "tests/integration/storefront-publishing-postgres-rehearsal.sql",
 ]) {
   await psql(["--file", path.join(root, fixture)]);
 }
@@ -84,18 +85,23 @@ const { stdout } = await execFileAsync(
         WHERE n.nspname = 'storefront' AND c.relkind = 'r' AND c.relrowsecurity AND c.relforcerowsecurity
       ),
       'auditEvents', (SELECT count(*) FROM platform.audit_events WHERE event_type LIKE 'storefront.%'),
-      'outboxEvents', (SELECT count(*) FROM platform.outbox_events WHERE event_type LIKE 'storefront.%')
+      'outboxEvents', (SELECT count(*) FROM platform.outbox_events WHERE event_type LIKE 'storefront.%'),
+      'commandReceipts', (SELECT count(*) FROM storefront.command_receipts),
+      'cacheGenerations', (SELECT count(*) FROM storefront.cache_generations)
     )::text;`,
   ],
   { cwd: root, maxBuffer: 1024 * 1024 },
 );
 const summary = JSON.parse(stdout.trim());
-if (summary.migrations !== 3) throw new Error("Storefront migration count is invalid");
+if (summary.migrations !== 5) throw new Error("Storefront migration count is invalid");
 if (summary.tables < 16) throw new Error("Storefront table count is incomplete");
 if (summary.forcedRlsTables !== summary.tables) {
   throw new Error("Not every storefront table has forced RLS");
 }
-if (summary.auditEvents < 12 || summary.outboxEvents < 12) {
+if (summary.auditEvents < 20 || summary.outboxEvents < 20) {
   throw new Error("Storefront audit/outbox evidence is incomplete");
+}
+if (summary.commandReceipts < 16 || summary.cacheGenerations < 1) {
+  throw new Error("Storefront command or cache evidence is incomplete");
 }
 console.log(JSON.stringify(summary));
