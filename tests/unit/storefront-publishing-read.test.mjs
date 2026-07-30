@@ -24,7 +24,7 @@ const ids = {
   homepage: "018f0000-0000-4000-8000-000000000014",
 };
 
-function context(permissions = ["storefront.read"]) {
+function context(permissions = ["storefront.storefront.read"]) {
   return {
     requestId: "018f0000-0000-7000-8000-000000000015",
     traceId: "trace-storefront-publishing-read",
