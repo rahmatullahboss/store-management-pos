@@ -334,11 +334,12 @@ test("storefront manifest registers exact discovery migration checksums", async 
   const expectedFiles = [
     "STF-0011-public-category-collection-resolution.sql",
     "STF-0012-public-search-resolution.sql",
+    "STF-0013-public-search-filters.sql",
   ];
-  const registered = manifest.migrations.slice(-2);
+  const registered = manifest.migrations.slice(-3);
   assert.deepEqual(
     registered.map((migration) => migration.id),
-    ["STF-0011", "STF-0012"],
+    ["STF-0011", "STF-0012", "STF-0013"],
   );
   assert.deepEqual(
     registered.map((migration) => migration.file),
