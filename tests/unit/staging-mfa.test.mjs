@@ -6,6 +6,7 @@ import {
   STAGING_RESERVATION_PERMISSION,
   STAGING_STEP_UP_SECONDS,
   STAGING_TOTP_PBKDF2_ITERATIONS,
+  STAGING_TOTP_PBKDF2_ROUNDS,
   STAGING_TOTP_PERIOD_SECONDS,
   stagingTotpBase32,
   totpCodeAt,
@@ -27,9 +28,9 @@ test("TOTP implementation matches the RFC SHA-1 vector reduced to six digits", a
   assert.equal(await verifyTotpCode(rfcSecret, "000000", 59_000), null);
 });
 
-test("TOTP secret is encrypted with password-derived AES-GCM and rejects a wrong password", async () => {
+test("TOTP secret is encrypted with chained password-derived AES-GCM and rejects a wrong password", async () => {
   const encrypted = await encryptTotpSecret(rfcSecret, password, factorId);
-  assert.equal(encrypted.iterations, 310_000);
+  assert.equal(encrypted.iterations, 300_000);
   assert.match(encrypted.ciphertext, /^[A-Za-z0-9_-]+$/u);
   assert.match(encrypted.iv, /^[A-Za-z0-9_-]{16}$/u);
   assert.match(encrypted.salt, /^[A-Za-z0-9_-]{22}$/u);
@@ -54,5 +55,6 @@ test("MFA constants keep the controlled command narrowly bounded", () => {
   assert.equal(STAGING_RESERVATION_PERMISSION, "inventory.reservation.manage");
   assert.equal(STAGING_STEP_UP_SECONDS, 300);
   assert.equal(STAGING_TOTP_PERIOD_SECONDS, 30);
-  assert.equal(STAGING_TOTP_PBKDF2_ITERATIONS, 310_000);
+  assert.equal(STAGING_TOTP_PBKDF2_ITERATIONS, 300_000);
+  assert.equal(STAGING_TOTP_PBKDF2_ROUNDS, 3);
 });
