@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - program/integration-v1
+      - validation/storefront-h1-synced-base
     paths:
       - "apps/storefront-web/**"
       - "packages/storefront-client/**"
