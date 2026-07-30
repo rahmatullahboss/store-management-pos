@@ -109,7 +109,7 @@ test("read context is GET and HEAD only", async () => {
   assert.equal(post.headers.get("allow"), "GET, HEAD");
 });
 
-test("persistent status advertises custom auth and database-resolved authorization", async () => {
+test("persistent status advertises the operational release candidate boundary", async () => {
   const response = await request("/staging/status");
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), {
@@ -117,8 +117,10 @@ test("persistent status advertises custom auth and database-resolved authorizati
     service: "persistent-admin-pos-staging",
     version: "0123456789ab",
     database: "dedicated-neon-staging",
-    browserMode: "synthetic-read-only",
+    browserMode: "operational-release-candidate",
+    dataMode: "deterministic-synthetic-module-records",
     authentication: "custom-auth-required",
     authorization: "database-resolved-read-only",
+    authoritativeWrites: false,
   });
 });
