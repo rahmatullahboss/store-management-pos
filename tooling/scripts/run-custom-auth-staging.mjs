@@ -26,6 +26,7 @@ const scenarioNeedle = `    for (const scenario of [
       },`;
 const loginPageNeedle = "    const loginPage = await browser.newPage();";
 const sessionPageNeedle = "    const sessionPage = await browser.newPage();";
+const browserEvidenceNeedle = "  const browser = await browserEvidence(baseUrl);";
 for (const [label, needle] of [
   ["redaction", redactNeedle],
   ["Worker entry", mainNeedle],
@@ -34,6 +35,7 @@ for (const [label, needle] of [
   ["browser scenarios", scenarioNeedle],
   ["login CSP bypass", loginPageNeedle],
   ["session CSP bypass", sessionPageNeedle],
+  ["browser evidence gate", browserEvidenceNeedle],
 ]) {
   if (!originalDeploy.includes(needle)) {
     throw new Error(`Custom staging ${label} patch target is missing`);
@@ -276,6 +278,22 @@ const secretUpload = [
   baseUrlNeedle,
 ].join("\n");
 
+const browserEvidenceGate = `${browserEvidenceNeedle}
+  const failedBrowserScenarios = browser.scenarios
+    .filter((scenario) => scenario.passed !== true)
+    .map((scenario) => scenario.id);
+  if (
+    browser.scenarios.length !== 5 ||
+    failedBrowserScenarios.length > 0 ||
+    browser.session.passed !== true ||
+    browser.context.passed !== true ||
+    browser.logout.passed !== true
+  ) {
+    throw new Error(
+      \`Persistent staging browser evidence failed: \${failedBrowserScenarios.join(",") || "session/context/logout/count"}\`,
+    );
+  }`;
+
 const patchedDeploy = originalDeploy
   .replace(
     redactNeedle,
@@ -292,7 +310,8 @@ const patchedDeploy = originalDeploy
   .replace(
     sessionPageNeedle,
     `${sessionPageNeedle}\n    await sessionPage.setBypassCSP(true);`,
-  );
+  )
+  .replace(browserEvidenceNeedle, browserEvidenceGate);
 
 process.env.STAGING_INTERNAL_TOKEN_SECRET = randomBytes(48).toString("base64url");
 await writeFile(deployPath, patchedDeploy, "utf8");
