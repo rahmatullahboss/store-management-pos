@@ -278,8 +278,7 @@ function renderDocument(
   const seo = page?.seo ?? content?.homepageSeo ?? {};
   const titleSource = options.product?.product.summary.name ??
     (options.catalog ? "Products" : undefined) ??
-    page?.title ??
-    seoText(seo, "title", hostname);
+    (page ? seoText(seo, "title", page.title) : seoText(seo, "title", hostname));
   const descriptionSource = options.product?.product.description ??
     (options.catalog ? `Published product catalog for ${hostname}.` : undefined) ??
     seoText(seo, "description", `Published storefront content for ${hostname}.`);
