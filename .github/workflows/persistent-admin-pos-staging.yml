@@ -18,10 +18,12 @@ on:
       - "tests/unit/staging-read-context.test.mjs"
       - "tests/unit/staging-mfa.test.mjs"
       - "tests/unit/staging-command-token.test.mjs"
+      - "tests/unit/staging-account-recovery.test.mjs"
       - "tooling/scripts/apply-migrations.mjs"
       - "tooling/scripts/deploy-custom-auth-staging.mjs"
       - "tooling/scripts/run-custom-auth-staging.mjs"
       - "tooling/scripts/staging-mfa-reservation-evidence.mjs"
+      - "tooling/scripts/staging-account-recovery-evidence.mjs"
       - "tooling/scripts/run-operational-staging.mjs"
       - "tooling/scripts/staging-operational-runner.mjs"
       - "docs/architecture/staging/**"
@@ -44,10 +46,12 @@ on:
       - "tests/unit/staging-read-context.test.mjs"
       - "tests/unit/staging-mfa.test.mjs"
       - "tests/unit/staging-command-token.test.mjs"
+      - "tests/unit/staging-account-recovery.test.mjs"
       - "tooling/scripts/apply-migrations.mjs"
       - "tooling/scripts/deploy-custom-auth-staging.mjs"
       - "tooling/scripts/run-custom-auth-staging.mjs"
       - "tooling/scripts/staging-mfa-reservation-evidence.mjs"
+      - "tooling/scripts/staging-account-recovery-evidence.mjs"
       - "tooling/scripts/run-operational-staging.mjs"
       - "tooling/scripts/staging-operational-runner.mjs"
       - "docs/architecture/staging/**"
@@ -112,6 +116,12 @@ jobs:
             `- Reservation create/release: ${report.controlledCommand?.createPassed === true && report.controlledCommand?.releasePassed === true ? 'passed' : 'not confirmed'}`,
             `- Reservation availability reconciliation: ${report.controlledCommand?.availabilityReconciled === true ? 'passed' : 'not confirmed'}`,
             `- Synthetic reservation cleanup: ${report.controlledCommand?.syntheticReservationCleaned === true ? 'passed' : 'not confirmed'}`,
+            `- Password recovery non-enumeration: ${report.accountRecovery?.nonEnumeratingRequest === true ? 'passed' : 'not confirmed'}`,
+            `- Password reset and credential rotation: ${report.accountRecovery?.resetCompleted === true && report.accountRecovery?.oldPasswordRejected === true && report.accountRecovery?.newPasswordAccepted === true ? 'passed' : 'not confirmed'}`,
+            `- Recovery token replay rejection: ${report.accountRecovery?.resetReplayRejected === true ? 'passed' : 'not confirmed'}`,
+            `- Session, MFA and step-up revocation: ${report.accountRecovery?.oldSessionRevoked === true && report.accountRecovery?.mfaFactorsRevoked === true && report.accountRecovery?.outstandingStepUpRevoked === true ? 'passed' : 'not confirmed'}`,
+            `- Email verification lifecycle: ${report.accountRecovery?.emailVerificationCompleted === true && report.accountRecovery?.verificationReplayRejected === true ? 'passed' : 'not confirmed'}`,
+            `- Production email delivery: ${report.accountRecovery?.productionEmailDeliveryConfigured === true ? 'configured' : 'not configured'}`,
             `- Synthetic auth account cleanup: ${report.authentication?.syntheticAccountCleaned === true ? 'passed' : 'not confirmed'}`,
             `- Legacy Neon Auth removed: ${report.authentication?.legacyNeonAuthRemoved === true ? 'yes' : 'not confirmed'}`,
             `- General authoritative browser writes: ${report.authoritativeBrowserWritesEnabled === true ? 'enabled' : 'disabled'}`,
