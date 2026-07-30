@@ -40,7 +40,7 @@
     {
       "id": "FND-0008",
       "file": "FND-0008-custom-auth-read-context.sql",
-      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      "sha256": "ac5bf72fde89ec9e5268ec5b1128e9152b03d09a5eabd6a8ea050d5bf1ea3812"
     }
   ]
 }
