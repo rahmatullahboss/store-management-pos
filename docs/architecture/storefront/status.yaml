@@ -2,7 +2,7 @@ workpack:
   id: MOD-H
   title: Storefront Commerce and Custom Domains
   status: active
-  current_checkpoint: H2
+  current_checkpoint: H3
   updated_at: 2026-07-30
   owner_model: one_agent_complete_workpack
   pull_request: 48
@@ -92,7 +92,7 @@ checkpoints:
 
   H2:
     title: Storefront domain and publishing
-    status: active
+    status: complete
     completed:
       - STF_0001_storefront_domain_publication_content_and_cache_schema
       - forced_RLS_and_runtime_direct_write_denial
@@ -108,24 +108,47 @@ checkpoints:
       - authenticated_storefront_command_API
       - tenant_scoped_management_read_repository_service_and_API
       - deterministic_UUID_pagination_and_exact_bigint_serialisation
-      - PostgreSQL_17_migration_command_RLS_idempotency_audit_outbox_and_public_host_rehearsal
-    active_slice:
-      id: H2-PUBLISH-04
-      description: Add idempotent variant, category, collection, collection-member, navigation, content-page and homepage publication commands with audit, outbox, cache generation, APIs, reads and PostgreSQL rehearsal.
-    remaining:
-      - STF_0004_remaining_publication_and_content_commands
-      - variant_publication_management
-      - category_publication_management
-      - collection_lifecycle_and_membership_management
-      - navigation_document_publication
-      - content_page_publication
-      - homepage_document_publication
-      - H2_admin_UI_surfaces_and_permissions_evidence
-      - H2_final_migration_recovery_and_observability_checkpoint
+      - STF_0004_qualified_status_reference_hotfix
+      - STF_0005_variant_category_collection_navigation_content_and_homepage_commands
+      - idempotent_publication_service_and_authenticated_API
+      - tenant_scoped_variant_category_collection_content_and_revision_reads
+      - storefront_operations_admin_surface_and_permission_gating
+      - PostgreSQL_17_H2_replay_conflict_RLS_audit_outbox_and_cache_generation_rehearsal
+      - buyer_and_admin_accessibility_RTL_mobile_and_200_percent_text_evidence
+      - Cloudflare_preview_runtime_metrics_and_cleanup
+      - non_destructive_Neon_recovery
+    exact_head_evidence:
+      head: 899c73512a5337f52dc5809e6df03877e96f1ef9
+      storefront_ci_run: 30505139609
+      storefront_verify_job: 90753143254
+      postgres_rehearsal_job: 90753284394
+      browser_evidence_job: 90753284422
+      cloudflare_preview_job: 90753284391
+      neon_recovery_job: 90753284761
+      foundation_design_run: 30505139614
+      storefront_lockfile_run: 30505139612
+      foundation_ci_run: 30505139644
+      foundation_ci_result: external_neon_preview_branch_quota_failure_only
+      H1_validation_run: 30505140254
+      H1_validation_result: superseded_validation_harness_failure_not_storefront_source_gate
+      repository_tests: 423
+      buyer_browser_scenarios: 3
+      admin_browser_scenarios: 4
+    remaining: []
 
   H3:
     title: Public catalog and content
-    status: blocked_by_H2
+    status: active
+    active_slice:
+      id: H3-CONTENT-01
+      description: Add versioned public layout, navigation, homepage and CMS content contracts, host-scoped API projection, typed client methods and buyer rendering with fail-closed publication rules.
+    remaining:
+      - public_layout_navigation_homepage_and_CMS_bundle
+      - authoritative_public_product_listing_and_detail_projection
+      - category_collection_and_search_pages
+      - media_delivery_and_cache_generation
+      - SEO_discovery_robots_sitemap_and_structured_data
+      - public_catalog_accessibility_localisation_RTL_and_low_bandwidth_evidence
   H4:
     title: Exact cart and checkout
     status: blocked_by_H3
@@ -137,7 +160,7 @@ checkpoints:
     status: blocked_by_H2_and_MOD_G_provider_control_plane
   H7:
     title: Hardening and handoff
-    status: blocked_by_H2_to_H6
+    status: blocked_by_H3_to_H6
 
 module_authority:
   catalog_pricing_tax: MOD-A
@@ -149,22 +172,22 @@ module_authority:
   storefront_publication_presentation_domains: MOD-H
 
 next_action:
-  id: H2-PUBLISH-04
-  description: Create STF-0004 command functions and corresponding TypeScript service, API, read surfaces, tests and PostgreSQL rehearsal for variant, category, collection, navigation, content-page and homepage publishing.
+  id: H3-CONTENT-01
+  description: Implement host-scoped public layout, navigation, homepage and CMS content contracts and projection before composing authoritative MOD-A and MOD-B public catalog data.
 
 last_commits:
   - sha: e9dc992ded901452b3633b3d20a261e50668bc88
     purpose: latest integration baseline merged with reviewed conflict resolution
-  - sha: 707a4e2138af610038f0e21bae6fd07eee2c0e13
-    purpose: temporary integration workflow removed and trusted CI checkpoint
   - sha: ae2c44d6306ac8ec31211b04c276bdcce9882cc7
-    purpose: bounded browser evidence runner and fully green storefront checkpoint
+    purpose: H1 fully green storefront foundation checkpoint
+  - sha: 899c73512a5337f52dc5809e6df03877e96f1ef9
+    purpose: H2 publishing management admin and full storefront CI checkpoint
 
 evidence:
   github:
     pr: 48
     base_sha: fd63dfde4d5940112a9c77c2743b281e49ff6b55
-    verified_head: ae2c44d6306ac8ec31211b04c276bdcce9882cc7
+    verified_head: 899c73512a5337f52dc5809e6df03877e96f1ef9
     integration_sync_pr: 53
     integration_sync_report: docs/architecture/storefront/integration-conflicts.txt
   neon:
@@ -182,5 +205,5 @@ evidence:
   known_risks:
     - dedicated_neon_branch_waiting_for_safe_quota_slot
     - custom_domain_provider_execution_requires_MOD_G_control_plane_adapter
-    - category_variant_collection_and_content_commands_not_yet_complete
+    - authoritative_public_catalog_composition_requires_MOD_A_and_MOD_B_contract_projection
     - customer_auth_cart_checkout_and_order_experience_remain_future_checkpoints
