@@ -1,9 +1,9 @@
-# Usable Admin/POS account-recovery checkpoint
+# Usable Admin/POS operability implementation checkpoint
 
-Status: account recovery release-candidate checkpoint complete  
-Verified implementation head: `9aba12c3431fc5970ee862a567d31a026389fa85`  
-Persistent URL: `https://store-pos-staging.rahmatullahzisan.workers.dev`  
-Date: 2026-07-30
+Status: aggregate operability implementation complete; live schema-v6 staging evidence pending
+Previous verified staging head: `9aba12c3431fc5970ee862a567d31a026389fa85`
+Persistent URL: `https://store-pos-staging.rahmatullahzisan.workers.dev`
+Date: 2026-07-31
 
 ## Result
 
@@ -12,7 +12,8 @@ The persistent Admin/POS staging environment now supports:
 - production-shaped authenticated business reads;
 - one narrow reversible authoritative business workflow: inventory reservation create/release;
 - encrypted TOTP MFA and privileged step-up;
-- hashed, single-use password-recovery and email-verification token lifecycles.
+- hashed, single-use password-recovery and email-verification token lifecycles;
+- fixed aggregate operability signals, deterministic alert policies, atomic schema-v6 evidence and linked response runbooks.
 
 This remains synthetic staging, not a production launch. Production credentials, production data and production database branches are prohibited. Payment, refund, journal, period-close, banking, fiscal, destructive, stock-posting and transfer commands remain disabled.
 
@@ -148,7 +149,31 @@ The deterministic `synthetic-beta` dataset contains:
 
 Opening stock is represented by five immutable inventory ledger entries. The seed does not manufacture balance totals; quantity and value reconcile to the ledger. Complete replay is skipped, partial state fails closed, and exact money remains integer minor units.
 
-## Exact staging evidence
+## Aggregate operability implementation
+
+The operational staging runner now derives eleven fixed low-cardinality signals from the existing release report and synthetic-tenant database aggregates:
+
+- HTTP probe, browser scenario, Axe and horizontal-overflow failures;
+- identity, recovery and MFA control failures;
+- controlled reservation command failures;
+- artifact secret-leak controls;
+- inventory ledger/projection reconciliation mismatches;
+- journal header/line imbalance count;
+- outbox backlog count and oldest unpublished age.
+
+Critical integrity, identity, accessibility and leakage signals are zero-tolerance. The runner writes a schema-v6 report atomically before enforcing a critical launch block, and the workflow summary exposes only fixed alert IDs, severity, owner and runbook path. Outbox backlog remains a review-only warning until a continuous publisher and approved production SLO are commissioned.
+
+Implementation evidence:
+
+- `tooling/scripts/staging-operability.mjs`;
+- `tests/unit/staging-operability.test.mjs`;
+- `tests/unit/staging-operational-release.test.mjs`;
+- `docs/architecture/staging/operability-alerts-runbook.md`;
+- `docs/superpowers/plans/2026-07-31-staging-operability-hardening.md`.
+
+A new persistent staging deployment must still produce and independently verify the live schema-v6 report. Production alert delivery, paging and approved SLOs are not configured by this checkpoint.
+
+## Previous exact staging evidence
 
 Persistent Admin POS Staging:
 
@@ -235,6 +260,6 @@ Prioritise production operability rather than enabling risky financial commands:
 
 1. define production MFA recovery and factor-replacement governance;
 2. establish production Cloudflare/Neon backup, restore and retention policy;
-3. add authentication, command-failure, outbox-lag and database-availability monitoring;
+3. connect the implemented aggregate policies to an approved monitoring backend, paging path and production SLOs;
 4. select and securely configure the production transactional-email provider;
 5. keep inventory reservation create/release as the only authoritative business write until those gates pass.

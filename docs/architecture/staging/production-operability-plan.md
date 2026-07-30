@@ -1,7 +1,7 @@
 # Production operability gate plan
 
-Status: implementation-gate plan only  
-Date: 2026-07-30  
+Status: aggregate staging policy implemented; production activation gates remain open
+Date: 2026-07-31
 Branch: `ops/persistent-admin-pos-staging-v1`
 
 ## Purpose
@@ -144,6 +144,21 @@ Alert requirements:
 - every alert has a linked runbook and bounded diagnostic queries;
 - silence/maintenance windows are auditable.
 
+Implemented in synthetic staging on 2026-07-31:
+
+- eleven fixed low-cardinality aggregate signals covering HTTP/browser evidence, identity/recovery/MFA controls, controlled reservation evidence, artifact leakage, inventory reconciliation, journal balance and outbox health;
+- zero-tolerance critical gates for integrity, identity, accessibility and leakage failures;
+- warning-only outbox thresholds until a continuous publisher and approved production SLO exist;
+- schema-v6 atomic report enrichment that preserves evidence before a critical gate fails;
+- bounded GitHub Actions summaries containing fixed alert IDs, severity, owner and runbook path rather than raw metric payloads;
+- `docs/architecture/staging/operability-alerts-runbook.md` with ownership, response objectives, containment and recovery verification.
+
+Still required for production:
+
+- approved observability backend and production resource binding;
+- tested paging/notification delivery, acknowledgement and escalation;
+- approved production SLOs, critical outbox thresholds, maintenance windows and audit retention.
+
 ## Gate 6 — incident and support runbooks
 
 Required runbooks:
@@ -180,7 +195,7 @@ A launch candidate must prove:
 
 1. define environment/secret ownership and production resource names;
 2. implement isolated Neon restore rehearsal automation;
-3. implement aggregate observability queries and alert thresholds in staging;
+3. connect the completed aggregate staging policies to an approved production alert-delivery backend and approved SLOs;
 4. define MFA recovery/factor-replacement workflow and audit contract;
 5. select transactional-email provider and implement an adapter behind the existing delivery interface;
 6. execute a full synthetic production launch rehearsal;
@@ -195,7 +210,8 @@ Completed in synthetic persistent staging:
 - protected inventory/procurement reads;
 - controlled inventory reservation create/release;
 - password-recovery and email-verification token lifecycles;
-- exact-head CI, accessibility, recovery and artifact evidence.
+- exact-head CI, accessibility, recovery and artifact evidence;
+- aggregate synthetic-staging operability queries, deterministic thresholds, atomic report evidence and linked response runbook.
 
 Still blocked:
 
@@ -203,6 +219,6 @@ Still blocked:
 - production email delivery;
 - production MFA support governance;
 - backup/restore acceptance;
-- monitoring/alert delivery;
-- incident/support readiness;
+- production monitoring backend, alert delivery, paging and approved SLOs;
+- remaining incident/support readiness;
 - controlled launch approval.

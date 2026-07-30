@@ -1,12 +1,19 @@
 import { spawn } from "node:child_process";
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Client } from "@neondatabase/serverless";
+import {
+  collectStagingDatabaseSignals,
+  deriveStagingOperabilitySignals,
+  evaluateStagingOperability,
+} from "./staging-operability.mjs";
 
 const root = fileURLToPath(new URL("../..", import.meta.url));
 const seedPath = path.join(root, "tooling", "fixtures", "staging-operational-seed.sql");
 const deployPath = path.join(root, "tooling", "scripts", "deploy-custom-auth-staging.mjs");
+const operabilityReportPath = path.join(root, "artifacts", "staging", "persistent-staging-report.json");
+const operabilityReportTemporaryPath = path.join(root, "artifacts", "staging", "persistent-staging-report.json.tmp");
 const projectId = "morning-flower-46531465";
 const branchId = "br-empty-sound-afkx5vkj";
 const databaseName = "neondb";
@@ -141,6 +148,48 @@ async function loadAndVerify(uri) {
   }
 }
 
+async function persistOperabilityEvidence(uri) {
+  const client = new Client({ connectionString: uri });
+  await client.connect();
+  let databaseSignals;
+  try {
+    databaseSignals = await collectStagingDatabaseSignals(client);
+  } finally {
+    await client.end();
+  }
+
+  const report = JSON.parse(await readFile(operabilityReportPath, "utf8"));
+  const signals = deriveStagingOperabilitySignals(report, databaseSignals);
+  const operability = evaluateStagingOperability(signals);
+  const enrichedReport = {
+    ...report,
+    schemaVersion: 6,
+    operability,
+  };
+  try {
+    await writeFile(
+      operabilityReportTemporaryPath,
+      `${JSON.stringify(enrichedReport, null, 2)}\n`,
+      "utf8",
+    );
+    await rename(operabilityReportTemporaryPath, operabilityReportPath);
+  } catch (error) {
+    await rm(operabilityReportTemporaryPath, { force: true });
+    throw error;
+  }
+
+  if (operability.launchGate === "blocked") {
+    const alertIds = operability.alerts
+      .filter((alert) => alert.severity === "critical")
+      .map((alert) => alert.alertId)
+      .join(", ");
+    throw new Error(`Persistent staging operability gate blocked: ${alertIds}`);
+  }
+  console.log(
+    `persistent staging operability evidence ${operability.status}; launch gate ${operability.launchGate}`,
+  );
+}
+
 const uri = await connectionString();
 await run("npm", ["run", "db:migrate"], {
   ...process.env,
@@ -162,6 +211,7 @@ await writeFile(
 process.env.DATABASE_URL = uri;
 try {
   await import("./run-custom-auth-staging.mjs");
+  await persistOperabilityEvidence(uri);
 } finally {
   delete process.env.DATABASE_URL;
   await writeFile(deployPath, originalDeploy, "utf8");

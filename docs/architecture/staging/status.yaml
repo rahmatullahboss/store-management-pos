@@ -1,6 +1,6 @@
-schema_version: 8
+schema_version: 9
 workstream: persistent-admin-pos-staging
-status: account_recovery_release_candidate_complete
+status: aggregate_operability_policy_implemented_pending_live_evidence
 branch: ops/persistent-admin-pos-staging-v1
 base_sha: 3a414363a40f48bd6e526418d9e82679501b170e
 verified_implementation_head: 9aba12c3431fc5970ee862a567d31a026389fa85
@@ -232,6 +232,25 @@ checkpoints:
     keyboard_scrollable_reservation_region: passed
   api_health:
     status: complete
+  aggregate_operability:
+    status: implementation_complete_live_evidence_pending
+    report_schema_version: 6
+    signal_count: 11
+    fixed_low_cardinality_metrics: true
+    atomic_report_write: true
+    critical_gate: fail_after_evidence_persistence
+    zero_tolerance_controls:
+      - availability_and_http_probes
+      - browser_and_accessibility
+      - identity_recovery_and_mfa
+      - controlled_reservation_command
+      - artifact_secret_exposure
+      - inventory_projection_reconciliation
+      - journal_balance_integrity
+    outbox_policy: warning_only_until_publisher_and_slo_approved
+    production_alert_delivery: false
+    runbook: docs/architecture/staging/operability-alerts-runbook.md
+    unit_test: tests/unit/staging-operability.test.mjs
   custom_domain:
     status: pending
 evidence:
@@ -255,10 +274,14 @@ evidence:
   usable_release_checkpoint: docs/architecture/staging/usable-release-candidate-checkpoint.md
   protected_read_plan: docs/architecture/staging/internal-token-read-api-plan.md
   account_recovery_plan: docs/architecture/staging/account-recovery-plan.md
+  operability_plan: docs/architecture/staging/production-operability-plan.md
+  operability_runbook: docs/architecture/staging/operability-alerts-runbook.md
+  operability_implementation_plan: docs/superpowers/plans/2026-07-31-staging-operability-hardening.md
 limitations:
   - this is a production-shaped synthetic staging release candidate, not a production launch
   - repository policy prohibits production credentials, production data and production database branches in this workstream
   - protected inventory and procurement reads are complete; remaining enabled modules still need protected read integration
   - only inventory reservation create and release are enabled as controlled business writes; payment, refund, journal, period-close, banking, fiscal, destructive and other inventory commands remain disabled
   - password recovery and email-verification token lifecycles are implemented, but production sender domain, transactional email provider, templates, bounce handling, delivery monitoring and support policy are not configured
-  - production domain, backup policy, production MFA recovery and factor governance, asymmetric token lifecycle, monitoring and controlled launch approval remain pending
+  - aggregate staging operability queries, deterministic thresholds and runbooks are implemented, but the next persistent staging workflow must still produce live schema-v6 operability evidence
+  - production domain, backup policy, production MFA recovery and factor governance, asymmetric token lifecycle, production alert delivery and controlled launch approval remain pending

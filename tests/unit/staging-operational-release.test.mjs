@@ -72,3 +72,59 @@ test("persistent deployment proves useful routes and responsive browser surfaces
     );
   }
 });
+
+test("operational staging persists aggregate operability evidence before enforcing critical alerts", async () => {
+  const loader = await source("tooling/scripts/run-operational-staging.mjs");
+  assert.match(loader, /collectStagingDatabaseSignals/u);
+  assert.match(loader, /deriveStagingOperabilitySignals/u);
+  assert.match(loader, /evaluateStagingOperability/u);
+  assert.match(loader, /persistent-staging-report\.json/u);
+  assert.match(loader, /persistent-staging-report\.json\.tmp/u);
+  assert.match(loader, /schemaVersion:\s*6/u);
+  assert.match(loader, /await rename\(operabilityReportTemporaryPath, operabilityReportPath\)/u);
+  assert.match(loader, /operability\.launchGate === "blocked"/u);
+  assert.match(loader, /alert\.alertId/u);
+  assert.doesNotMatch(loader, /alert\.observed/u);
+});
+
+test("persistent staging workflow publishes bounded operability summary and evidence paths", async () => {
+  const workflow = await source(".github/workflows/persistent-admin-pos-staging.yml");
+  for (const path of [
+    '"tooling/scripts/staging-operability.mjs"',
+    '"tests/unit/staging-operability.test.mjs"',
+  ]) assert.ok(workflow.includes(path), `missing workflow path ${path}`);
+  assert.match(workflow, /Operability status:/u);
+  assert.match(workflow, /Operability launch gate:/u);
+  assert.match(workflow, /Operability warnings:/u);
+  assert.match(workflow, /Operability critical alerts:/u);
+  assert.match(workflow, /alert\.alertId/u);
+  assert.match(workflow, /alert\.runbook/u);
+  assert.doesNotMatch(workflow, /operability\?\.signals/u);
+  assert.doesNotMatch(workflow, /alert\.observed/u);
+});
+
+test("operability documentation fixes ownership while preserving production blockers", async () => {
+  const [runbook, plan, status, checkpoint] = await Promise.all([
+    source("docs/architecture/staging/operability-alerts-runbook.md"),
+    source("docs/architecture/staging/production-operability-plan.md"),
+    source("docs/architecture/staging/status.yaml"),
+    source("docs/architecture/staging/usable-release-candidate-checkpoint.md"),
+  ]);
+  for (const metric of [
+    "http_probe_failures",
+    "identity_control_failures",
+    "artifact_secret_leaks",
+    "inventory_reconciliation_mismatches",
+    "journal_imbalance_count",
+    "outbox_backlog_count",
+  ]) assert.ok(runbook.includes(metric), `missing runbook metric ${metric}`);
+  assert.match(runbook, /Outbox backlog alerts remain review-only/u);
+  assert.match(runbook, /production monitoring vendor/u);
+  assert.match(plan, /eleven fixed low-cardinality aggregate signals/u);
+  assert.match(plan, /production monitoring backend, alert delivery, paging and approved SLOs/u);
+  assert.match(status, /schema_version: 9/u);
+  assert.match(status, /report_schema_version: 6/u);
+  assert.match(status, /production_alert_delivery: false/u);
+  assert.match(checkpoint, /live schema-v6 staging evidence pending/u);
+  assert.match(checkpoint, /Production alert delivery, paging and approved SLOs are not configured/u);
+});

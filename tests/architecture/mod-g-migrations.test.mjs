@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 import { discoverMigrationManifests } from "../../tooling/scripts/migration-manifests.mjs";
 
 const modules = [
@@ -48,7 +49,7 @@ test("MOD-G manifests are deterministic, complete and ordered after MOD-F", asyn
       assert.match(migration.sql, new RegExp(`VALUES \\('${migration.id}'`, "u"));
     }
   }
-  const registry = await discoverMigrationManifests(new URL("../..", import.meta.url).pathname);
+  const registry = await discoverMigrationManifests(fileURLToPath(new URL("../..", import.meta.url)));
   const identities = registry.map(({ module }) => module);
   assert.ok(identities.indexOf("MOD-F-LOCALIZATION") < identities.indexOf("MOD-G-REPORTING"));
   assert.ok(identities.indexOf("MOD-G-REPORTING") < identities.indexOf("MOD-G-INTEGRATION"));
