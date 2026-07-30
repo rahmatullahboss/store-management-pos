@@ -17,6 +17,8 @@ on:
       - "tooling/scripts/storefront-design-evidence.mjs"
       - "tooling/scripts/storefront-design-evidence-runner.mjs"
       - "tooling/scripts/storefront-admin-design-evidence.mjs"
+      - "tooling/scripts/storefront-public-content-design-evidence.mjs"
+      - "tooling/scripts/storefront-public-catalog-design-evidence.mjs"
       - "tooling/scripts/storefront-postgres-rehearsal.mjs"
       - "tooling/scripts/validate-module-migrations.mjs"
       - "tooling/scripts/apply-migrations.mjs"
@@ -41,6 +43,8 @@ on:
       - "tooling/scripts/storefront-design-evidence.mjs"
       - "tooling/scripts/storefront-design-evidence-runner.mjs"
       - "tooling/scripts/storefront-admin-design-evidence.mjs"
+      - "tooling/scripts/storefront-public-content-design-evidence.mjs"
+      - "tooling/scripts/storefront-public-catalog-design-evidence.mjs"
       - "tooling/scripts/storefront-postgres-rehearsal.mjs"
       - "tooling/scripts/validate-module-migrations.mjs"
       - "tooling/scripts/apply-migrations.mjs"
@@ -150,7 +154,7 @@ jobs:
           mkdir -p artifacts/storefront
           node .agents/skills/impeccable/scripts/context.mjs --target apps/storefront-web/src/components/ProductCard.astro | tee artifacts/storefront/impeccable-context.txt
           node .agents/skills/impeccable/scripts/context.mjs --target apps/admin-web/src/modules/storefront/page.ts | tee artifacts/storefront/admin-impeccable-context.txt
-      - name: Run Astro browser and accessibility evidence
+      - name: Run buyer browser and accessibility evidence
         run: npm run storefront:design:verify
       - name: Run admin browser and accessibility evidence
         run: |
