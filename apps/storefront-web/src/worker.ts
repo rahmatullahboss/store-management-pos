@@ -9,6 +9,11 @@ import type {
   StorefrontPublicProductDetailV1,
 } from "../../../packages/storefront-contracts/src/public-catalog.js";
 import type { StorefrontPublicContentBundleV1 } from "../../../packages/storefront-contracts/src/public-content.js";
+import type {
+  StorefrontPublicCategoryPageV1,
+  StorefrontPublicCollectionPageV1,
+  StorefrontPublicSearchPageV1,
+} from "../../../packages/storefront-contracts/src/public-discovery.js";
 import {
   createStorefrontCatalogResolver,
   createStorefrontCatalogTransportResolver,
@@ -31,6 +36,8 @@ import {
 } from "./host-resolver.js";
 import { storefrontShellResponse } from "./render.js";
 import {
+  storefrontCategoryNotFoundResponse,
+  storefrontCollectionNotFoundResponse,
   storefrontContentNotFoundResponse,
   storefrontHealthResponse,
   storefrontProductNotFoundResponse,
@@ -188,15 +195,37 @@ function publicContentSlug(url: URL): string | undefined {
 
 type CatalogRoute =
   | { readonly kind: "listing" }
-  | { readonly kind: "detail"; readonly slug: string };
+  | { readonly kind: "detail"; readonly slug: string }
+  | { readonly kind: "category"; readonly slug: string }
+  | { readonly kind: "collection"; readonly slug: string }
+  | { readonly kind: "search"; readonly query: string };
 
 function publicCatalogRoute(url: URL): CatalogRoute | null {
   if (url.pathname === "/products" || url.pathname === "/products/") {
     return { kind: "listing" };
   }
-  const match = url.pathname.match(/^\/products\/([^/]+)$/u);
-  if (!match?.[1]) return null;
-  return { kind: "detail", slug: decodePublicSlug(match[1], "product") };
+  if (url.pathname === "/search" || url.pathname === "/search/") {
+    return { kind: "search", query: publicSearchQuery(url) };
+  }
+  const productMatch = url.pathname.match(/^\/products\/([^/]+)$/u);
+  if (productMatch?.[1]) {
+    return { kind: "detail", slug: decodePublicSlug(productMatch[1], "product") };
+  }
+  const categoryMatch = url.pathname.match(/^\/categories\/([^/]+)$/u);
+  if (categoryMatch?.[1]) {
+    return {
+      kind: "category",
+      slug: decodePublicSlug(categoryMatch[1], "category"),
+    };
+  }
+  const collectionMatch = url.pathname.match(/^\/collections\/([^/]+)$/u);
+  if (collectionMatch?.[1]) {
+    return {
+      kind: "collection",
+      slug: decodePublicSlug(collectionMatch[1], "collection"),
+    };
+  }
+  return null;
 }
 
 function decodePublicSlug(value: string, label: string): string {
@@ -214,6 +243,18 @@ function decodePublicSlug(value: string, label: string): string {
     throw new StorefrontContractError(`Storefront ${label} path is invalid.`);
   }
   return decoded;
+}
+
+function publicSearchQuery(url: URL): string {
+  const query = url.searchParams.get("q")?.trim() ?? "";
+  if (
+    [...query].length < 2 ||
+    [...query].length > 120 ||
+    /[\u0000-\u001f\u007f]/u.test(query)
+  ) {
+    throw new StorefrontContractError("Storefront search query is invalid.");
+  }
+  return query;
 }
 
 function catalogRequestOptions(
@@ -357,6 +398,9 @@ export function createStorefrontWorker(
 
         let catalog: StorefrontPublicCatalogPageV1 | undefined;
         let product: StorefrontPublicProductDetailV1 | undefined;
+        let category: StorefrontPublicCategoryPageV1 | undefined;
+        let collection: StorefrontPublicCollectionPageV1 | undefined;
+        let search: StorefrontPublicSearchPageV1 | undefined;
         const catalogRoute = publicCatalogRoute(url);
         if (catalogRoute) {
           if (
@@ -367,17 +411,18 @@ export function createStorefrontWorker(
             return asHeadResponse(request, storefrontUnavailableResponse());
           }
           const catalogResolver = catalogResolverFactory(bindings, environment);
+          const pageOptions = catalogRequestOptions(url, request.signal);
           if (catalogRoute.kind === "listing") {
             const resolved = await catalogResolver.resolveCatalog(
               hostname,
-              catalogRequestOptions(url, request.signal),
+              pageOptions,
             );
             if (!resolved) {
               return asHeadResponse(request, storefrontUnavailableResponse());
             }
             assertPublicScope(bootstrap, resolved.context, "catalog");
             catalog = resolved;
-          } else {
+          } else if (catalogRoute.kind === "detail") {
             const resolved = await catalogResolver.resolveProduct(
               hostname,
               catalogRoute.slug,
@@ -388,6 +433,39 @@ export function createStorefrontWorker(
             }
             assertPublicScope(bootstrap, resolved.context, "product");
             product = resolved;
+          } else if (catalogRoute.kind === "category") {
+            const resolved = await catalogResolver.resolveCategory(
+              hostname,
+              catalogRoute.slug,
+              pageOptions,
+            );
+            if (!resolved) {
+              return asHeadResponse(request, storefrontCategoryNotFoundResponse());
+            }
+            assertPublicScope(bootstrap, resolved.context, "category");
+            category = resolved;
+          } else if (catalogRoute.kind === "collection") {
+            const resolved = await catalogResolver.resolveCollection(
+              hostname,
+              catalogRoute.slug,
+              pageOptions,
+            );
+            if (!resolved) {
+              return asHeadResponse(request, storefrontCollectionNotFoundResponse());
+            }
+            assertPublicScope(bootstrap, resolved.context, "collection");
+            collection = resolved;
+          } else {
+            const resolved = await catalogResolver.resolveSearch(
+              hostname,
+              catalogRoute.query,
+              pageOptions,
+            );
+            if (!resolved) {
+              return asHeadResponse(request, storefrontUnavailableResponse());
+            }
+            assertPublicScope(bootstrap, resolved.context, "search");
+            search = resolved;
           }
         }
 
@@ -397,6 +475,9 @@ export function createStorefrontWorker(
           ...(content ? { content } : {}),
           ...(catalog ? { catalog } : {}),
           ...(product ? { product } : {}),
+          ...(category ? { category } : {}),
+          ...(collection ? { collection } : {}),
+          ...(search ? { search } : {}),
           ...(options.theme === undefined ? {} : { theme: options.theme }),
         };
         return await storefrontShellResponse(request, bootstrap, renderOptions);
