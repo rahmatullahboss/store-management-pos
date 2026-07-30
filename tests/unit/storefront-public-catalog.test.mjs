@@ -116,6 +116,7 @@ test("public catalog contract preserves exact money and bounded availability", (
         variants: [{
           ...product.variants[0],
           price: { currency: "USD", minor: "2599", scale: 2 },
+          compareAtPrice: { currency: "USD", minor: "3099", scale: 2 },
         }],
       }],
     }),
