@@ -11,6 +11,16 @@ const branchId = "br-empty-sound-afkx5vkj";
 const databaseName = "neondb";
 const roleName = "neondb_owner";
 const { NEON_API_KEY } = process.env;
+const expected = {
+  products: 5,
+  variants: 5,
+  suppliers: 3,
+  purchase_orders: 3,
+  customers: 4,
+  sales_orders: 3,
+  ledger_entries: 5,
+  stock_balances: 5,
+};
 
 if (!NEON_API_KEY) throw new Error("NEON_API_KEY is required");
 
@@ -41,68 +51,91 @@ async function connectionString() {
   return body.uri;
 }
 
+async function evidence(client) {
+  const result = await client.query(`
+    WITH ledger AS (
+      SELECT variant_id,
+             sum(quantity_amount)::numeric AS quantity_amount,
+             sum(coalesce(value_delta_minor, 0))::numeric AS value_minor
+      FROM inventory.stock_ledger_entries
+      WHERE tenant_id = '018f0000-0000-7000-8000-000000000002'::uuid
+        AND source_document_type = 'staging_seed'
+      GROUP BY variant_id
+    ), balances AS (
+      SELECT variant_id,
+             sum(quantity_amount)::numeric AS quantity_amount,
+             sum(value_minor)::numeric AS value_minor
+      FROM inventory.stock_balances
+      WHERE tenant_id = '018f0000-0000-7000-8000-000000000002'::uuid
+        AND warehouse_id = '018f0000-0000-7000-8000-000000000402'::uuid
+      GROUP BY variant_id
+    )
+    SELECT
+      (SELECT count(*)::int FROM catalog.products WHERE tenant_id = '018f0000-0000-7000-8000-000000000002'::uuid AND code LIKE 'DEMO-%') AS products,
+      (SELECT count(*)::int FROM catalog.variants WHERE tenant_id = '018f0000-0000-7000-8000-000000000002'::uuid AND sku IN ('TSHIRT-NAVY-M','RICE-AROMA-5KG','HEADPHONE-BLK','BAG-OLIVE','PAPER-80')) AS variants,
+      (SELECT count(*)::int FROM procurement.suppliers WHERE tenant_id = '018f0000-0000-7000-8000-000000000002'::uuid AND code LIKE 'SUP-%') AS suppliers,
+      (SELECT count(*)::int FROM procurement.purchase_orders WHERE tenant_id = '018f0000-0000-7000-8000-000000000002'::uuid AND order_number LIKE 'PO-STG-%') AS purchase_orders,
+      (SELECT count(*)::int FROM customer.customers WHERE tenant_id = '018f0000-0000-7000-8000-000000000002'::uuid AND id::text LIKE '018f1000-%') AS customers,
+      (SELECT count(*)::int FROM sales.orders WHERE tenant_id = '018f0000-0000-7000-8000-000000000002'::uuid AND document_number LIKE 'SO-STG-%') AS sales_orders,
+      (SELECT count(*)::int FROM inventory.stock_ledger_entries WHERE tenant_id = '018f0000-0000-7000-8000-000000000002'::uuid AND source_document_type = 'staging_seed') AS ledger_entries,
+      (SELECT count(*)::int FROM inventory.stock_balances WHERE tenant_id = '018f0000-0000-7000-8000-000000000002'::uuid AND warehouse_id = '018f0000-0000-7000-8000-000000000402'::uuid) AS stock_balances,
+      NOT EXISTS (
+        SELECT 1
+        FROM ledger
+        FULL JOIN balances USING (variant_id)
+        WHERE ledger.quantity_amount IS DISTINCT FROM balances.quantity_amount
+           OR ledger.value_minor IS DISTINCT FROM balances.value_minor
+      ) AS inventory_reconciled
+  `);
+  return result.rows[0] ?? {};
+}
+
+function countState(row) {
+  const counts = Object.keys(expected).map((key) => Number(row[key] ?? 0));
+  const complete = Object.entries(expected).every(
+    ([key, value]) => Number(row[key] ?? 0) === value,
+  );
+  const empty = counts.every((value) => value === 0);
+  return { complete, empty };
+}
+
+function verify(row) {
+  for (const [key, value] of Object.entries(expected)) {
+    if (Number(row[key] ?? 0) !== value) {
+      throw new Error(`Operational staging ${key} verification failed`);
+    }
+  }
+  if (row.inventory_reconciled !== true) {
+    throw new Error("Operational staging inventory ledger reconciliation failed");
+  }
+}
+
 async function loadAndVerify(uri) {
   const client = new Client({ connectionString: uri });
   await client.connect();
   try {
+    await client.query("SELECT pg_advisory_lock(hashtext('store-management-staging-operational-loader-v1'))");
+    const before = await evidence(client);
+    const state = countState(before);
+    if (state.complete) {
+      verify(before);
+      console.log("operational staging dataset already complete; immutable seed replay skipped");
+      return;
+    }
+    if (!state.empty) {
+      throw new Error("Operational staging dataset is partial; refusing an unsafe immutable seed replay");
+    }
     const seedSql = await readFile(seedPath, "utf8");
     await client.query(seedSql);
-    const result = await client.query(`
-      WITH ledger AS (
-        SELECT variant_id,
-               sum(quantity_amount)::numeric AS quantity_amount,
-               sum(coalesce(value_delta_minor, 0))::numeric AS value_minor
-        FROM inventory.stock_ledger_entries
-        WHERE tenant_id = '018f0000-0000-7000-8000-000000000002'::uuid
-          AND source_document_type = 'staging_seed'
-        GROUP BY variant_id
-      ), balances AS (
-        SELECT variant_id,
-               sum(quantity_amount)::numeric AS quantity_amount,
-               sum(value_minor)::numeric AS value_minor
-        FROM inventory.stock_balances
-        WHERE tenant_id = '018f0000-0000-7000-8000-000000000002'::uuid
-          AND warehouse_id = '018f0000-0000-7000-8000-000000000402'::uuid
-        GROUP BY variant_id
-      )
-      SELECT
-        (SELECT count(*)::int FROM catalog.products WHERE tenant_id = '018f0000-0000-7000-8000-000000000002'::uuid AND code LIKE 'DEMO-%') AS products,
-        (SELECT count(*)::int FROM catalog.variants WHERE tenant_id = '018f0000-0000-7000-8000-000000000002'::uuid AND sku IN ('TSHIRT-NAVY-M','RICE-AROMA-5KG','HEADPHONE-BLK','BAG-OLIVE','PAPER-80')) AS variants,
-        (SELECT count(*)::int FROM procurement.suppliers WHERE tenant_id = '018f0000-0000-7000-8000-000000000002'::uuid AND code LIKE 'SUP-%') AS suppliers,
-        (SELECT count(*)::int FROM procurement.purchase_orders WHERE tenant_id = '018f0000-0000-7000-8000-000000000002'::uuid AND order_number LIKE 'PO-STG-%') AS purchase_orders,
-        (SELECT count(*)::int FROM customer.customers WHERE tenant_id = '018f0000-0000-7000-8000-000000000002'::uuid AND id::text LIKE '018f1000-%') AS customers,
-        (SELECT count(*)::int FROM sales.orders WHERE tenant_id = '018f0000-0000-7000-8000-000000000002'::uuid AND document_number LIKE 'SO-STG-%') AS sales_orders,
-        (SELECT count(*)::int FROM inventory.stock_ledger_entries WHERE tenant_id = '018f0000-0000-7000-8000-000000000002'::uuid AND source_document_type = 'staging_seed') AS ledger_entries,
-        (SELECT count(*)::int FROM inventory.stock_balances WHERE tenant_id = '018f0000-0000-7000-8000-000000000002'::uuid AND warehouse_id = '018f0000-0000-7000-8000-000000000402'::uuid) AS stock_balances,
-        NOT EXISTS (
-          SELECT 1
-          FROM ledger
-          FULL JOIN balances USING (variant_id)
-          WHERE ledger.quantity_amount IS DISTINCT FROM balances.quantity_amount
-             OR ledger.value_minor IS DISTINCT FROM balances.value_minor
-        ) AS inventory_reconciled
-    `);
-    const evidence = result.rows[0];
-    const expected = {
-      products: 5,
-      variants: 5,
-      suppliers: 3,
-      purchase_orders: 3,
-      customers: 4,
-      sales_orders: 3,
-      ledger_entries: 5,
-      stock_balances: 5,
-    };
-    for (const [key, value] of Object.entries(expected)) {
-      if (Number(evidence?.[key]) !== value) {
-        throw new Error(`Operational staging ${key} verification failed`);
-      }
-    }
-    if (evidence?.inventory_reconciled !== true) {
-      throw new Error("Operational staging inventory ledger reconciliation failed");
-    }
+    const after = await evidence(client);
+    verify(after);
     console.log("operational staging seed and inventory reconciliation passed");
   } finally {
+    try {
+      await client.query("SELECT pg_advisory_unlock(hashtext('store-management-staging-operational-loader-v1'))");
+    } catch {
+      // Connection close releases the lock if the unlock cannot be observed.
+    }
     await client.end();
   }
 }
