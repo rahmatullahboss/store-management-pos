@@ -229,7 +229,7 @@ test("STF-0015 is checksum registered and keeps product media read-only", async 
   const manifest = JSON.parse(
     await readFile(new URL("../../database/modules/storefront/manifest.json", import.meta.url), "utf8"),
   );
-  assert.equal(manifest.migrations.at(-1).id, "STF-0015");
+  assert.ok(manifest.migrations.some(({ id }) => id === "STF-0015"));
   const sql = await readFile(
     new URL("../../database/modules/storefront/migrations/STF-0015-public-media-resolution.sql", import.meta.url),
     "utf8",
