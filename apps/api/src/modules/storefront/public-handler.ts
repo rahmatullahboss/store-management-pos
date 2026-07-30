@@ -3,6 +3,7 @@ import { PlatformError } from "../../../../../packages/foundation/src/errors.js"
 import type { StorefrontPublicAvailabilityFacetValueV1 } from "../../../../../packages/storefront-contracts/src/public-discovery.js";
 import { SqlStorefrontPublicRepository } from "../../../../../modules/storefront/src/public.js";
 import { resolveStorefrontPublicSearch } from "../../../../../modules/storefront/src/public-search.js";
+import { resolveStorefrontPublicSeo } from "../../../../../modules/storefront/src/public-seo.js";
 
 function publicHeaders(cacheControl: string): HeadersInit {
   return {
@@ -185,6 +186,7 @@ export async function handlePublicStorefrontRequest(
     "/v1/storefront/content",
     "/v1/storefront/catalog",
     "/v1/storefront/search",
+    "/v1/storefront/seo",
   ]).has(url.pathname);
   if (
     !exactRoute &&
@@ -226,6 +228,16 @@ export async function handlePublicStorefrontRequest(
       request,
       content,
       "public, max-age=0, s-maxage=60, stale-while-revalidate=300",
+    );
+  }
+
+  if (url.pathname === "/v1/storefront/seo") {
+    const seo = await resolveStorefrontPublicSeo(database, hostname);
+    if (!seo) return unavailable(request);
+    return publicJson(
+      request,
+      seo,
+      "public, max-age=0, s-maxage=300, stale-while-revalidate=900",
     );
   }
 
