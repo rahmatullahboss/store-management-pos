@@ -1,0 +1,73 @@
+name: Storefront STF-0005 Register
+
+on:
+  push:
+    branches:
+      - module/storefront-commerce-v1
+    paths:
+      - .github/workflows/storefront-stf0005-register.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: storefront-stf0005-register
+  cancel-in-progress: false
+
+jobs:
+  register:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: module/storefront-commerce-v1
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - name: Rename, checksum and validate STF-0005
+        shell: bash
+        run: |
+          set -euo pipefail
+          old="database/modules/storefront/migrations/STF-0004-publication-content-commands.sql"
+          new="database/modules/storefront/migrations/STF-0005-publication-content-commands.sql"
+          test -f "$old"
+          test ! -e "$new"
+          mv "$old" "$new"
+          python <<'PY'
+          from hashlib import sha256
+          from pathlib import Path
+          import json
+
+          migration = Path("database/modules/storefront/migrations/STF-0005-publication-content-commands.sql")
+          text = migration.read_text()
+          old = "VALUES ('STF-0004','MOD-H-STOREFRONT','manifest:STF-0004-publication-content-commands.sql')"
+          new = "VALUES ('STF-0005','MOD-H-STOREFRONT','manifest:STF-0005-publication-content-commands.sql')"
+          if text.count(old) != 1:
+              raise SystemExit("Expected exactly one STF-0004 marker in publication command migration")
+          migration.write_text(text.replace(old, new, 1))
+          digest = sha256(migration.read_bytes()).hexdigest()
+
+          manifest_path = Path("database/modules/storefront/manifest.json")
+          manifest = json.loads(manifest_path.read_text())
+          ids = [item["id"] for item in manifest["migrations"]]
+          if ids != ["STF-0001", "STF-0002", "STF-0003", "STF-0004"]:
+              raise SystemExit(f"Unexpected storefront migration order: {ids}")
+          manifest["migrations"].append({
+              "id": "STF-0005",
+              "file": migration.name,
+              "sha256": digest,
+          })
+          manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
+          print(f"STF-0005 sha256={digest}")
+          PY
+          npm ci --ignore-scripts
+          npm run db:validate
+          git config user.name "Storefront Migration Bot"
+          git config user.email "storefront-migration-bot@users.noreply.github.com"
+          git add database/modules/storefront
+          git commit -m "feat(storefront): register STF-0005 publication commands"
+          git push origin HEAD:module/storefront-commerce-v1
