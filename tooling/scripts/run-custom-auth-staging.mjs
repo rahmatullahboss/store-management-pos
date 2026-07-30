@@ -15,6 +15,7 @@ const originalDeploy = await readFile(deployPath, "utf8");
 const redactNeedle =
   '.replaceAll(connectionString, "[REDACTED_DATABASE_URL]")';
 const mainNeedle = 'main: "apps/api/src/staging.ts"';
+const baseUrlNeedle = "  const baseUrl = await resolveWorkerUrl();";
 const contextProbeNeedle = `  probes.push(await probe(baseUrl, "/auth/session", '"authenticated":true', 200, authenticated));`;
 const scenarioNeedle = `    for (const scenario of [
       {
@@ -26,6 +27,7 @@ const scenarioNeedle = `    for (const scenario of [
 for (const [label, needle] of [
   ["redaction", redactNeedle],
   ["Worker entry", mainNeedle],
+  ["secret upload", baseUrlNeedle],
   ["context probe", contextProbeNeedle],
   ["browser scenarios", scenarioNeedle],
 ]) {
@@ -246,7 +248,29 @@ const expandedProbes = `${contextProbeNeedle}
   probes.push(await probe(baseUrl, "/admin", "Run the store from evidence", 200, authenticated));
   probes.push(await probe(baseUrl, "/admin/catalog", "Database-backed catalog", 200, authenticated));
   probes.push(await probe(baseUrl, "/admin/customers", "Ayesha Rahman", 200, authenticated));
-  probes.push(await probe(baseUrl, "/admin/sales", "SO-STG-0001", 200, authenticated));`;
+  probes.push(await probe(baseUrl, "/admin/sales", "SO-STG-0001", 200, authenticated));
+  probes.push(await probe(baseUrl, "/api/v1/inventory/availability?variantId=018f1000-0000-7000-8000-000000000201&warehouseId=018f0000-0000-7000-8000-000000000402", '"available"', 200, authenticated));
+  probes.push(await probe(baseUrl, "/api/v1/inventory/movements?warehouseId=018f0000-0000-7000-8000-000000000402&limit=10", "STG-OPEN-001", 200, authenticated));
+  probes.push(await probe(baseUrl, "/api/v1/procurement/suppliers?limit=10", "Northstar Distribution", 200, authenticated));
+  probes.push(await probe(baseUrl, "/api/v1/procurement/purchase-orders?warehouseId=018f0000-0000-7000-8000-000000000402&limit=10", "PO-STG-0001", 200, authenticated));
+  probes.push(await probe(baseUrl, "/api/v1/inventory/movements?warehouseId=018f0000-0000-7000-8000-000000000401", '"PERMISSION_DENIED"', 403, authenticated));`;
+
+const secretUpload = [
+  "  const internalTokenSecret = process.env.STAGING_INTERNAL_TOKEN_SECRET;",
+  '  if (!internalTokenSecret || internalTokenSecret.length < 43) throw new Error("STAGING_INTERNAL_TOKEN_SECRET is required");',
+  '  await run("npx", [',
+  '    "--yes",',
+  '    `wrangler@${WRANGLER_VERSION}`,',
+  '    "secret",',
+  '    "put",',
+  '    "STAGING_INTERNAL_TOKEN_SECRET",',
+  '    "--config",',
+  '    configPath,',
+  '    "--name",',
+  '    WORKER_NAME,',
+  '  ], { input: internalTokenSecret + "\\n", secret: internalTokenSecret });',
+  baseUrlNeedle,
+].join("\n");
 
 const patchedDeploy = originalDeploy
   .replace(
@@ -254,12 +278,15 @@ const patchedDeploy = originalDeploy
     '.replaceAll(connectionString || "postgresql://__never__", "[REDACTED_DATABASE_URL]")',
   )
   .replace(mainNeedle, 'main: "apps/api/src/staging-entry.ts"')
+  .replace(baseUrlNeedle, secretUpload)
   .replace(contextProbeNeedle, expandedProbes)
   .replace(scenarioNeedle, expandedScenario);
 
+process.env.STAGING_INTERNAL_TOKEN_SECRET = randomBytes(48).toString("base64url");
 await writeFile(deployPath, patchedDeploy, "utf8");
 try {
   await import("./deploy-custom-auth-staging.mjs");
 } finally {
+  delete process.env.STAGING_INTERNAL_TOKEN_SECRET;
   await writeFile(deployPath, originalDeploy, "utf8");
 }
