@@ -220,19 +220,28 @@ test("worker fails closed on content scope mismatch and returns bounded CMS not-
   assert.equal((await missing.json()).error.code, "CONTENT_NOT_FOUND");
 });
 
-test("STF-0006 is registered and exposes only the safe runtime function", async () => {
+test("STF-0006 and STF-0007 are registered with safe public execution boundaries", async () => {
   const manifest = JSON.parse(
     await readFile(new URL("../../database/modules/storefront/manifest.json", import.meta.url), "utf8"),
   );
-  assert.equal(manifest.migrations.at(-1).id, "STF-0006");
-  const sql = await readFile(
+  assert.ok(manifest.migrations.some(({ id }) => id === "STF-0006"));
+  assert.equal(manifest.migrations.at(-1).id, "STF-0007");
+  const contentSql = await readFile(
     new URL("../../database/modules/storefront/migrations/STF-0006-public-content-resolution.sql", import.meta.url),
     "utf8",
   );
-  assert.match(sql, /WHERE tr\.status = 'published'/u);
-  assert.match(sql, /WHERE nd\.status = 'published'/u);
-  assert.match(sql, /WHERE hr\.status = 'published'/u);
-  assert.match(sql, /WHERE cp\.status = 'published'/u);
-  assert.match(sql, /REVOKE ALL ON FUNCTION storefront\.resolve_public_content_bundle\(text,text\) FROM PUBLIC/u);
-  assert.match(sql, /GRANT EXECUTE ON FUNCTION storefront\.resolve_public_content_bundle\(text,text\) TO store_app_runtime/u);
+  assert.match(contentSql, /WHERE tr\.status = 'published'/u);
+  assert.match(contentSql, /WHERE nd\.status = 'published'/u);
+  assert.match(contentSql, /WHERE hr\.status = 'published'/u);
+  assert.match(contentSql, /WHERE cp\.status = 'published'/u);
+  assert.match(contentSql, /REVOKE ALL ON FUNCTION storefront\.resolve_public_content_bundle\(text,text\) FROM PUBLIC/u);
+  assert.match(contentSql, /GRANT EXECUTE ON FUNCTION storefront\.resolve_public_content_bundle\(text,text\) TO store_app_runtime/u);
+  const qualificationSql = await readFile(
+    new URL("../../database/modules/storefront/migrations/STF-0007-qualified-product-publication-reference.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(qualificationSql, /SELECT product_publication\.publication_state INTO v_product_state/u);
+  assert.match(qualificationSql, /FROM storefront\.product_publications AS product_publication/u);
+  assert.match(qualificationSql, /REVOKE ALL ON FUNCTION storefront\.set_variant_publication/u);
+  assert.match(qualificationSql, /GRANT EXECUTE ON FUNCTION storefront\.set_variant_publication/u);
 });
