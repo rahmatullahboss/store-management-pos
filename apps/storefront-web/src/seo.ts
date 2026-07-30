@@ -79,10 +79,10 @@ export function renderStorefrontRobotsTxt(
 export function renderStorefrontSitemapXml(
   bundle: StorefrontPublicSeoBundleV1,
 ): string {
-  const entries = bundle.indexable
-    ? bundle.entries
+  const entries: StorefrontPublicSeoBundleV1["entries"][number][] = bundle.indexable
+    ? [...bundle.entries]
         .filter(({ path }) => isStorefrontDiscoveryPath(path))
-        .toSorted((left, right) => left.path.localeCompare(right.path))
+        .sort((left, right) => left.path.localeCompare(right.path))
     : [];
   const urls = entries
     .map((entry) => {
