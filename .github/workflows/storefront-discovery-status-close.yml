@@ -1,90 +1,13 @@
-name: Storefront Discovery Status Closeout
+name: Retired Storefront Discovery Closeout
 
 on:
-  pull_request:
-    branches:
-      - program/integration-v1
-    paths:
-      - .github/workflows/storefront-discovery-status-close.yml
+  workflow_dispatch:
 
 permissions:
-  contents: write
-
-concurrency:
-  group: storefront-discovery-status-closeout
-  cancel-in-progress: false
+  contents: read
 
 jobs:
-  update-tracker:
+  retired:
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          ref: module/storefront-commerce-v1
-          persist-credentials: true
-      - name: Apply exact tracker closeout
-        shell: bash
-        run: |
-          set -euo pipefail
-          python <<'PY'
-          from pathlib import Path
-
-          path = Path("docs/architecture/storefront/status.yaml")
-          text = path.read_text()
-
-          replacements = [
-            ("  imported_source_batches: 3\n  latest_import_batch: SF-UP-003", "  imported_source_batches: 4\n  latest_import_batch: SF-UP-004"),
-            ("      - file_level_adaptation_manifests_SF_UP_001_to_SF_UP_003", "      - file_level_adaptation_manifests_SF_UP_001_to_SF_UP_004"),
-            (
-              "          checkpoint_doc: docs/architecture/storefront/public-catalog-checkpoint.md\n    active_slice:\n      id: H3-DISCOVERY-03\n      description: Add published category and collection projections and pages, then bounded storefront search and facets using the existing authoritative public product composition.\n      plan_doc: docs/architecture/storefront/public-discovery-plan.md\n    remaining:\n      - category_and_collection_public_projections_and_pages\n      - bounded_public_search_and_facets\n      - media_delivery_and_cache_generation\n      - SEO_discovery_robots_sitemap_and_structured_data\n      - public_catalog_low_bandwidth_and_broader_locale_evidence",
-              "          checkpoint_doc: docs/architecture/storefront/public-catalog-checkpoint.md\n      H3-DISCOVERY-03:\n        status: complete\n        completed:\n          - versioned_public_category_collection_and_search_contracts\n          - STF_0011_host_scoped_category_and_collection_resolution\n          - STF_0012_published_only_literal_and_full_text_search\n          - STF_0013_authoritative_category_and_availability_filter_application\n          - category_breadcrumb_child_navigation_and_bounded_pagination\n          - deterministic_collection_member_order_and_public_product_intersection\n          - retained_search_filter_state_clear_action_facets_and_no_result_page\n          - wildcard_safe_search_and_SQL_bounded_category_facets\n          - bootstrap_discovery_scope_reconciliation_and_fail_closed_routes\n          - SF_UP_004_category_collection_and_search_page_composition_adaptation\n          - PostgreSQL_pipefail_and_disjoint_fixture_truth_correction\n          - owner_safe_Cloudflare_preview_quota_recovery\n          - PostgreSQL_browser_Cloudflare_and_recovery_evidence\n        exact_head_evidence:\n          head: bad50da86831d1392e77d0263f978220356a36d6\n          storefront_ci_run: 30534413388\n          storefront_verify_job: 90844121062\n          postgres_rehearsal_job: 90844265607\n          browser_evidence_job: 90844265594\n          cloudflare_preview_job: 90844265639\n          neon_recovery_job: 90844265994\n          repository_tests: 450\n          buyer_browser_scenarios: 3\n          admin_browser_scenarios: 4\n          public_content_browser_scenarios: 3\n          public_catalog_browser_scenarios: 3\n          public_discovery_browser_scenarios: 3\n          public_discovery_axe_violations: 0\n          applied_search_filter_evidence: passed_zero_axe\n          storefront_migrations: 13\n          storefront_tables: 16\n          forced_RLS_tables: 16\n          audit_events: 42\n          outbox_events: 42\n          command_receipts: 23\n          cache_generation_rows: 1\n          PostgreSQL_raw_errors: 0\n          Cloudflare_owned_stale_workers_pruned: 20\n          Cloudflare_requests: 1\n          Cloudflare_errors: 0\n          checkpoint_doc: docs/architecture/storefront/public-discovery-checkpoint.md\n    active_slice:\n      id: H3-SEO-MEDIA-04\n      description: Add published-only robots, sitemap, canonical and structured metadata, bounded product media delivery and exact cache-generation families using selectively adapted Scalius discovery patterns.\n      plan_doc: docs/architecture/storefront/public-seo-media-plan.md\n    remaining:\n      - media_delivery_and_cache_generation\n      - SEO_discovery_robots_sitemap_and_structured_data\n      - public_catalog_low_bandwidth_and_broader_locale_evidence"
-            ),
-            (
-              "next_action:\n  id: H3-DISCOVERY-03\n  description: Follow the approved public-discovery plan: build published category and collection pages from MOD-H selection and the verified authoritative public product composition, then add bounded search and facets without creating a second catalog authority.\n  documentation_first: docs/architecture/storefront/public-discovery-plan.md",
-              "next_action:\n  id: H3-SEO-MEDIA-04\n  description: Follow the approved SEO/media plan: selectively adapt Scalius robots, sitemap, canonical, discovery-cache and generation patterns to local published-only contracts without importing upstream business authority.\n  documentation_first: docs/architecture/storefront/public-seo-media-plan.md"
-            ),
-            (
-              "  - sha: f4b9e93a50d60e22e98c5ef80a1542279000095a\n    purpose: quota-safe full validation of the H3 catalog checkpoint",
-              "  - sha: f4b9e93a50d60e22e98c5ef80a1542279000095a\n    purpose: quota-safe full validation of the H3 catalog checkpoint\n  - sha: bad50da86831d1392e77d0263f978220356a36d6\n    purpose: H3 category collection search filters PostgreSQL truth Cloudflare retention and exact-head evidence"
-            ),
-            (
-              "    verified_implementation_head: e5092766ff625e1bbf0f9cff191296e1fb1851a8\n    verified_validation_head: f4b9e93a50d60e22e98c5ef80a1542279000095a",
-              "    verified_implementation_head: bad50da86831d1392e77d0263f978220356a36d6\n    verified_validation_head: bad50da86831d1392e77d0263f978220356a36d6"
-            ),
-            (
-              "  adaptation:\n    latest_batch: SF-UP-003\n    upstream_product_card_blob: 68bc025696a3e36dbf316d64f2e026ac719ddcf9",
-              "  adaptation:\n    latest_batch: SF-UP-004\n    upstream_product_card_blob: 68bc025696a3e36dbf316d64f2e026ac719ddcf9\n    upstream_discovery_blobs:\n      category_page: fb8c87c5828766d9a63f149e1bac3692384a1f79\n      collection_page: 110a72dd675ab282ae5efa656529844b3a8aabba\n      search_page: 9a8bf2f1c8876d57875209791dd2c0a878c2c385"
-            ),
-            (
-              "    - category_collection_search_media_and_SEO_discovery_remain_in_H3",
-              "    - media_cache_generation_and_SEO_discovery_remain_in_H3"
-            ),
-          ]
-
-          for old, new in replacements:
-              count = text.count(old)
-              if count != 1:
-                  raise SystemExit(f"Tracker replacement expected once, found {count}: {old[:80]!r}")
-              text = text.replace(old, new, 1)
-
-          path.write_text(text)
-          PY
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
-        with:
-          node-version: 22
-          package-manager-cache: false
-      - name: Validate tracker and repository format
-        run: |
-          npm ci --ignore-scripts
-          npm run format:check
-          npm run check:secrets
-      - name: Commit tracker closeout
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name "Storefront Status Bot"
-          git config user.email "storefront-status-bot@users.noreply.github.com"
-          git add docs/architecture/storefront/status.yaml
-          git commit -m "docs(storefront): close discovery and activate SEO media"
-          git push origin HEAD:module/storefront-commerce-v1
+      - run: echo "Discovery closeout is complete; this workflow is intentionally inert."
