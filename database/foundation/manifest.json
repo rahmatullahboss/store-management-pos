@@ -51,6 +51,11 @@
       "id": "FND-0010",
       "file": "FND-0010-custom-auth-step-up-consume-hardening.sql",
       "sha256": "6965e454f4204b37123a9c5a01ca03a2b06aee23ec9b9fa46d503975decb6a56"
+    },
+    {
+      "id": "FND-0011",
+      "file": "FND-0011-custom-auth-mfa-password-search-path.sql",
+      "sha256": "ae51d38ab6c5ba5bf2e6383f904f454cd339a4bdec02fbd47688035f140db40e"
     }
   ]
 }
