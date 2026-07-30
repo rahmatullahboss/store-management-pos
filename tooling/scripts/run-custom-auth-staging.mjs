@@ -5,27 +5,25 @@ import { fileURLToPath } from "node:url";
 import { Client, neon } from "@neondatabase/serverless";
 
 const root = fileURLToPath(new URL("../..", import.meta.url));
-const entryPath = path.join(root, "apps", "api", "src", "staging.ts");
 const deployPath = path.join(
   root,
   "tooling",
   "scripts",
   "deploy-custom-auth-staging.mjs",
 );
-const originalEntry = await readFile(entryPath, "utf8");
 const originalDeploy = await readFile(deployPath, "utf8");
-const legacyMarker = '"neon-auth-required"';
-const customMarker = '"custom-auth-required"';
-const markerOccurrences = originalEntry.split(legacyMarker).length - 1;
-if (markerOccurrences !== 1) {
-  throw new Error(
-    `Expected exactly one legacy staging auth marker, found ${markerOccurrences}`,
-  );
-}
 const redactNeedle =
   '.replaceAll(connectionString, "[REDACTED_DATABASE_URL]")';
-if (!originalDeploy.includes(redactNeedle)) {
-  throw new Error("Custom staging redaction patch target is missing");
+const mainNeedle = 'main: "apps/api/src/staging.ts"';
+const contextProbeNeedle = `  probes.push(await probe(baseUrl, "/auth/session", '"authenticated":true', 200, authenticated));`;
+for (const [label, needle] of [
+  ["redaction", redactNeedle],
+  ["Worker entry", mainNeedle],
+  ["context probe", contextProbeNeedle],
+]) {
+  if (!originalDeploy.includes(needle)) {
+    throw new Error(`Custom staging ${label} patch target is missing`);
+  }
 }
 
 const { NEON_API_KEY, GITHUB_RUN_ID } = process.env;
@@ -49,12 +47,12 @@ async function connectionString() {
   return body.uri;
 }
 
-async function customAuthMigrationExists(uri) {
+async function readContextMigrationExists(uri) {
   const client = new Client({ connectionString: uri });
   await client.connect();
   try {
     const result = await client.query(
-      "SELECT EXISTS(SELECT 1 FROM platform.schema_migrations WHERE migration_id = 'FND-0007') AS exists",
+      "SELECT EXISTS(SELECT 1 FROM platform.schema_migrations WHERE migration_id = 'FND-0008') AS exists",
     );
     return result.rows[0]?.exists === true;
   } finally {
@@ -125,7 +123,34 @@ async function httpDriverPreflight(uri) {
     ) {
       throw new Error("Custom auth login preflight returned an invalid row");
     }
-    console.log("custom auth Neon HTTP registration and login preflight passed");
+
+    const contexts = await query.query(
+      "SELECT * FROM platform.custom_auth_resolve_context($1::text)",
+      [loginTokenHash],
+    );
+    const context = contexts[0];
+    const permissions = Array.isArray(context?.permissions)
+      ? context.permissions
+      : [];
+    if (
+      contexts.length !== 1 ||
+      context?.user_id !== userId ||
+      context?.role_code !== "staging-read-only" ||
+      permissions.length !== 16 ||
+      permissions.some(
+        (permission) =>
+          typeof permission !== "string" ||
+          !(
+            permission.endsWith(".read") ||
+            permission === "pricing.price_tax.calculate"
+          ),
+      )
+    ) {
+      throw new Error("Custom auth read-context preflight returned unsafe scope");
+    }
+    console.log(
+      "custom auth registration, login and read-context preflight passed",
+    );
   } catch (error) {
     const record =
       typeof error === "object" && error !== null
@@ -182,28 +207,26 @@ async function httpDriverPreflight(uri) {
 }
 
 const uri = await connectionString();
-if (await customAuthMigrationExists(uri)) {
+if (await readContextMigrationExists(uri)) {
   await httpDriverPreflight(uri);
 } else {
-  console.log("custom auth HTTP preflight deferred until FND-0007 is applied");
+  console.log("custom auth read-context preflight deferred until FND-0008 is applied");
 }
 
-await writeFile(
-  entryPath,
-  originalEntry.replace(legacyMarker, customMarker),
-  "utf8",
-);
-await writeFile(
-  deployPath,
-  originalDeploy.replace(
+const patchedDeploy = originalDeploy
+  .replace(
     redactNeedle,
     '.replaceAll(connectionString || "postgresql://__never__", "[REDACTED_DATABASE_URL]")',
-  ),
-  "utf8",
-);
+  )
+  .replace(mainNeedle, 'main: "apps/api/src/staging-entry.ts"')
+  .replace(
+    contextProbeNeedle,
+    `${contextProbeNeedle}\n  probes.push(await probe(baseUrl, "/auth/context", '"database-resolved-read-only"', 200, authenticated));`,
+  );
+
+await writeFile(deployPath, patchedDeploy, "utf8");
 try {
   await import("./deploy-custom-auth-staging.mjs");
 } finally {
-  await writeFile(entryPath, originalEntry, "utf8");
   await writeFile(deployPath, originalDeploy, "utf8");
 }
