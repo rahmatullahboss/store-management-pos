@@ -60,7 +60,7 @@ BEGIN
   SELECT binding_id, status, replayed INTO v_id, v_status, v_replayed
   FROM storefront.bind_domain_sales_channel(
     '10000000-0000-4000-8000-000000000170',
-    '10000000-0000-4000-8000-000000000171',
+    '10000000-0000-4000-8000-000000000250',
     '10000000-0000-4000-8000-000000000001',
     '10000000-0000-4000-8000-000000000150',
     '10000000-0000-4000-8000-000000000110',
@@ -77,7 +77,7 @@ BEGIN
   SELECT binding_id, status, replayed INTO v_id, v_status, v_replayed
   FROM storefront.bind_domain_sales_channel(
     '10000000-0000-4000-8000-000000000170',
-    '10000000-0000-4000-8000-000000000172',
+    '10000000-0000-4000-8000-000000000251',
     '10000000-0000-4000-8000-000000000001',
     '10000000-0000-4000-8000-000000000150',
     '10000000-0000-4000-8000-000000000110',
@@ -140,7 +140,7 @@ SELECT platform.set_request_context(
   NULL, NULL, DATE '2026-07-30', 'suspend-public-domain', 'trace-suspend-public-domain'
 );
 SELECT * FROM storefront.transition_domain(
-  '10000000-0000-4000-8000-000000000173',
+  '10000000-0000-4000-8000-000000000252',
   '10000000-0000-4000-8000-000000000001',
   '10000000-0000-4000-8000-000000000150',
   'suspended', 'active', 'provider-host-a', NULL, NULL, false,
