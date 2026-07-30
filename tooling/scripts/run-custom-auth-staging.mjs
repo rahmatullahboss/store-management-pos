@@ -19,6 +19,8 @@ const scenarioNeedle = `    for (const scenario of [
         viewport: { width: 1440, height: 900, deviceScaleFactor: 1 },
       },`;
 const identityNeedle = '        hasIdentity: document.body.textContent?.includes("Signed in as") === true,';
+const scenarioEvidenceNeedle = `        overflow: metrics.overflow,
+        passed:`;
 const loginPageNeedle = "    const loginPage = await browser.newPage();";
 const sessionPageNeedle = "    const sessionPage = await browser.newPage();";
 const browserEvidenceNeedle = "  const browser = await browserEvidence(baseUrl);";
@@ -27,6 +29,8 @@ const catchNeedle = `} catch (error) {
   if (connectionString && authEmail && cleanupCount === 0) {`;
 const reportNeedle = `    probes,
     browser: browser.scenarios,`;
+const failedReportNeedle = `    syntheticAuthCleanupCount: cleanupCount,
+    error:`;
 const reportWriteNeedle = "    authoritativeBrowserWritesEnabled: false,";
 const migrationMinimumNeedle = "evidence.migration_count < 57";
 const declarationNeedle = "let cleanupCount = 0;";
@@ -35,9 +39,11 @@ const actualRelations = "'auth_credentials','auth_sessions','auth_rate_limits','
 for (const [label, needle] of [
   ["redaction", redactNeedle], ["Worker entry", mainNeedle], ["secret upload", baseUrlNeedle],
   ["account journey", accountNeedle], ["context probe", contextProbeNeedle], ["browser scenarios", scenarioNeedle],
-  ["browser identity", identityNeedle], ["login CSP bypass", loginPageNeedle], ["session CSP bypass", sessionPageNeedle],
+  ["browser identity", identityNeedle], ["browser scenario evidence", scenarioEvidenceNeedle],
+  ["login CSP bypass", loginPageNeedle], ["session CSP bypass", sessionPageNeedle],
   ["browser evidence gate", browserEvidenceNeedle], ["reservation cleanup", cleanupNeedle], ["failure cleanup", catchNeedle],
-  ["report evidence", reportNeedle], ["report write boundary", reportWriteNeedle], ["migration minimum", migrationMinimumNeedle],
+  ["report evidence", reportNeedle], ["failed report evidence", failedReportNeedle],
+  ["report write boundary", reportWriteNeedle], ["migration minimum", migrationMinimumNeedle],
   ["evidence declaration", declarationNeedle], ["custom auth relations", actualRelations],
 ]) {
   if (!originalDeploy.includes(needle)) throw new Error(`Custom staging ${label} patch target is missing`);
@@ -77,10 +83,11 @@ const mfaJourney = `${accountNeedle}
     baseUrl, sessionCookie: account.cookie, password: authPassword, email: authEmail, connectionString, runId: GITHUB_RUN_ID || "manual",
   });`;
 
-const browserEvidenceGate = `${browserEvidenceNeedle}
-  const failedBrowserScenarios = browser.scenarios.filter((scenario) => scenario.passed !== true).map((scenario) => scenario.id);
-  if (browser.scenarios.length !== 6 || failedBrowserScenarios.length > 0 || browser.session.passed !== true || browser.context.passed !== true || browser.logout.passed !== true) {
-    throw new Error(\`Persistent staging browser evidence failed: \${failedBrowserScenarios.join(",") || "session/context/logout/count"}\`);
+const browserEvidenceGate = `  browserEvidenceResult = await browserEvidence(baseUrl);
+  const browser = browserEvidenceResult;
+  const failedBrowserEvidence = browser.scenarios.filter((scenario) => scenario.passed !== true);
+  if (browser.scenarios.length !== 6 || failedBrowserEvidence.length > 0 || browser.session.passed !== true || browser.context.passed !== true || browser.logout.passed !== true) {
+    throw new Error(\`Persistent staging browser evidence failed: \${JSON.stringify({ scenarios: failedBrowserEvidence, session: browser.session, context: browser.context, logout: browser.logout })}\`);
   }`;
 
 const successfulCleanup = `  const reservationEvidenceCleaned = await (await import("./staging-mfa-reservation-evidence.mjs")).cleanupMfaReservationEvidence(connectionString, mfaReservationEvidence?.reservationId);
@@ -95,10 +102,23 @@ const reportEvidence = `    mfa: mfaReservationEvidence?.report ?? null,
     controlledCommand: { permission: "inventory.reservation.manage", createPassed: mfaReservationEvidence?.report?.createPassed === true, releasePassed: mfaReservationEvidence?.report?.releasePassed === true, availabilityReconciled: mfaReservationEvidence?.report?.availabilityReconciled === true, syntheticReservationCleaned: reservationEvidenceCleaned },
     probes,
     browser: browser.scenarios,`;
+const failedReportEvidence = `    syntheticAuthCleanupCount: cleanupCount,
+    browser: browserEvidenceResult?.scenarios ?? [],
+    mfa: mfaReservationEvidence?.report ?? null,
+    error:`;
+const scenarioEvidence = `        overflow: metrics.overflow,
+        evidence: {
+          hasNotice: metrics.hasNotice,
+          hasIdentity: metrics.hasIdentity,
+          checkoutDisabled: metrics.checkoutDisabled,
+          adminSkipTarget: metrics.adminSkipTarget,
+          skipFocusedMain: metrics.skipFocusedMain ?? null,
+        },
+        passed:`;
 
 const patchedDeploy = originalDeploy
   .replace(redactNeedle, '.replaceAll(connectionString || "postgresql://__never__", "[REDACTED_DATABASE_URL]")')
-  .replace(declarationNeedle, `${declarationNeedle}\nlet mfaReservationEvidence;`)
+  .replace(declarationNeedle, `${declarationNeedle}\nlet mfaReservationEvidence;\nlet browserEvidenceResult;`)
   .replace(migrationMinimumNeedle, "evidence.migration_count < 60")
   .replace(mainNeedle, 'main: "apps/api/src/staging-entry.ts"')
   .replace(baseUrlNeedle, secretUpload)
@@ -106,12 +126,14 @@ const patchedDeploy = originalDeploy
   .replace(contextProbeNeedle, expandedProbes)
   .replace(scenarioNeedle, expandedScenario)
   .replace(identityNeedle, '        hasIdentity: kind === "reservation" ? document.body.textContent?.includes("warehouse-scoped") === true : document.body.textContent?.includes("Signed in as") === true,')
+  .replace(scenarioEvidenceNeedle, scenarioEvidence)
   .replace(loginPageNeedle, `${loginPageNeedle}\n    await loginPage.setBypassCSP(true);`)
   .replace(sessionPageNeedle, `${sessionPageNeedle}\n    await sessionPage.setBypassCSP(true);`)
   .replace(browserEvidenceNeedle, browserEvidenceGate)
   .replace(cleanupNeedle, successfulCleanup)
   .replace(catchNeedle, failureCleanup)
   .replace(reportNeedle, reportEvidence)
+  .replace(failedReportNeedle, failedReportEvidence)
   .replace(reportWriteNeedle, `${reportWriteNeedle}\n    controlledAuthoritativeWritesEnabled: ["inventory.reservation.create", "inventory.reservation.release"],`)
   .replaceAll("schemaVersion: 3", "schemaVersion: 4");
 
