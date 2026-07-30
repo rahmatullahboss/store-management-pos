@@ -286,7 +286,10 @@ SET row_security = off AS $$
         'quantity', CASE
           WHEN pv.kind IN ('service','non_stock') OR pv.warehouse_count = 0 THEN NULL
           ELSE jsonb_build_object(
-            'amount', storefront.format_public_quantity(pv.available_quantity, pv.quantity_scale),
+            'amount', storefront.format_public_quantity(
+              GREATEST(pv.on_hand - pv.reserved, 0::numeric),
+              pv.quantity_scale
+            ),
             'unit', pv.unit_code,
             'scale', pv.quantity_scale,
             'asOf', to_char(pv.inventory_as_of AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'),
