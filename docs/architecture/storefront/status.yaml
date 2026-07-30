@@ -139,11 +139,46 @@ checkpoints:
   H3:
     title: Public catalog and content
     status: active
+    completed_slices:
+      H3-CONTENT-01:
+        status: complete
+        completed:
+          - STF_0006_published_only_public_content_resolver
+          - versioned_storefront_public_content_v1_contract
+          - host_scoped_public_content_API_and_typed_client
+          - bootstrap_content_scope_reconciliation_and_fail_closed_Worker
+          - published_navigation_homepage_and_CMS_rendering
+          - bounded_JSON_safe_navigation_CSP_canonical_and_SEO_projection
+          - hidden_scheduled_unknown_host_and_scope_mismatch_denial
+          - STF_0007_variant_parent_product_reference_qualification
+          - STF_0008_remaining_publication_command_reference_qualification
+          - Cloudflare_preview_subdomain_eventual_consistency_retry
+          - PostgreSQL_browser_Cloudflare_and_recovery_evidence
+        exact_head_evidence:
+          head: b5fa25cc6e197c9bb9893ac0194028408fe89940
+          storefront_ci_run: 30513418700
+          storefront_verify_job: 90778058213
+          postgres_rehearsal_job: 90778179295
+          browser_evidence_job: 90778179223
+          cloudflare_preview_job: 90778179203
+          neon_recovery_job: 90778179526
+          repository_tests: 429
+          buyer_browser_scenarios: 3
+          admin_browser_scenarios: 4
+          public_content_browser_scenarios: 3
+          storefront_migrations: 8
+          storefront_tables: 16
+          forced_RLS_tables: 16
+          audit_events: 35
+          outbox_events: 35
+          command_receipts: 23
+          Cloudflare_requests: 42
+          Cloudflare_errors: 0
+          checkpoint_doc: docs/architecture/storefront/public-content-checkpoint.md
     active_slice:
-      id: H3-CONTENT-01
-      description: Add versioned public layout, navigation, homepage and CMS content contracts, host-scoped API projection, typed client methods and buyer rendering with fail-closed publication rules.
+      id: H3-CATALOG-02
+      description: Compose published MOD-H selection with authoritative MOD-A catalog and exact pricing plus MOD-B availability for public listing and detail projections without moving business authority into MOD-H.
     remaining:
-      - public_layout_navigation_homepage_and_CMS_bundle
       - authoritative_public_product_listing_and_detail_projection
       - category_collection_and_search_pages
       - media_delivery_and_cache_generation
@@ -172,22 +207,22 @@ module_authority:
   storefront_publication_presentation_domains: MOD-H
 
 next_action:
-  id: H3-CONTENT-01
-  description: Implement host-scoped public layout, navigation, homepage and CMS content contracts and projection before composing authoritative MOD-A and MOD-B public catalog data.
+  id: H3-CATALOG-02
+  description: Build published-only public listing/detail projections from MOD-H selection, MOD-A catalog and exact pricing, and MOD-B availability; then render category, collection and search pages.
 
 last_commits:
   - sha: e9dc992ded901452b3633b3d20a261e50668bc88
     purpose: latest integration baseline merged with reviewed conflict resolution
-  - sha: ae2c44d6306ac8ec31211b04c276bdcce9882cc7
-    purpose: H1 fully green storefront foundation checkpoint
   - sha: 899c73512a5337f52dc5809e6df03877e96f1ef9
     purpose: H2 publishing management admin and full storefront CI checkpoint
+  - sha: b5fa25cc6e197c9bb9893ac0194028408fe89940
+    purpose: H3 published public content and compatibility migration checkpoint
 
 evidence:
   github:
     pr: 48
     base_sha: fd63dfde4d5940112a9c77c2743b281e49ff6b55
-    verified_head: 899c73512a5337f52dc5809e6df03877e96f1ef9
+    verified_head: b5fa25cc6e197c9bb9893ac0194028408fe89940
     integration_sync_pr: 53
     integration_sync_report: docs/architecture/storefront/integration-conflicts.txt
   neon:
