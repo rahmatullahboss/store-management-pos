@@ -63,6 +63,10 @@ const contentPayload = {
 };
 
 const content = parseStorefrontPublicContentBundleV1(contentPayload);
+const homepageContent = parseStorefrontPublicContentBundleV1({
+  ...contentPayload,
+  page: null,
+});
 
 const environment = {
   STOREFRONT_STAGE: "production",
@@ -162,7 +166,11 @@ test("public API returns host-scoped content and published-page 404", async () =
 test("worker renders published homepage, navigation and CMS without leaking scope identifiers", async () => {
   const worker = createStorefrontWorker({
     resolverFactory: () => ({ async resolve() { return bootstrap; } }),
-    contentResolverFactory: () => ({ async resolve() { return content; } }),
+    contentResolverFactory: () => ({
+      async resolve(_hostname, options = {}) {
+        return options.slug ? content : homepageContent;
+      },
+    }),
   });
   const homepage = await worker.fetch(new Request("https://shop.example.com/"), environment);
   const homepageHtml = await homepage.text();
