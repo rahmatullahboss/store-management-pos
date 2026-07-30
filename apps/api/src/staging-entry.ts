@@ -4,6 +4,10 @@ import {
   type OperationalStagingEnvironment,
 } from "./staging-operational-worker.js";
 import {
+  handleStagingProtectedApi,
+  type StagingProtectedApiEnvironment,
+} from "./staging-protected-api.js";
+import {
   handleStagingReadContext,
   type StagingReadContextEnvironment,
 } from "./staging-read-context.js";
@@ -16,7 +20,8 @@ export interface PersistentStagingEnvironment
   extends StagingEnvironment,
     StagingReadContextEnvironment,
     OperationalStagingEnvironment,
-    StagingPosReleaseEnvironment {}
+    StagingPosReleaseEnvironment,
+    StagingProtectedApiEnvironment {}
 
 function statusHeaders(): HeadersInit {
   return {
@@ -56,11 +61,15 @@ export default {
                   ? "custom-auth-required"
                   : "not-required",
               authorization: "database-resolved-read-only",
+              protectedReadTransport: "short-lived-internal-token",
+              internalTokenLifetimeSeconds: 300,
               authoritativeWrites: false,
             }),
         { status: 200, headers: statusHeaders() },
       );
     }
+    const protectedApi = await handleStagingProtectedApi(request, env);
+    if (protectedApi) return protectedApi;
     const exactPos = await handleExactStagingPos(request, env);
     if (exactPos) return exactPos;
     const operational = await handleOperationalStagingRequest(request, env);
