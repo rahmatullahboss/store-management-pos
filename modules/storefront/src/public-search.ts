@@ -1,10 +1,10 @@
+import type { NeonDatabase } from "../../../packages/foundation/src/db.js";
 import { StorefrontContractError } from "../../../packages/storefront-contracts/src/index.js";
 import {
   parseStorefrontPublicSearchPageV1,
   type StorefrontPublicAvailabilityFacetValueV1,
   type StorefrontPublicSearchPageV1,
 } from "../../../packages/storefront-contracts/src/public-discovery.js";
-import type { StorefrontPublicDatabase } from "./public.js";
 
 export interface StorefrontPublicSearchRequestOptions {
   readonly category?: string;
@@ -13,7 +13,7 @@ export interface StorefrontPublicSearchRequestOptions {
   readonly cursor?: string;
 }
 
-interface StorefrontPublicSearchRow {
+interface StorefrontPublicSearchRow extends Record<string, unknown> {
   readonly tenantId: string;
   readonly storefrontId: string;
   readonly salesChannelId: string;
@@ -98,7 +98,7 @@ function normalizeCursor(value: string | undefined): string | null {
 }
 
 export async function resolveStorefrontPublicSearch(
-  database: StorefrontPublicDatabase,
+  database: NeonDatabase,
   hostname: string,
   query: string,
   options: StorefrontPublicSearchRequestOptions = {},
