@@ -116,7 +116,7 @@ function exactDecimal(minor: string, scale: number): string {
 
 function schemaAvailability(
   availability: StorefrontPublicProductDetailV1["product"]["summary"]["availability"],
-): string {
+): string | undefined {
   switch (availability) {
     case "available":
       return "https://schema.org/InStock";
@@ -127,7 +127,7 @@ function schemaAvailability(
     case "unavailable":
       return "https://schema.org/OutOfStock";
     case "unknown":
-      return "https://schema.org/OnlineOnly";
+      return undefined;
   }
 }
 
@@ -151,12 +151,13 @@ function safeJson(value: unknown): string {
     .replaceAll("\u2029", "\\u2029");
 }
 
-export function renderStorefrontProductStructuredData(
+export function serializeStorefrontProductStructuredData(
   detail: StorefrontPublicProductDetailV1,
 ): string {
   const { context, product } = detail;
   const { summary } = product;
   const image = structuredImage(context.canonicalHostname, summary.media?.src);
+  const availability = schemaAvailability(summary.availability);
   const payload = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -170,9 +171,15 @@ export function renderStorefrontProductStructuredData(
       url: absoluteUrl(context.canonicalHostname, `/products/${summary.slug}`),
       priceCurrency: summary.price.currency,
       price: exactDecimal(summary.price.minor, summary.price.scale),
-      availability: schemaAvailability(summary.availability),
+      ...(availability ? { availability } : {}),
       itemCondition: "https://schema.org/NewCondition",
     },
   };
-  return `<script type="application/ld+json">${safeJson(payload)}</script>`;
+  return safeJson(payload);
+}
+
+export function renderStorefrontProductStructuredData(
+  detail: StorefrontPublicProductDetailV1,
+): string {
+  return `<script type="application/ld+json">${serializeStorefrontProductStructuredData(detail)}</script>`;
 }
