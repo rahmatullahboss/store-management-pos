@@ -206,7 +206,7 @@ function renderDocument(
 <body>
   <a class="skip-link" href="#main-content">Skip to content</a>
   <header><div class="container header-row"><a class="brand" href="/" aria-label="Storefront home">${escapeHtml(hostname)}</a><nav class="nav" aria-label="Primary navigation">${renderPrimaryNavigation(content)}</nav></div></header>
-  <main id="main-content" class="container">${main}</main>
+  <main id="main-content" class="container" tabindex="-1">${main}</main>
   <footer><div class="container"><span>Secure storefront commerce powered by the merchant's operational platform.</span>${renderFooterNavigation(content)}</div></footer>
 </body>
 </html>`;
