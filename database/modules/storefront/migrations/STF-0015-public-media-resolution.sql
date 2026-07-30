@@ -52,6 +52,15 @@ SET row_security = off AS $$
       ON product.tenant_id = publication.tenant_id
      AND product.id = publication.product_id
      AND product.status = 'active'
+    JOIN LATERAL storefront.compose_public_product_documents(
+      host.tenant_id,
+      host.storefront_id,
+      host.sales_channel_id,
+      host.locale,
+      host.currency
+    ) composed
+      ON composed.product_id = publication.product_id
+     AND composed.public_slug = publication.public_slug
   )
   SELECT
     product.tenant_id,
