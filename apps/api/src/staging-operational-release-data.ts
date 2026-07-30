@@ -17,12 +17,17 @@ const BENGALI_DIGITS: Readonly<Record<string, string>> = {
   "৯": "9",
 };
 
-function exactMinorFromDisplay(value: string): bigint {
-  const ascii = [...value]
+function asciiDigits(value: string): string {
+  return [...value]
     .map((character) => BENGALI_DIGITS[character] ?? character)
     .join("");
-  const digits = ascii.replace(/[^0-9]/gu, "");
-  if (!digits) throw new Error("Operational POS price does not contain exact minor units");
+}
+
+function exactMinorFromDisplay(value: string): bigint {
+  const digits = asciiDigits(value).replace(/[^0-9]/gu, "");
+  if (!digits) {
+    throw new Error("Operational POS price does not contain exact minor units");
+  }
   return BigInt(digits);
 }
 
@@ -31,12 +36,19 @@ export async function loadReleaseCandidateOperationalData(
   context: StagingReadContext,
 ): Promise<StagingOperationalData> {
   const data = await loadStagingOperationalData(connectionString, context);
+  const catalog = data.catalog.map((item) => ({
+    ...item,
+    price: asciiDigits(item.price),
+    available: asciiDigits(item.available),
+    inventoryValue: asciiDigits(item.inventoryValue),
+  }));
   const lines = data.pos.lines.map((line, index) => {
-    const catalog = data.catalog[index];
-    if (!catalog) return line;
+    const source = data.catalog[index];
+    if (!source) return line;
     return {
       ...line,
-      lineTotalMinor: exactMinorFromDisplay(catalog.price),
+      variant: asciiDigits(line.variant),
+      lineTotalMinor: exactMinorFromDisplay(source.price),
     };
   });
   const subtotalMinor = lines.reduce(
@@ -45,6 +57,52 @@ export async function loadReleaseCandidateOperationalData(
   );
   return {
     ...data,
+    catalog,
+    dashboard: {
+      ...data.dashboard,
+      availableUnits: asciiDigits(data.dashboard.availableUnits),
+      reservedUnits: asciiDigits(data.dashboard.reservedUnits),
+      inventoryValue: asciiDigits(data.dashboard.inventoryValue),
+      openPurchaseValue: asciiDigits(data.dashboard.openPurchaseValue),
+      salesOrderValue: asciiDigits(data.dashboard.salesOrderValue),
+      recentOrders: data.dashboard.recentOrders.map((order) => ({
+        ...order,
+        total: asciiDigits(order.total),
+      })),
+    },
+    inventory: {
+      ...data.inventory,
+      availableUnits: asciiDigits(data.inventory.availableUnits),
+      reservedUnits: asciiDigits(data.inventory.reservedUnits),
+      balances: data.inventory.balances.map((balance) => ({
+        ...balance,
+        sellable: asciiDigits(balance.sellable),
+        reserved: asciiDigits(balance.reserved),
+        inTransit: asciiDigits(balance.inTransit),
+        value: asciiDigits(balance.value),
+      })),
+      tasks: data.inventory.tasks.map((task) => ({
+        ...task,
+        quantity: asciiDigits(task.quantity),
+      })),
+    },
+    procurement: {
+      ...data.procurement,
+      approvedOpenValue: asciiDigits(data.procurement.approvedOpenValue),
+      purchaseOrders: data.procurement.purchaseOrders.map((order) => ({
+        ...order,
+        ordered: asciiDigits(order.ordered),
+        received: asciiDigits(order.received),
+        value: asciiDigits(order.value),
+      })),
+    },
+    sales: {
+      ...data.sales,
+      orders: data.sales.orders.map((order) => ({
+        ...order,
+        total: asciiDigits(order.total),
+      })),
+    },
     pos: {
       ...data.pos,
       lines,
