@@ -4,6 +4,12 @@ import {
   type StorefrontBootstrapV1,
 } from "../../storefront-contracts/src/index.js";
 import {
+  parseStorefrontPublicCatalogPageV1,
+  parseStorefrontPublicProductDetailV1,
+  type StorefrontPublicCatalogPageV1,
+  type StorefrontPublicProductDetailV1,
+} from "../../storefront-contracts/src/public-catalog.js";
+import {
   parseStorefrontPublicContentBundleV1,
   type StorefrontPublicContentBundleV1,
 } from "../../storefront-contracts/src/public-content.js";
@@ -17,6 +23,12 @@ export interface StorefrontContentRequestOptions {
   readonly slug?: string;
 }
 
+export interface StorefrontCatalogRequestOptions {
+  readonly signal?: AbortSignal;
+  readonly limit?: number;
+  readonly cursor?: string;
+}
+
 export interface StorefrontClient {
   getBootstrap(
     requestHostname: string,
@@ -26,6 +38,15 @@ export interface StorefrontClient {
     requestHostname: string,
     options?: StorefrontContentRequestOptions,
   ): Promise<StorefrontPublicContentBundleV1>;
+  getCatalog(
+    requestHostname: string,
+    options?: StorefrontCatalogRequestOptions,
+  ): Promise<StorefrontPublicCatalogPageV1>;
+  getProduct(
+    requestHostname: string,
+    publicSlug: string,
+    options?: { readonly signal?: AbortSignal },
+  ): Promise<StorefrontPublicProductDetailV1>;
 }
 
 export interface StorefrontClientOptions {
@@ -94,15 +115,36 @@ function createTimedSignal(
   };
 }
 
-function normalizeContentSlug(value: string | undefined): string | undefined {
+const PUBLIC_SLUG = /^[a-z0-9](?:[a-z0-9._~-]{0,178}[a-z0-9])?$/u;
+const UUID =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+
+function normalizePublicSlug(value: string | undefined, label: string): string | undefined {
   if (value === undefined) return undefined;
   const normalized = value.trim().toLowerCase();
   if (
-    !/^[a-z0-9](?:[a-z0-9._~-]{0,178}[a-z0-9])?$/u.test(normalized) ||
+    !PUBLIC_SLUG.test(normalized) ||
     normalized === "." ||
     normalized === ".."
   ) {
-    throw new StorefrontClientError("Invalid storefront content slug.");
+    throw new StorefrontClientError(`Invalid storefront ${label} slug.`);
+  }
+  return normalized;
+}
+
+function normalizeCatalogLimit(value: number | undefined): number | undefined {
+  if (value === undefined) return undefined;
+  if (!Number.isInteger(value) || value < 1 || value > 48) {
+    throw new StorefrontClientError("Invalid storefront catalog limit.");
+  }
+  return value;
+}
+
+function normalizeCatalogCursor(value: string | undefined): string | undefined {
+  if (value === undefined) return undefined;
+  const normalized = value.trim().toLowerCase();
+  if (!UUID.test(normalized)) {
+    throw new StorefrontClientError("Invalid storefront catalog cursor.");
   }
   return normalized;
 }
@@ -170,7 +212,7 @@ export function createStorefrontClient(
       const hostname = normalizeStorefrontHostname(requestHostname);
       const endpoint = new URL("/v1/storefront/content", baseUrl);
       endpoint.searchParams.set("hostname", hostname);
-      const slug = normalizeContentSlug(requestOptions.slug);
+      const slug = normalizePublicSlug(requestOptions.slug, "content");
       if (slug !== undefined) endpoint.searchParams.set("slug", slug);
       const content = await requestJson(
         endpoint,
@@ -182,6 +224,56 @@ export function createStorefrontClient(
         throw new StorefrontClientError("Storefront content hostname mismatch.");
       }
       return content;
+    },
+
+    async getCatalog(
+      requestHostname: string,
+      requestOptions: StorefrontCatalogRequestOptions = {},
+    ): Promise<StorefrontPublicCatalogPageV1> {
+      const hostname = normalizeStorefrontHostname(requestHostname);
+      const endpoint = new URL("/v1/storefront/catalog", baseUrl);
+      endpoint.searchParams.set("hostname", hostname);
+      const limit = normalizeCatalogLimit(requestOptions.limit);
+      const cursor = normalizeCatalogCursor(requestOptions.cursor);
+      if (limit !== undefined) endpoint.searchParams.set("limit", String(limit));
+      if (cursor !== undefined) endpoint.searchParams.set("cursor", cursor);
+      const catalog = await requestJson(
+        endpoint,
+        requestOptions.signal,
+        parseStorefrontPublicCatalogPageV1,
+        "Storefront catalog request failed.",
+      );
+      if (catalog.context.requestHostname !== hostname) {
+        throw new StorefrontClientError("Storefront catalog hostname mismatch.");
+      }
+      return catalog;
+    },
+
+    async getProduct(
+      requestHostname: string,
+      publicSlug: string,
+      requestOptions: { readonly signal?: AbortSignal } = {},
+    ): Promise<StorefrontPublicProductDetailV1> {
+      const hostname = normalizeStorefrontHostname(requestHostname);
+      const slug = normalizePublicSlug(publicSlug, "product");
+      if (slug === undefined) {
+        throw new StorefrontClientError("Storefront product slug is required.");
+      }
+      const endpoint = new URL(
+        `/v1/storefront/products/${encodeURIComponent(slug)}`,
+        baseUrl,
+      );
+      endpoint.searchParams.set("hostname", hostname);
+      const product = await requestJson(
+        endpoint,
+        requestOptions.signal,
+        parseStorefrontPublicProductDetailV1,
+        "Storefront product request failed.",
+      );
+      if (product.context.requestHostname !== hostname) {
+        throw new StorefrontClientError("Storefront product hostname mismatch.");
+      }
+      return product;
     },
   });
 }
