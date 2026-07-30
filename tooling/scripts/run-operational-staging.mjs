@@ -147,4 +147,9 @@ await run("npm", ["run", "db:migrate"], {
   LOAD_SYNTHETIC_SEED: "1",
 });
 await loadAndVerify(uri);
-await import("./run-custom-auth-staging.mjs");
+process.env.DATABASE_URL = uri;
+try {
+  await import("./run-custom-auth-staging.mjs");
+} finally {
+  delete process.env.DATABASE_URL;
+}
