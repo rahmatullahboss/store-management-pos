@@ -1,0 +1,84 @@
+name: Persistent Admin POS Staging
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - ops/persistent-admin-pos-staging-v1
+    paths:
+      - "apps/admin-web/**"
+      - "apps/pos-web/**"
+      - "apps/api/**"
+      - "packages/foundation/**"
+      - "packages/ui/**"
+      - "modules/**"
+      - "database/**"
+      - "tests/unit/persistent-admin-pos-staging.test.mjs"
+      - "tooling/scripts/apply-migrations.mjs"
+      - "tooling/scripts/deploy-persistent-staging.mjs"
+      - "docs/architecture/staging/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/persistent-admin-pos-staging.yml"
+
+concurrency:
+  group: persistent-admin-pos-staging
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  verify-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - name: Install exact dependencies
+        run: npm ci --ignore-scripts
+      - name: Verify repository and staging Worker
+        run: npm run verify
+      - name: Deploy persistent staging
+        run: npm run ci:staging-deploy
+      - name: Publish staging URL summary
+        if: always()
+        run: |
+          node <<'NODE'
+          const { readFileSync, appendFileSync, existsSync } = require('node:fs');
+          const reportPath = 'artifacts/staging/persistent-staging-report.json';
+          if (!existsSync(reportPath)) {
+            appendFileSync(process.env.GITHUB_STEP_SUMMARY, '## Persistent staging\n\nNo deployment report was produced.\n');
+            process.exit(0);
+          }
+          const report = JSON.parse(readFileSync(reportPath, 'utf8'));
+          const lines = [
+            '## Persistent staging',
+            '',
+            `- Status: ${report.status}`,
+            `- Worker: ${report.workerName}`,
+            `- URL: ${report.baseUrl ?? 'not available'}`,
+            `- Git SHA: ${report.gitSha}`,
+            `- Persistent: ${report.persistent === true ? 'yes' : 'not confirmed'}`,
+            `- Browser data: ${report.syntheticOnly === true ? 'synthetic only' : 'not confirmed'}`,
+            `- Authoritative browser writes: ${report.authoritativeBrowserWritesEnabled === true ? 'enabled' : 'disabled'}`,
+            '',
+          ];
+          appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join('\n')}\n`);
+          NODE
+      - name: Upload persistent staging evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: persistent-admin-pos-staging-${{ github.run_id }}
+          path: artifacts/staging/persistent-staging-report.json
+          if-no-files-found: warn
+          retention-days: 30
