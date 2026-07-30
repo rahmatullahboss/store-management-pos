@@ -55,6 +55,8 @@ test("authenticated operational routes replace empty staging shells", async () =
 
 test("persistent deployment proves useful routes and responsive browser surfaces", async () => {
   const runner = await source("tooling/scripts/run-custom-auth-staging.mjs");
+  const deploy = await source("tooling/scripts/deploy-custom-auth-staging.mjs");
+  const evidenceSources = `${runner}\n${deploy}`;
   for (const marker of [
     '"/admin/catalog"',
     '"/admin/customers"',
@@ -64,6 +66,9 @@ test("persistent deployment proves useful routes and responsive browser surfaces
     '"admin-inventory-desktop"',
     '"pos-register-mobile"',
   ]) {
-    assert.ok(runner.includes(marker), `missing deployment evidence marker ${marker}`);
+    assert.ok(
+      evidenceSources.includes(marker),
+      `missing deployment evidence marker ${marker}`,
+    );
   }
 });
