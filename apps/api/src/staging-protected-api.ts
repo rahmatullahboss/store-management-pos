@@ -24,15 +24,16 @@ import {
 } from "./staging-read-context.js";
 
 const AUDIENCE = "store-management-api-staging";
+const RESERVATION_UNIT = "EA";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
-const ALLOWED_READ_PATHS = new Set([
+const READ_PATHS = new Set([
   "/v1/inventory/availability",
   "/v1/inventory/movements",
   "/v1/procurement/suppliers",
   "/v1/procurement/purchase-orders",
 ]);
-const RESERVATION_CREATE_PATH = "/v1/inventory/reservations";
-const RESERVATION_RELEASE = /^\/v1\/inventory\/reservations\/([0-9a-f-]+)\/release$/iu;
+const CREATE_PATH = "/v1/inventory/reservations";
+const RELEASE_PATH = /^\/v1\/inventory\/reservations\/([0-9a-f-]+)\/release$/iu;
 
 export interface StagingProtectedApiEnvironment
   extends StagingReadContextEnvironment,
@@ -58,41 +59,6 @@ function requireSecret(env: StagingProtectedApiEnvironment): string {
   return value;
 }
 
-function requireScopedWarehouse(
-  url: URL,
-  warehouseId: string | undefined,
-): void {
-  if (!warehouseId) {
-    throw new PlatformError(
-      "PERMISSION_DENIED",
-      "Warehouse scope is required for this protected route",
-      403,
-    );
-  }
-  const supplied = url.searchParams.get("warehouseId");
-  if (supplied && supplied !== warehouseId) {
-    throw new PlatformError(
-      "PERMISSION_DENIED",
-      "Requested warehouse is outside the authenticated scope",
-      403,
-    );
-  }
-  url.searchParams.set("warehouseId", warehouseId);
-}
-
-function scopeProtectedRead(
-  url: URL,
-  warehouseId: string | undefined,
-): void {
-  if (
-    url.pathname === "/v1/inventory/availability" ||
-    url.pathname === "/v1/inventory/movements" ||
-    url.pathname === "/v1/procurement/purchase-orders"
-  ) {
-    requireScopedWarehouse(url, warehouseId);
-  }
-}
-
 function requireRecord(value: unknown, message: string): Record<string, unknown> {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     throw new PlatformError("VALIDATION_FAILED", message, 400);
@@ -107,39 +73,101 @@ function requireUuid(value: unknown, message: string): string {
   return value;
 }
 
-function requireInteger(value: unknown, minimum: number, maximum: number, message: string): number {
+function requireInteger(
+  value: unknown,
+  minimum: number,
+  maximum: number,
+  message: string,
+): number {
   if (!Number.isInteger(value) || Number(value) < minimum || Number(value) > maximum) {
     throw new PlatformError("VALIDATION_FAILED", message, 400);
   }
   return Number(value);
 }
 
-async function scopedCommandBody(
+function requireWarehouseScope(
+  url: URL,
+  warehouseId: string | undefined,
+): string {
+  if (!warehouseId) {
+    throw new PlatformError("PERMISSION_DENIED", "Warehouse scope is required", 403);
+  }
+  const supplied = url.searchParams.get("warehouseId");
+  if (supplied && supplied !== warehouseId) {
+    throw new PlatformError(
+      "PERMISSION_DENIED",
+      "Requested warehouse is outside the authenticated scope",
+      403,
+    );
+  }
+  url.searchParams.set("warehouseId", warehouseId);
+  return warehouseId;
+}
+
+function scopeRead(url: URL, warehouseId: string | undefined): void {
+  if (
+    url.pathname === "/v1/inventory/availability" ||
+    url.pathname === "/v1/inventory/movements" ||
+    url.pathname === "/v1/procurement/purchase-orders"
+  ) {
+    requireWarehouseScope(url, warehouseId);
+  }
+}
+
+function validateCommandOrigin(request: Request): void {
+  const url = new URL(request.url);
+  const expected = `${url.protocol}//${url.host}`;
+  const origin = request.headers.get("origin");
+  const site = request.headers.get("sec-fetch-site");
+  if (origin !== null && origin !== "null" && origin !== expected) {
+    throw new PlatformError(
+      "AUTHENTICATION_REQUIRED",
+      "Reservation command origin is invalid",
+      403,
+    );
+  }
+  if (site !== null && site !== "same-origin") {
+    throw new PlatformError(
+      "AUTHENTICATION_REQUIRED",
+      "Cross-site reservation command is not allowed",
+      403,
+    );
+  }
+  if ((origin === null || origin === "null") && site !== "same-origin") {
+    throw new PlatformError(
+      "AUTHENTICATION_REQUIRED",
+      "Reservation command origin evidence is missing",
+      403,
+    );
+  }
+}
+
+async function commandBody(
   request: Request,
   internalUrl: URL,
   warehouseId: string | undefined,
 ): Promise<string> {
-  if (!warehouseId) {
-    throw new PlatformError("PERMISSION_DENIED", "Warehouse scope is required", 403);
-  }
-  const contentType = request.headers.get("content-type") ?? "";
-  if (!contentType.toLowerCase().startsWith("application/json")) {
+  validateCommandOrigin(request);
+  const scopedWarehouse = requireWarehouseScope(internalUrl, warehouseId);
+  if (!(request.headers.get("content-type") ?? "").toLowerCase().startsWith("application/json")) {
     throw new PlatformError("VALIDATION_FAILED", "Reservation command requires JSON", 400);
   }
   const body = requireRecord(await request.json(), "Reservation command body is invalid");
-  if (internalUrl.pathname === RESERVATION_CREATE_PATH) {
-    const id = requireUuid(body.id, "Reservation id is invalid");
-    const rawLines = Array.isArray(body.lines) ? body.lines : [];
-    if (rawLines.length !== 1) {
+  if (internalUrl.pathname === CREATE_PATH) {
+    const lines = Array.isArray(body.lines) ? body.lines : [];
+    if (lines.length !== 1) {
       throw new PlatformError(
         "VALIDATION_FAILED",
         "Controlled reservation requires exactly one line",
         400,
       );
     }
-    const line = requireRecord(rawLines[0], "Reservation line is invalid");
-    const suppliedWarehouse = requireUuid(line.warehouseId, "Reservation warehouse is invalid");
-    if (suppliedWarehouse !== warehouseId) {
+    const line = requireRecord(lines[0], "Reservation line is invalid");
+    const suppliedWarehouse = requireUuid(
+      line.warehouseId,
+      "Reservation warehouse is invalid",
+    );
+    if (suppliedWarehouse !== scopedWarehouse) {
       throw new PlatformError(
         "PERMISSION_DENIED",
         "Reservation warehouse is outside the authenticated scope",
@@ -147,17 +175,22 @@ async function scopedCommandBody(
       );
     }
     const quantity = requireRecord(line.quantity, "Reservation quantity is invalid");
-    const amount = typeof quantity.amount === "string" ? Number(quantity.amount) : Number.NaN;
+    const amount = typeof quantity.amount === "string"
+      ? Number(quantity.amount)
+      : Number.NaN;
+    const suppliedUnit = typeof quantity.unit === "string"
+      ? quantity.unit.toUpperCase()
+      : "";
     if (
       !Number.isInteger(amount) ||
       amount < 1 ||
       amount > 5 ||
-      quantity.unit !== "EACH" ||
+      !["EA", "EACH"].includes(suppliedUnit) ||
       quantity.scale !== 0
     ) {
       throw new PlatformError(
         "VALIDATION_FAILED",
-        "Controlled reservation quantity must be 1 to 5 EACH",
+        "Controlled reservation quantity must be 1 to 5 EA",
         400,
       );
     }
@@ -166,21 +199,19 @@ async function scopedCommandBody(
       throw new PlatformError("VALIDATION_FAILED", "Reservation source id is invalid", 400);
     }
     return JSON.stringify({
-      id,
+      id: requireUuid(body.id, "Reservation id is invalid"),
       sourceType: "staging_manual",
       sourceId,
       fulfillmentPolicy: "all_or_nothing",
-      lines: [
-        {
-          id: requireUuid(line.id, "Reservation line id is invalid"),
-          variantId: requireUuid(line.variantId, "Reservation variant is invalid"),
-          warehouseId,
-          quantity: { amount: String(amount), unit: "EACH", scale: 0 },
-        },
-      ],
+      lines: [{
+        id: requireUuid(line.id, "Reservation line id is invalid"),
+        variantId: requireUuid(line.variantId, "Reservation variant is invalid"),
+        warehouseId: scopedWarehouse,
+        quantity: { amount: String(amount), unit: RESERVATION_UNIT, scale: 0 },
+      }],
     });
   }
-  if (RESERVATION_RELEASE.test(internalUrl.pathname)) {
+  if (RELEASE_PATH.test(internalUrl.pathname)) {
     return JSON.stringify({
       expectedVersion: requireInteger(
         body.expectedVersion,
@@ -200,12 +231,10 @@ async function assertReleaseWarehouse(
   warehouseId: string,
 ): Promise<void> {
   const rows = await database.httpQuery<{ in_scope: boolean } & Record<string, unknown>>(
-    `SELECT
-       COUNT(*) > 0
-       AND BOOL_AND(l.warehouse_id = $3::uuid) AS in_scope
-     FROM inventory.stock_reservation_lines AS l
-     WHERE l.tenant_id = $1::uuid
-       AND l.reservation_id = $2::uuid`,
+    `SELECT COUNT(*) > 0 AND BOOL_AND(line.warehouse_id = $3::uuid) AS in_scope
+       FROM inventory.stock_reservation_lines AS line
+      WHERE line.tenant_id = $1::uuid
+        AND line.reservation_id = $2::uuid`,
     [tenantId, reservationId, warehouseId],
   );
   if (rows[0]?.in_scope !== true) {
@@ -217,16 +246,17 @@ async function assertReleaseWarehouse(
   }
 }
 
-function securedResponse(response: Response, head: boolean, clearGrant = false): Response {
+function securedResponse(
+  response: Response,
+  head: boolean,
+  clearGrant = false,
+): Response {
   const headers = new Headers(response.headers);
   headers.set("Cache-Control", "no-store, max-age=0");
   headers.set("X-Content-Type-Options", "nosniff");
   headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
   if (clearGrant) headers.append("Set-Cookie", clearStagingStepUpCookie());
-  return new Response(head ? null : response.body, {
-    status: response.status,
-    headers,
-  });
+  return new Response(head ? null : response.body, { status: response.status, headers });
 }
 
 export async function handleStagingProtectedApi(
@@ -246,22 +276,16 @@ export async function handleStagingProtectedApi(
         401,
       );
     }
-
     const internalUrl = new URL(request.url);
     internalUrl.pathname = internalUrl.pathname.slice("/api".length) || "/";
     const readRoute =
       (request.method === "GET" || request.method === "HEAD") &&
-      ALLOWED_READ_PATHS.has(internalUrl.pathname);
+      READ_PATHS.has(internalUrl.pathname);
     const commandRoute =
       request.method === "POST" &&
-      (internalUrl.pathname === RESERVATION_CREATE_PATH ||
-        RESERVATION_RELEASE.test(internalUrl.pathname));
+      (internalUrl.pathname === CREATE_PATH || RELEASE_PATH.test(internalUrl.pathname));
     if (!readRoute && !commandRoute) {
-      throw new PlatformError(
-        "NOT_FOUND",
-        "Protected staging route is not enabled",
-        404,
-      );
+      throw new PlatformError("NOT_FOUND", "Protected staging route is not enabled", 404);
     }
 
     const secret = requireSecret(env);
@@ -278,7 +302,7 @@ export async function handleStagingProtectedApi(
     let verifier: StagingInternalTokenVerifier | StagingCommandTokenVerifier;
     let body: string | undefined;
     if (readRoute) {
-      scopeProtectedRead(internalUrl, context.scope.warehouseId);
+      scopeRead(internalUrl, context.scope.warehouseId);
       token = await issueStagingInternalToken({
         secret,
         issuer,
@@ -293,8 +317,8 @@ export async function handleStagingProtectedApi(
       });
     } else {
       commandAttempt = true;
-      body = await scopedCommandBody(request, internalUrl, context.scope.warehouseId);
-      const release = RESERVATION_RELEASE.exec(internalUrl.pathname);
+      body = await commandBody(request, internalUrl, context.scope.warehouseId);
+      const release = RELEASE_PATH.exec(internalUrl.pathname);
       if (release) {
         await assertReleaseWarehouse(
           database,
@@ -331,18 +355,14 @@ export async function handleStagingProtectedApi(
       headers,
       ...(body === undefined ? {} : { body }),
     });
-    const requestContext = await buildRequestContext(
-      internalRequest,
-      verifier,
-      env.REGION,
-    );
-    const inventoryResponse = await handleInventoryRequest(
+    const requestContext = await buildRequestContext(internalRequest, verifier, env.REGION);
+    const inventory = await handleInventoryRequest(
       internalRequest,
       internalUrl,
       requestContext,
       database,
     );
-    const response = inventoryResponse ?? await handleProcurementRequest(
+    const response = inventory ?? await handleProcurementRequest(
       internalRequest,
       internalUrl,
       requestContext,
@@ -351,15 +371,8 @@ export async function handleStagingProtectedApi(
     if (!response) {
       throw new PlatformError("NOT_FOUND", "Protected staging route was not handled", 404);
     }
-    return securedResponse(
-      response,
-      request.method === "HEAD",
-      commandRoute,
-    );
+    return securedResponse(response, request.method === "HEAD", commandRoute);
   } catch (error) {
-    const response = errorResponse(error, id);
-    return commandAttempt
-      ? securedResponse(response, false, true)
-      : securedResponse(response, false, false);
+    return securedResponse(errorResponse(error, id), false, commandAttempt);
   }
 }
