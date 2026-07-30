@@ -30,8 +30,8 @@ upstream:
   product_branding_reuse: prohibited
   provenance_recording: required
   wholesale_import: prohibited
-  imported_source_batches: 3
-  latest_import_batch: SF-UP-003
+  imported_source_batches: 4
+  latest_import_batch: SF-UP-004
 
 checkpoints:
   H0:
@@ -42,7 +42,7 @@ checkpoints:
       - workpack_continuation_hub_programme_board_and_execution_policy_created
       - product_scope_delivery_roadmap_and_implementation_backlog_created
       - reuse_register_OSS_0006_and_internal_notice_created
-      - file_level_adaptation_manifests_SF_UP_001_to_SF_UP_003
+      - file_level_adaptation_manifests_SF_UP_001_to_SF_UP_004
       - module_boundary_registered
       - latest_integration_baseline_merged_by_sync_PR_53
       - integration_conflicts_resolved_additively_and_validated
@@ -230,13 +230,55 @@ checkpoints:
           validation_foundation_design_run: 30519327509
           validation_storefront_lockfile_run: 30519327510
           checkpoint_doc: docs/architecture/storefront/public-catalog-checkpoint.md
+      H3-DISCOVERY-03:
+        status: complete
+        completed:
+          - versioned_public_category_collection_and_search_contracts
+          - STF_0011_host_scoped_category_and_collection_resolution
+          - STF_0012_published_only_literal_and_full_text_search
+          - STF_0013_authoritative_category_and_availability_filter_application
+          - category_breadcrumb_child_navigation_and_bounded_pagination
+          - deterministic_collection_member_order_and_public_product_intersection
+          - retained_search_filter_state_clear_action_facets_and_no_result_page
+          - wildcard_safe_search_and_SQL_bounded_category_facets
+          - bootstrap_discovery_scope_reconciliation_and_fail_closed_routes
+          - SF_UP_004_category_collection_and_search_page_composition_adaptation
+          - PostgreSQL_pipefail_and_disjoint_fixture_truth_correction
+          - owner_safe_Cloudflare_preview_quota_recovery
+          - PostgreSQL_browser_Cloudflare_and_recovery_evidence
+        exact_head_evidence:
+          head: bad50da86831d1392e77d0263f978220356a36d6
+          storefront_ci_run: 30534413388
+          storefront_verify_job: 90844121062
+          postgres_rehearsal_job: 90844265607
+          browser_evidence_job: 90844265594
+          cloudflare_preview_job: 90844265639
+          neon_recovery_job: 90844265994
+          repository_tests: 450
+          buyer_browser_scenarios: 3
+          admin_browser_scenarios: 4
+          public_content_browser_scenarios: 3
+          public_catalog_browser_scenarios: 3
+          public_discovery_browser_scenarios: 3
+          public_discovery_axe_violations: 0
+          applied_search_filter_evidence: passed_zero_axe
+          storefront_migrations: 13
+          storefront_tables: 16
+          forced_RLS_tables: 16
+          audit_events: 42
+          outbox_events: 42
+          command_receipts: 23
+          cache_generation_rows: 1
+          PostgreSQL_raw_errors: 0
+          Cloudflare_owned_stale_workers_pruned: 20
+          Cloudflare_requests: 1
+          Cloudflare_errors: 0
+          checkpoint_doc: docs/architecture/storefront/public-discovery-checkpoint.md
     active_slice:
-      id: H3-DISCOVERY-03
-      description: Add published category and collection projections and pages, then bounded storefront search and facets using the existing authoritative public product composition.
-      plan_doc: docs/architecture/storefront/public-discovery-plan.md
+      id: H3-SEO-MEDIA-04
+      description: Add published-only robots, sitemap, canonical and structured metadata, bounded product media delivery and exact cache-generation families using selectively adapted Scalius discovery patterns.
+      plan_doc: docs/architecture/storefront/public-seo-media-plan.md
     remaining:
-      - category_and_collection_public_projections_and_pages
-      - bounded_public_search_and_facets
       - media_delivery_and_cache_generation
       - SEO_discovery_robots_sitemap_and_structured_data
       - public_catalog_low_bandwidth_and_broader_locale_evidence
@@ -263,9 +305,9 @@ module_authority:
   storefront_publication_presentation_domains: MOD-H
 
 next_action:
-  id: H3-DISCOVERY-03
-  description: Follow the approved public-discovery plan: build published category and collection pages from MOD-H selection and the verified authoritative public product composition, then add bounded search and facets without creating a second catalog authority.
-  documentation_first: docs/architecture/storefront/public-discovery-plan.md
+  id: H3-SEO-MEDIA-04
+  description: Follow the approved SEO/media plan: selectively adapt Scalius robots, sitemap, canonical, discovery-cache and generation patterns to local published-only contracts without importing upstream business authority.
+  documentation_first: docs/architecture/storefront/public-seo-media-plan.md
 
 last_commits:
   - sha: e9dc992ded901452b3633b3d20a261e50668bc88
@@ -278,13 +320,15 @@ last_commits:
     purpose: H3 authoritative public listing and product detail implementation checkpoint
   - sha: f4b9e93a50d60e22e98c5ef80a1542279000095a
     purpose: quota-safe full validation of the H3 catalog checkpoint
+  - sha: bad50da86831d1392e77d0263f978220356a36d6
+    purpose: H3 category collection search filters PostgreSQL truth Cloudflare retention and exact-head evidence
 
 evidence:
   github:
     pr: 48
     base_sha: fd63dfde4d5940112a9c77c2743b281e49ff6b55
-    verified_implementation_head: e5092766ff625e1bbf0f9cff191296e1fb1851a8
-    verified_validation_head: f4b9e93a50d60e22e98c5ef80a1542279000095a
+    verified_implementation_head: bad50da86831d1392e77d0263f978220356a36d6
+    verified_validation_head: bad50da86831d1392e77d0263f978220356a36d6
     integration_sync_pr: 53
     integration_sync_report: docs/architecture/storefront/integration-conflicts.txt
   neon:
@@ -297,12 +341,16 @@ evidence:
     generic_preview_policy: skipped_for_MOD_H_until_safe_quota_slot
     required_evidence: PostgreSQL_17_full_replay_plus_non_destructive_Neon_recovery
   adaptation:
-    latest_batch: SF-UP-003
+    latest_batch: SF-UP-004
     upstream_product_card_blob: 68bc025696a3e36dbf316d64f2e026ac719ddcf9
+    upstream_discovery_blobs:
+      category_page: fb8c87c5828766d9a63f149e1bac3692384a1f79
+      collection_page: 110a72dd675ab282ae5efa656529844b3a8aabba
+      search_page: 9a8bf2f1c8876d57875209791dd2c0a878c2c385
     product_facing_upstream_branding: none
     upstream_business_authority_imported: false
   known_risks:
     - dedicated_neon_branch_waiting_for_safe_quota_slot
     - custom_domain_provider_execution_requires_MOD_G_control_plane_adapter
-    - category_collection_search_media_and_SEO_discovery_remain_in_H3
+    - media_cache_generation_and_SEO_discovery_remain_in_H3
     - customer_auth_cart_checkout_and_order_experience_remain_future_checkpoints
