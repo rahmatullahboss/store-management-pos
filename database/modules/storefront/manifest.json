@@ -26,6 +26,11 @@
       "id": "STF-0005",
       "file": "STF-0005-publication-content-commands.sql",
       "sha256": "b6a287c089d30ae2d9fd45231772dce6eaf062fdbdbe6ce55cc612134561e6a7"
+    },
+    {
+      "id": "STF-0006",
+      "file": "STF-0006-public-content-resolution.sql",
+      "sha256": "8507fc7f369fd784bf2e28729df3f73125550c8350c9fa891e5226285659e51a"
     }
   ]
 }
