@@ -11,6 +11,17 @@ SELECT platform.set_request_context(
 );
 
 SELECT *
+FROM storefront.transition_domain(
+  '10000000-0000-4000-8000-000000000260',
+  '10000000-0000-4000-8000-000000000001',
+  '10000000-0000-4000-8000-000000000150',
+  'active', 'active', 'provider-host-a', NULL, NULL, true,
+  '30000000-0000-4000-8000-000000000001',
+  'reactivate-domain-public-content', repeat('a', 64),
+  'reactivate-domain-public-content', 'trace-storefront-public-content', DATE '2026-07-30'
+);
+
+SELECT *
 FROM storefront.publish_content_page_revision(
   '10000000-0000-4000-8000-000000000240',
   '10000000-0000-4000-8000-000000000241',
