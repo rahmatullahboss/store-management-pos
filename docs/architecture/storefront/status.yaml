@@ -175,15 +175,55 @@ checkpoints:
           Cloudflare_requests: 42
           Cloudflare_errors: 0
           checkpoint_doc: docs/architecture/storefront/public-content-checkpoint.md
+      H3-CATALOG-02:
+        status: complete
+        completed:
+          - versioned_storefront_public_catalog_and_product_contracts
+          - STF_0009_authoritative_MOD_A_catalog_pricing_and_MOD_B_availability_composition
+          - STF_0010_host_scoped_listing_and_product_detail_resolvers
+          - exact_integer_minor_money_and_exact_decimal_quantity_projection
+          - published_selection_active_price_rule_and_warehouse_scope_enforcement
+          - active_reservation_subtraction_and_unknown_preorder_unavailable_states
+          - public_catalog_and_product_API_routes
+          - typed_client_and_buyer_Worker_catalog_resolvers
+          - responsive_product_listing_and_detail_rendering
+          - checkout_time_tax_and_promotion_revalidation_notice
+          - unpublished_archived_unpriced_unknown_host_and_scope_mismatch_denial
+          - compare_at_price_accessibility_contrast_correction
+          - PostgreSQL_browser_Cloudflare_and_recovery_evidence
+        exact_head_evidence:
+          head: e5092766ff625e1bbf0f9cff191296e1fb1851a8
+          storefront_ci_run: 30519058955
+          storefront_verify_job: 90795225080
+          postgres_rehearsal_job: 90795311940
+          browser_evidence_job: 90795311932
+          cloudflare_preview_job: 90795311951
+          neon_recovery_job: 90795311962
+          repository_tests: 435
+          buyer_browser_scenarios: 3
+          admin_browser_scenarios: 4
+          public_content_browser_scenarios: 3
+          public_catalog_browser_scenarios: 3
+          public_catalog_axe_violations: 0
+          storefront_migrations: 10
+          storefront_tables: 16
+          forced_RLS_tables: 16
+          audit_events: 37
+          outbox_events: 37
+          command_receipts: 23
+          cache_generation_rows: 1
+          Cloudflare_requests: 3
+          Cloudflare_errors: 0
+          checkpoint_doc: docs/architecture/storefront/public-catalog-checkpoint.md
     active_slice:
-      id: H3-CATALOG-02
-      description: Compose published MOD-H selection with authoritative MOD-A catalog and exact pricing plus MOD-B availability for public listing and detail projections without moving business authority into MOD-H.
+      id: H3-DISCOVERY-03
+      description: Add published category and collection projections and pages, then bounded storefront search and facets using the existing authoritative public product composition.
     remaining:
-      - authoritative_public_product_listing_and_detail_projection
-      - category_collection_and_search_pages
+      - category_and_collection_public_projections_and_pages
+      - bounded_public_search_and_facets
       - media_delivery_and_cache_generation
       - SEO_discovery_robots_sitemap_and_structured_data
-      - public_catalog_accessibility_localisation_RTL_and_low_bandwidth_evidence
+      - public_catalog_low_bandwidth_and_broader_locale_evidence
   H4:
     title: Exact cart and checkout
     status: blocked_by_H3
@@ -207,8 +247,8 @@ module_authority:
   storefront_publication_presentation_domains: MOD-H
 
 next_action:
-  id: H3-CATALOG-02
-  description: Build published-only public listing/detail projections from MOD-H selection, MOD-A catalog and exact pricing, and MOD-B availability; then render category, collection and search pages.
+  id: H3-DISCOVERY-03
+  description: Build published category and collection pages from MOD-H taxonomy selection and the verified authoritative public product composition, then add bounded search and facets without creating a second catalog authority.
 
 last_commits:
   - sha: e9dc992ded901452b3633b3d20a261e50668bc88
@@ -217,12 +257,14 @@ last_commits:
     purpose: H2 publishing management admin and full storefront CI checkpoint
   - sha: b5fa25cc6e197c9bb9893ac0194028408fe89940
     purpose: H3 published public content and compatibility migration checkpoint
+  - sha: e5092766ff625e1bbf0f9cff191296e1fb1851a8
+    purpose: H3 authoritative public listing and product detail checkpoint
 
 evidence:
   github:
     pr: 48
     base_sha: fd63dfde4d5940112a9c77c2743b281e49ff6b55
-    verified_head: b5fa25cc6e197c9bb9893ac0194028408fe89940
+    verified_head: e5092766ff625e1bbf0f9cff191296e1fb1851a8
     integration_sync_pr: 53
     integration_sync_report: docs/architecture/storefront/integration-conflicts.txt
   neon:
@@ -240,5 +282,5 @@ evidence:
   known_risks:
     - dedicated_neon_branch_waiting_for_safe_quota_slot
     - custom_domain_provider_execution_requires_MOD_G_control_plane_adapter
-    - authoritative_public_catalog_composition_requires_MOD_A_and_MOD_B_contract_projection
+    - category_collection_search_media_and_SEO_discovery_remain_in_H3
     - customer_auth_cart_checkout_and_order_experience_remain_future_checkpoints
