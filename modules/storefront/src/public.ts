@@ -5,6 +5,12 @@ import {
   type StorefrontBootstrapV1,
 } from "../../../packages/storefront-contracts/src/index.js";
 import {
+  parseStorefrontPublicCatalogPageV1,
+  parseStorefrontPublicProductDetailV1,
+  type StorefrontPublicCatalogPageV1,
+  type StorefrontPublicProductDetailV1,
+} from "../../../packages/storefront-contracts/src/public-catalog.js";
+import {
   parseStorefrontPublicContentBundleV1,
   type StorefrontPublicContentBundleV1,
 } from "../../../packages/storefront-contracts/src/public-content.js";
@@ -36,21 +42,58 @@ interface PublicContentRow extends PublicHostRow {
   readonly contentPageSeoDocument: Readonly<Record<string, unknown>> | null;
 }
 
+interface PublicCatalogRow extends PublicHostRow {
+  readonly productDocuments: readonly unknown[];
+  readonly nextCursor: string | null;
+  readonly hasMore: boolean;
+}
+
+interface PublicProductRow extends PublicHostRow {
+  readonly productDocument: unknown;
+}
+
 export interface StorefrontPublicRepository {
   resolveBootstrap(hostname: string): Promise<StorefrontBootstrapV1 | null>;
   resolveContentBundle(
     hostname: string,
     contentSlug?: string,
   ): Promise<StorefrontPublicContentBundleV1 | null>;
+  resolveCatalog(
+    hostname: string,
+    options?: { readonly limit?: number; readonly cursor?: string },
+  ): Promise<StorefrontPublicCatalogPageV1 | null>;
+  resolveProduct(
+    hostname: string,
+    publicSlug: string,
+  ): Promise<StorefrontPublicProductDetailV1 | null>;
 }
 
 const PUBLIC_SLUG = /^[a-z0-9](?:[a-z0-9._~-]{0,178}[a-z0-9])?$/u;
+const UUID =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
-function normalizeContentSlug(value: string | undefined): string | null {
+function normalizePublicSlug(value: string | undefined, label: string): string | null {
   if (value === undefined) return null;
   const normalized = value.trim().toLowerCase();
   if (!PUBLIC_SLUG.test(normalized) || normalized === "." || normalized === "..") {
-    throw new TypeError("Public content slug is invalid.");
+    throw new TypeError(`${label} is invalid.`);
+  }
+  return normalized;
+}
+
+function normalizeCatalogLimit(value: number | undefined): number {
+  if (value === undefined) return 24;
+  if (!Number.isInteger(value) || value < 1 || value > 48) {
+    throw new RangeError("Public catalog limit must be between 1 and 48.");
+  }
+  return value;
+}
+
+function normalizeCatalogCursor(value: string | undefined): string | null {
+  if (value === undefined) return null;
+  const normalized = value.trim().toLowerCase();
+  if (!UUID.test(normalized)) {
+    throw new TypeError("Public catalog cursor is invalid.");
   }
   return normalized;
 }
@@ -111,7 +154,7 @@ export class SqlStorefrontPublicRepository implements StorefrontPublicRepository
     contentSlug?: string,
   ): Promise<StorefrontPublicContentBundleV1 | null> {
     const normalized = normalizeStorefrontHostname(hostname);
-    const normalizedSlug = normalizeContentSlug(contentSlug);
+    const normalizedSlug = normalizePublicSlug(contentSlug, "Public content slug");
     const rows = await this.database.httpQuery<PublicContentRow>(
       `SELECT
         tenant_id AS "tenantId",
@@ -162,5 +205,79 @@ export class SqlStorefrontPublicRepository implements StorefrontPublicRepository
       throw new Error("Public storefront content resolution returned a mismatched hostname.");
     }
     return bundle;
+  }
+
+  public async resolveCatalog(
+    hostname: string,
+    options: { readonly limit?: number; readonly cursor?: string } = {},
+  ): Promise<StorefrontPublicCatalogPageV1 | null> {
+    const normalized = normalizeStorefrontHostname(hostname);
+    const limit = normalizeCatalogLimit(options.limit);
+    const cursor = normalizeCatalogCursor(options.cursor);
+    const rows = await this.database.httpQuery<PublicCatalogRow>(
+      `SELECT
+        tenant_id AS "tenantId",
+        storefront_id AS "storefrontId",
+        sales_channel_id AS "salesChannelId",
+        request_hostname AS "requestHostname",
+        canonical_hostname AS "canonicalHostname",
+        locale,
+        currency,
+        price_list_revision AS "priceListRevision",
+        publication_generation AS "publicationGeneration",
+        product_documents AS "productDocuments",
+        next_cursor::text AS "nextCursor",
+        has_more AS "hasMore"
+      FROM storefront.resolve_public_catalog($1::text, $2::integer, $3::uuid)`,
+      [normalized, limit, cursor],
+    );
+    const row = rows[0];
+    if (!row) return null;
+    const catalog = parseStorefrontPublicCatalogPageV1({
+      contractVersion: "storefront-public-catalog.v1",
+      context: context(row),
+      items: row.productDocuments,
+      nextCursor: row.nextCursor,
+      hasMore: row.hasMore,
+    });
+    if (catalog.context.requestHostname !== normalized) {
+      throw new Error("Public storefront catalog resolution returned a mismatched hostname.");
+    }
+    return catalog;
+  }
+
+  public async resolveProduct(
+    hostname: string,
+    publicSlug: string,
+  ): Promise<StorefrontPublicProductDetailV1 | null> {
+    const normalized = normalizeStorefrontHostname(hostname);
+    const slug = normalizePublicSlug(publicSlug, "Public product slug");
+    if (slug === null) throw new TypeError("Public product slug is required.");
+    const rows = await this.database.httpQuery<PublicProductRow>(
+      `SELECT
+        tenant_id AS "tenantId",
+        storefront_id AS "storefrontId",
+        sales_channel_id AS "salesChannelId",
+        request_hostname AS "requestHostname",
+        canonical_hostname AS "canonicalHostname",
+        locale,
+        currency,
+        price_list_revision AS "priceListRevision",
+        publication_generation AS "publicationGeneration",
+        product_document AS "productDocument"
+      FROM storefront.resolve_public_product($1::text, $2::text)`,
+      [normalized, slug],
+    );
+    const row = rows[0];
+    if (!row) return null;
+    const detail = parseStorefrontPublicProductDetailV1({
+      contractVersion: "storefront-public-product.v1",
+      context: context(row),
+      product: row.productDocument,
+    });
+    if (detail.context.requestHostname !== normalized) {
+      throw new Error("Public storefront product resolution returned a mismatched hostname.");
+    }
+    return detail;
   }
 }
