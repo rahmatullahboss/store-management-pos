@@ -41,6 +41,11 @@
       "id": "STF-0008",
       "file": "STF-0008-qualified-publication-command-references.sql",
       "sha256": "7599c938eb5e6adf834ba3919d8ed4a16e2b016216ef7db2ca7d25f64b62be42"
+    },
+    {
+      "id": "STF-0009",
+      "file": "STF-0009-public-catalog-resolution.sql",
+      "sha256": "4a915f573a2da394189ba5ca6eb539a13bd7489318a3488f707cce0d68e8707e"
     }
   ]
 }
