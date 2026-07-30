@@ -58,12 +58,13 @@ const expandedScenario = `    for (const scenario of [
 const expandedProbes = `${contextProbeNeedle}
   probes.push(await probe(baseUrl, "/auth/context", '"database-resolved-read-only"', 200, authenticated));
   probes.push(await probe(baseUrl, "/auth/mfa/status", '"enrolled":true', 200, authenticated));
+  probes.push(await probe(baseUrl, "/forgot-password", "Reset your password", 200));
   probes.push(await probe(baseUrl, "/admin", "Run the store from evidence", 200, authenticated));
   probes.push(await probe(baseUrl, "/admin/catalog", "Database-backed catalog", 200, authenticated));
   probes.push(await probe(baseUrl, "/admin/customers", "Ayesha Rahman", 200, authenticated));
   probes.push(await probe(baseUrl, "/admin/sales", "SO-STG-0001", 200, authenticated));
   probes.push(await probe(baseUrl, "/admin/inventory/reservations", "Controlled reservations", 200, authenticated));
-  probes.push(await probe(baseUrl, "/staging/status", '"controlled-reservation-release-candidate"'));
+  probes.push(await probe(baseUrl, "/staging/status", '"hashed-single-use-token-lifecycle"'));
   probes.push(await probe(baseUrl, "/api/v1/inventory/availability?variantId=018f1000-0000-7000-8000-000000000201&warehouseId=018f0000-0000-7000-8000-000000000402", '"available"', 200, authenticated));
   probes.push(await probe(baseUrl, "/api/v1/inventory/movements?warehouseId=018f0000-0000-7000-8000-000000000402&limit=10", "STG-OPEN-001", 200, authenticated));
   probes.push(await probe(baseUrl, "/api/v1/procurement/suppliers?limit=10", "Northstar Distribution", 200, authenticated));
@@ -88,7 +89,15 @@ const browserEvidenceGate = `  browserEvidenceResult = await browserEvidence(bas
   const failedBrowserEvidence = browser.scenarios.filter((scenario) => scenario.passed !== true);
   if (browser.scenarios.length !== 6 || failedBrowserEvidence.length > 0 || browser.session.passed !== true || browser.context.passed !== true || browser.logout.passed !== true) {
     throw new Error(\`Persistent staging browser evidence failed: \${JSON.stringify({ scenarios: failedBrowserEvidence, session: browser.session, context: browser.context, logout: browser.logout })}\`);
-  }`;
+  }
+  accountRecoveryEvidence = await (await import("./staging-account-recovery-evidence.mjs")).runAccountRecoveryJourney({
+    baseUrl,
+    sessionCookie: account.cookie,
+    oldPassword: authPassword,
+    email: authEmail,
+    connectionString,
+    runId: GITHUB_RUN_ID || "manual",
+  });`;
 
 const successfulCleanup = `  const reservationEvidenceCleaned = await (await import("./staging-mfa-reservation-evidence.mjs")).cleanupMfaReservationEvidence(connectionString, mfaReservationEvidence?.reservationId);
   if (!reservationEvidenceCleaned) throw new Error("Synthetic MFA reservation cleanup failed");
@@ -99,12 +108,14 @@ const failureCleanup = `} catch (error) {
   }
   if (connectionString && authEmail && cleanupCount === 0) {`;
 const reportEvidence = `    mfa: mfaReservationEvidence?.report ?? null,
+    accountRecovery: accountRecoveryEvidence?.report ?? null,
     controlledCommand: { permission: "inventory.reservation.manage", createPassed: mfaReservationEvidence?.report?.createPassed === true, releasePassed: mfaReservationEvidence?.report?.releasePassed === true, availabilityReconciled: mfaReservationEvidence?.report?.availabilityReconciled === true, syntheticReservationCleaned: reservationEvidenceCleaned },
     probes,
     browser: browser.scenarios,`;
 const failedReportEvidence = `    syntheticAuthCleanupCount: cleanupCount,
     browser: browserEvidenceResult?.scenarios ?? [],
     mfa: mfaReservationEvidence?.report ?? null,
+    accountRecovery: accountRecoveryEvidence?.report ?? null,
     error:`;
 const scenarioEvidence = `        overflow: metrics.overflow,
         evidence: {
@@ -118,8 +129,8 @@ const scenarioEvidence = `        overflow: metrics.overflow,
 
 const patchedDeploy = originalDeploy
   .replace(redactNeedle, '.replaceAll(connectionString || "postgresql://__never__", "[REDACTED_DATABASE_URL]")')
-  .replace(declarationNeedle, `${declarationNeedle}\nlet mfaReservationEvidence;\nlet browserEvidenceResult;`)
-  .replace(migrationMinimumNeedle, "evidence.migration_count < 60")
+  .replace(declarationNeedle, `${declarationNeedle}\nlet mfaReservationEvidence;\nlet browserEvidenceResult;\nlet accountRecoveryEvidence;`)
+  .replace(migrationMinimumNeedle, "evidence.migration_count < 63")
   .replace(mainNeedle, 'main: "apps/api/src/staging-entry.ts"')
   .replace(baseUrlNeedle, secretUpload)
   .replace(accountNeedle, mfaJourney)
@@ -135,7 +146,7 @@ const patchedDeploy = originalDeploy
   .replace(reportNeedle, reportEvidence)
   .replace(failedReportNeedle, failedReportEvidence)
   .replace(reportWriteNeedle, `${reportWriteNeedle}\n    controlledAuthoritativeWritesEnabled: ["inventory.reservation.create", "inventory.reservation.release"],`)
-  .replaceAll("schemaVersion: 3", "schemaVersion: 4");
+  .replaceAll("schemaVersion: 3", "schemaVersion: 5");
 
 process.env.STAGING_INTERNAL_TOKEN_SECRET = randomBytes(48).toString("base64url");
 await writeFile(deployPath, patchedDeploy, "utf8");
