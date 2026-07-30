@@ -1,0 +1,32 @@
+schema_version: 1
+workstream: persistent-admin-pos-staging
+status: active
+branch: ops/persistent-admin-pos-staging-v1
+base_sha: 3a414363a40f48bd6e526418d9e82679501b170e
+resources:
+  cloudflare_worker: store-pos-staging
+  neon_project_name: store-management-pos-staging
+  neon_project_id: morning-flower-46531465
+  neon_branch_name: main
+  neon_branch_id: br-empty-sound-afkx5vkj
+  database: neondb
+checkpoints:
+  documentation_first:
+    status: complete
+    plan: docs/architecture/staging/persistent-admin-pos-staging-plan.md
+  dedicated_neon_project:
+    status: complete
+  persistent_worker:
+    status: active
+  migration_replay:
+    status: pending
+  browser_smoke:
+    status: pending
+  api_health:
+    status: pending
+  staging_auth:
+    status: pending
+limitations:
+  - browser surfaces use synthetic data in the first milestone
+  - authoritative write journeys remain disabled until staging OIDC is configured
+  - no custom staging domain is assigned yet
