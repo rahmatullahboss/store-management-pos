@@ -76,6 +76,11 @@
       "id": "STF-0015",
       "file": "STF-0015-public-media-resolution.sql",
       "sha256": "532bb1249532e63db440a1a9111ec40fc354cffa8abbb73aabeeaccda6c751e6"
+    },
+    {
+      "id": "STF-0016",
+      "file": "STF-0016-cache-generation-families.sql",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
     }
   ]
 }
