@@ -21,6 +21,24 @@ on:
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/persistent-admin-pos-staging.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "apps/admin-web/**"
+      - "apps/pos-web/**"
+      - "apps/api/**"
+      - "packages/foundation/**"
+      - "packages/ui/**"
+      - "modules/**"
+      - "database/**"
+      - "tests/unit/persistent-admin-pos-staging.test.mjs"
+      - "tooling/scripts/apply-migrations.mjs"
+      - "tooling/scripts/deploy-persistent-staging.mjs"
+      - "docs/architecture/staging/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/persistent-admin-pos-staging.yml"
 
 concurrency:
   group: persistent-admin-pos-staging
@@ -31,6 +49,7 @@ permissions:
 
 jobs:
   verify-and-deploy:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
