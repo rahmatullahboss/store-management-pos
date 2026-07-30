@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import test from "node:test";
+import { enrichStorefrontProductStructuredData } from "../../build/apps/storefront-web/src/product-structured-response.js";
 import { storefrontShellResponse } from "../../build/apps/storefront-web/src/render.js";
 import { serializeStorefrontProductStructuredData } from "../../build/apps/storefront-web/src/seo.js";
 import { parseStorefrontBootstrapV1 } from "../../build/packages/storefront-contracts/src/index.js";
@@ -78,14 +79,37 @@ function productDetail(availability = "limited") {
   });
 }
 
-test("product detail binds the exact JSON-LD payload to a SHA-256 CSP source", async () => {
+function bindings(detail = productDetail()) {
+  return {
+    STOREFRONT_STAGE: "production",
+    STOREFRONT_API_BASE_URL: "https://api.example.com",
+    STOREFRONT_PLATFORM_BASE_DOMAIN: "shops.example.com",
+    STOREFRONT_BUILD_ID: "structured-data-test",
+    STOREFRONT_API: {
+      async fetch(input) {
+        const url = new URL(String(input));
+        assert.equal(url.pathname, "/v1/storefront/products/linen-shirt");
+        assert.equal(url.searchParams.get("hostname"), "shop.example.com");
+        return Response.json(detail);
+      },
+    },
+  };
+}
+
+test("product response binds the exact JSON-LD payload to a SHA-256 CSP source", async () => {
   const detail = productDetail();
   const serialized = serializeStorefrontProductStructuredData(detail);
   const expectedHash = createHash("sha256").update(serialized).digest("base64");
-  const response = await storefrontShellResponse(
-    new Request("https://shop.example.com/products/linen-shirt"),
-    bootstrap,
-    { buildId: "structured-data-test", product: detail },
+  const request = new Request("https://shop.example.com/products/linen-shirt");
+  const original = await storefrontShellResponse(request, bootstrap, {
+    buildId: "structured-data-test",
+    product: detail,
+  });
+  const originalEtag = original.headers.get("etag");
+  const response = await enrichStorefrontProductStructuredData(
+    request,
+    bindings(detail),
+    original,
   );
   const html = await response.text();
   const match = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/u);
@@ -99,23 +123,81 @@ test("product detail binds the exact JSON-LD payload to a SHA-256 CSP source", a
     response.headers.get("content-security-policy") ?? "",
     /script-src 'none'/u,
   );
+  assert.equal(response.headers.get("x-storefront-structured-data"), "product.v1");
+  assert.notEqual(response.headers.get("etag"), originalEtag);
   assert.match(html, /<meta name="robots" content="index,follow">/u);
   assert.doesNotMatch(html, /<\/script><script>alert/u);
 });
 
-test("non-product pages retain script-src none and do not emit structured data", async () => {
-  const response = await storefrontShellResponse(
-    new Request("https://shop.example.com/"),
-    bootstrap,
-    { buildId: "structured-data-test" },
+test("product HEAD response receives the same structured-data CSP without a body", async () => {
+  const detail = productDetail();
+  const request = new Request(
+    "https://shop.example.com/products/linen-shirt",
+    { method: "HEAD" },
   );
-  const html = await response.text();
+  const original = await storefrontShellResponse(request, bootstrap, {
+    buildId: "structured-data-test",
+    product: detail,
+    headOnly: true,
+  });
+  const response = await enrichStorefrontProductStructuredData(
+    request,
+    bindings(detail),
+    original,
+  );
+  assert.equal(response.status, 200);
+  assert.equal(await response.text(), "");
   assert.match(
     response.headers.get("content-security-policy") ?? "",
+    /script-src 'sha256-/u,
+  );
+});
+
+test("non-product pages and product API failures retain the original secure response", async () => {
+  const homepageRequest = new Request("https://shop.example.com/");
+  const homepage = await storefrontShellResponse(homepageRequest, bootstrap, {
+    buildId: "structured-data-test",
+  });
+  const unchangedHomepage = await enrichStorefrontProductStructuredData(
+    homepageRequest,
+    bindings(),
+    homepage,
+  );
+  const homepageHtml = await unchangedHomepage.text();
+  assert.match(
+    unchangedHomepage.headers.get("content-security-policy") ?? "",
     /script-src 'none'/u,
   );
-  assert.doesNotMatch(html, /application\/ld\+json/u);
-  assert.match(html, /<meta name="robots" content="index,follow">/u);
+  assert.doesNotMatch(homepageHtml, /application\/ld\+json/u);
+
+  const detail = productDetail();
+  const productRequest = new Request(
+    "https://shop.example.com/products/linen-shirt",
+  );
+  const productResponse = await storefrontShellResponse(
+    productRequest,
+    bootstrap,
+    { buildId: "structured-data-test", product: detail },
+  );
+  const failed = await enrichStorefrontProductStructuredData(
+    productRequest,
+    {
+      ...bindings(detail),
+      STOREFRONT_API: {
+        async fetch() {
+          return Response.json({ error: { code: "UNAVAILABLE" } }, { status: 503 });
+        },
+      },
+    },
+    productResponse,
+  );
+  const failedHtml = await failed.text();
+  assert.match(
+    failed.headers.get("content-security-policy") ?? "",
+    /script-src 'none'/u,
+  );
+  assert.doesNotMatch(failedHtml, /application\/ld\+json/u);
+  assert.match(failedHtml, /<meta name="robots" content="noindex,follow">/u);
 });
 
 test("unknown availability is omitted instead of becoming a stock claim", () => {
