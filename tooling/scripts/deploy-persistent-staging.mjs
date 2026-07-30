@@ -1,8 +1,9 @@
 import { spawn } from "node:child_process";
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Client } from "@neondatabase/serverless";
+import puppeteer from "puppeteer-core";
 
 const WRANGLER_VERSION = "4.114.0";
 const WORKER_NAME = "store-pos-staging";
@@ -16,6 +17,7 @@ const {
   CLOUDFLARE_ACCOUNT_ID,
   GITHUB_SHA,
   GITHUB_RUN_ID,
+  CHROME_PATH,
 } = process.env;
 
 if (!NEON_API_KEY || !CLOUDFLARE_API_TOKEN || !CLOUDFLARE_ACCOUNT_ID) {
@@ -26,6 +28,7 @@ if (!NEON_API_KEY || !CLOUDFLARE_API_TOKEN || !CLOUDFLARE_ACCOUNT_ID) {
 
 const root = fileURLToPath(new URL("../..", import.meta.url));
 const artifactsDir = path.join(root, "artifacts", "staging");
+const browserArtifactsDir = path.join(artifactsDir, "browser");
 const reportPath = path.join(artifactsDir, "persistent-staging-report.json");
 const configPath = path.join(root, ".wrangler-persistent-staging.json");
 const neonApiBase = `https://console.neon.tech/api/v2/projects/${NEON_PROJECT_ID}`;
@@ -170,6 +173,149 @@ async function probe(baseUrl, pathname, expectedMarker, expectedStatus = 200) {
   throw lastError ?? new Error(`${pathname} staging probe failed`);
 }
 
+async function browserScenario(browser, axeSource, baseUrl, scenario) {
+  const page = await browser.newPage();
+  await page.setBypassCSP(true);
+  await page.setViewport(scenario.viewport);
+  await page.emulateMediaFeatures([
+    { name: "prefers-reduced-motion", value: "reduce" },
+  ]);
+  try {
+    const response = await page.goto(`${baseUrl}${scenario.pathname}`, {
+      waitUntil: "networkidle0",
+      timeout: 60_000,
+    });
+    if (!response || response.status() !== 200) {
+      throw new Error(`${scenario.pathname} browser navigation returned ${response?.status() ?? "no response"}`);
+    }
+    await page.addScriptTag({ content: axeSource });
+    const accessibility = await page.evaluate(async () =>
+      globalThis.axe.run(document, {
+        runOnly: {
+          type: "tag",
+          values: ["wcag2a", "wcag2aa", "wcag21aa"],
+        },
+      }),
+    );
+    const layout = await page.evaluate((kind) => {
+      const bodyText = document.body.textContent ?? "";
+      const documentElement = document.documentElement;
+      const checkout = document.querySelector(".modd-complete");
+      return {
+        title: document.title,
+        mainCount: document.querySelectorAll("main").length,
+        h1Count: document.querySelectorAll("h1").length,
+        hasStagingNotice: bodyText.includes("Persistent staging"),
+        hasAdminInventoryLink:
+          kind === "admin"
+            ? document.querySelector('a[href="/admin/inventory"]') !== null
+            : null,
+        checkoutDisabled:
+          kind === "pos" && checkout instanceof HTMLButtonElement
+            ? checkout.disabled
+            : null,
+        leakedDatabaseUrl: bodyText.includes("postgresql://"),
+        horizontalOverflow:
+          documentElement.scrollWidth > documentElement.clientWidth + 2,
+      };
+    }, scenario.kind);
+
+    let keyboard = null;
+    if (scenario.kind === "admin") {
+      await page.keyboard.press("Tab");
+      const firstFocus = await page.evaluate(() => ({
+        className: document.activeElement?.className ?? "",
+        outline: document.activeElement
+          ? getComputedStyle(document.activeElement).outlineStyle
+          : "none",
+      }));
+      await page.keyboard.press("Enter");
+      const skipTarget = await page.evaluate(() => document.activeElement?.id ?? "");
+      keyboard = { firstFocus, skipTarget };
+    }
+
+    const screenshotPath = path.join(browserArtifactsDir, `${scenario.id}.jpg`);
+    await page.screenshot({
+      path: screenshotPath,
+      type: "jpeg",
+      quality: 82,
+      fullPage: true,
+    });
+
+    const result = {
+      id: scenario.id,
+      pathname: scenario.pathname,
+      viewport: scenario.viewport,
+      violations: accessibility.violations.map((violation) => ({
+        id: violation.id,
+        impact: violation.impact,
+        nodes: violation.nodes.length,
+      })),
+      layout,
+      keyboard,
+      screenshot: path.relative(root, screenshotPath),
+    };
+
+    const passed =
+      result.violations.length === 0 &&
+      result.layout.mainCount === 1 &&
+      result.layout.h1Count >= 1 &&
+      result.layout.hasStagingNotice &&
+      !result.layout.leakedDatabaseUrl &&
+      !result.layout.horizontalOverflow &&
+      (scenario.kind !== "admin" ||
+        (result.layout.hasAdminInventoryLink === true &&
+          result.keyboard?.firstFocus.className === "skip-link" &&
+          result.keyboard?.firstFocus.outline !== "none" &&
+          result.keyboard?.skipTarget === "main")) &&
+      (scenario.kind !== "pos" || result.layout.checkoutDisabled === true);
+
+    if (!passed) {
+      throw new Error(`${scenario.pathname} live browser evidence failed`);
+    }
+    return { ...result, passed };
+  } finally {
+    await page.close();
+  }
+}
+
+async function runBrowserEvidence(baseUrl) {
+  const executablePath = CHROME_PATH || "/usr/bin/google-chrome";
+  const axeSource = await readFile(
+    path.join(root, "node_modules", "axe-core", "axe.min.js"),
+    "utf8",
+  );
+  await mkdir(browserArtifactsDir, { recursive: true });
+  const browser = await puppeteer.launch({
+    executablePath,
+    headless: true,
+    args: ["--no-sandbox", "--disable-dev-shm-usage"],
+  });
+  try {
+    const scenarios = [
+      {
+        id: "admin-inventory-desktop",
+        pathname: "/admin/inventory",
+        kind: "admin",
+        viewport: { width: 1440, height: 900, deviceScaleFactor: 1 },
+      },
+      {
+        id: "pos-register-mobile",
+        pathname: "/pos",
+        kind: "pos",
+        viewport: { width: 390, height: 844, deviceScaleFactor: 1 },
+      },
+    ];
+    const results = [];
+    for (const scenario of scenarios) {
+      results.push(await browserScenario(browser, axeSource, baseUrl, scenario));
+    }
+    return results;
+  } finally {
+    await browser.close();
+  }
+}
+
 await mkdir(artifactsDir, { recursive: true });
 await rm(reportPath, { force: true });
 let connectionString = "";
@@ -254,6 +400,7 @@ try {
   probes.push(await probe(baseUrl, "/pos", "Persistent staging · synthetic POS"));
   probes.push(await probe(baseUrl, "/api/health", '"status":"healthy"'));
   probes.push(await probe(baseUrl, "/staging/status", '"persistent-admin-pos-staging"'));
+  const browser = await runBrowserEvidence(baseUrl);
 
   report = {
     schemaVersion: 1,
@@ -269,6 +416,7 @@ try {
       ...database,
     },
     probes,
+    browser,
     persistent: true,
     syntheticOnly: true,
     authoritativeBrowserWritesEnabled: false,
