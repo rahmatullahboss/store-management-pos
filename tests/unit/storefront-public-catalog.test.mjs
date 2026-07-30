@@ -278,22 +278,30 @@ test("buyer worker fails closed on catalog scope mismatch and returns product 40
   assert.equal((await missing.json()).error.code, "PRODUCT_NOT_FOUND");
 });
 
-test("STF-0009 composes publication, catalog, price and inventory authority read-only", async () => {
-  const sql = await readFile(
+test("STF-0009 and STF-0010 compose public catalog authority read-only", async () => {
+  const compositionSql = await readFile(
     new URL(
       "../../database/modules/storefront/migrations/STF-0009-public-catalog-resolution.sql",
       import.meta.url,
     ),
     "utf8",
   );
-  assert.match(sql, /JOIN catalog\.products p/u);
-  assert.match(sql, /JOIN pricing\.price_lists pl/u);
-  assert.match(sql, /FROM inventory\.stock_balances sb/u);
-  assert.match(sql, /FROM inventory\.stock_reservation_lines srl/u);
-  assert.match(sql, /pp\.publication_state = 'published'/u);
-  assert.match(sql, /COALESCE\(vp\.publication_state, 'published'\) = 'published'/u);
-  assert.match(sql, /REVOKE ALL ON FUNCTION storefront\.resolve_public_catalog/u);
-  assert.match(sql, /GRANT EXECUTE ON FUNCTION storefront\.resolve_public_catalog/u);
-  assert.doesNotMatch(sql, /INSERT INTO (?:catalog|pricing|inventory)\./u);
-  assert.doesNotMatch(sql, /UPDATE (?:catalog|pricing|inventory)\./u);
+  const endpointSql = await readFile(
+    new URL(
+      "../../database/modules/storefront/migrations/STF-0010-public-catalog-endpoints.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.match(compositionSql, /JOIN catalog\.products p/u);
+  assert.match(compositionSql, /JOIN pricing\.price_lists pl/u);
+  assert.match(compositionSql, /FROM inventory\.stock_balances sb/u);
+  assert.match(compositionSql, /FROM inventory\.stock_reservation_lines line/u);
+  assert.match(compositionSql, /pp\.publication_state = 'published'/u);
+  assert.match(compositionSql, /COALESCE\(vp\.publication_state, 'published'\) = 'published'/u);
+  assert.doesNotMatch(compositionSql, /INSERT INTO (?:catalog|pricing|inventory)\./u);
+  assert.doesNotMatch(compositionSql, /UPDATE (?:catalog|pricing|inventory)\./u);
+  assert.match(endpointSql, /REVOKE ALL ON FUNCTION storefront\.resolve_public_catalog/u);
+  assert.match(endpointSql, /GRANT EXECUTE ON FUNCTION storefront\.resolve_public_catalog/u);
+  assert.match(endpointSql, /ORDER BY page\.product_id DESC/u);
 });
