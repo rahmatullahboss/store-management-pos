@@ -1,10 +1,12 @@
 schema_version: 1
 workstream: persistent-admin-pos-staging
-status: active
+status: first_milestone_complete
 branch: ops/persistent-admin-pos-staging-v1
 base_sha: 3a414363a40f48bd6e526418d9e82679501b170e
+verified_source_head: d48357b64ab267b0c191ff03e30bf75dbc85e9ec
 resources:
   cloudflare_worker: store-pos-staging
+  base_url: https://store-pos-staging.rahmatullahzisan.workers.dev
   neon_project_name: store-management-pos-staging
   neon_project_id: morning-flower-46531465
   neon_branch_name: main
@@ -17,16 +19,38 @@ checkpoints:
   dedicated_neon_project:
     status: complete
   persistent_worker:
-    status: active
+    status: complete
+    worker_name: store-pos-staging
+    cleanup_on_success: false
   migration_replay:
-    status: pending
+    status: complete
+    registered_migrations: 55
+    synthetic_tenants: 2
+  http_smoke:
+    status: complete
+    routes_passed: 7
   browser_smoke:
-    status: pending
+    status: complete
+    scenarios_passed: 2
+    scenarios_total: 2
+    axe_violations: 0
+    horizontal_overflow_failures: 0
   api_health:
-    status: pending
+    status: complete
   staging_auth:
     status: pending
+  authoritative_browser_writes:
+    status: pending
+  custom_domain:
+    status: pending
+evidence:
+  workflow_run_id: 30527115140
+  workflow_job_id: 90820730822
+  artifact_id: 8753163579
+  artifact_digest: sha256:2a8b34fefa4dede45caac768f0405a515adaa34b85f8f1571118dae617a3a325
+  checkpoint: docs/architecture/staging/persistent-admin-pos-staging-checkpoint.md
 limitations:
   - browser surfaces use synthetic data in the first milestone
   - authoritative write journeys remain disabled until staging OIDC is configured
+  - the dedicated staging OIDC issuer is not configured yet
   - no custom staging domain is assigned yet
