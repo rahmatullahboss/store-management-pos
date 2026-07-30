@@ -69,7 +69,8 @@ function validateActionOrigin(request: Request): void {
   const expected = exactOrigin(request);
   const origin = request.headers.get("origin");
   const fetchSite = request.headers.get("sec-fetch-site");
-  if (origin !== null && origin !== expected) {
+  const opaqueOrigin = origin === "null";
+  if (origin !== null && !opaqueOrigin && origin !== expected) {
     throw new PlatformError(
       "AUTHENTICATION_REQUIRED",
       "Staging authentication request origin is invalid",
@@ -83,7 +84,7 @@ function validateActionOrigin(request: Request): void {
       403,
     );
   }
-  if (origin === null && fetchSite !== "same-origin") {
+  if ((origin === null || opaqueOrigin) && fetchSite !== "same-origin") {
     throw new PlatformError(
       "AUTHENTICATION_REQUIRED",
       "Staging authentication request origin evidence is missing",
