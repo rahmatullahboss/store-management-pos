@@ -92,7 +92,13 @@ export async function requestStorefrontPublicSearch(
   options: StorefrontPublicSearchClientOptions = {},
 ): Promise<StorefrontPublicSearchSelectionV1> {
   const baseUrl = normalizeBaseUrl(configuration.baseUrl);
-  const target = new URL(`${baseUrl.pathname}/v1/storefront/search`, baseUrl);
+  const target = new URL(baseUrl.toString());
+  const basePath = target.pathname === "/"
+    ? ""
+    : target.pathname.replace(/\/$/u, "");
+  target.pathname = `${basePath}/v1/storefront/search`;
+  target.search = "";
+  target.hash = "";
   target.searchParams.set("hostname", normalizeHostname(hostname));
   target.searchParams.set("q", normalizeQuery(query));
   if (options.category) target.searchParams.set("category", options.category);
