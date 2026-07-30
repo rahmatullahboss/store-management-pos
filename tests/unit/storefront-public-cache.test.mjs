@@ -188,7 +188,8 @@ test("STF-0016 defines forced-RLS cache families, idempotent bumps and runtime-o
   const manifest = JSON.parse(
     await readFile(new URL("../../database/modules/storefront/manifest.json", import.meta.url), "utf8"),
   );
-  assert.equal(manifest.migrations.at(-1).id, "STF-0016");
+  assert.ok(manifest.migrations.some(({ id }) => id === "STF-0016"));
+  assert.equal(manifest.migrations.at(-1).id, "STF-0017");
   const sql = await readFile(
     new URL("../../database/modules/storefront/migrations/STF-0016-cache-generation-families.sql", import.meta.url),
     "utf8",
@@ -210,4 +211,14 @@ test("STF-0016 defines forced-RLS cache families, idempotent bumps and runtime-o
   assert.match(sql, /REVOKE ALL ON FUNCTION storefront\.resolve_public_cache_generations\(text\) FROM PUBLIC/u);
   assert.match(sql, /GRANT EXECUTE ON FUNCTION storefront\.resolve_public_cache_generations\(text\)/u);
   assert.match(sql, /REVOKE INSERT, UPDATE, DELETE ON storefront\.cache_generation_families/u);
+
+  const initializationSql = await readFile(
+    new URL("../../database/modules/storefront/migrations/STF-0017-cache-family-initialization.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(initializationSql, /supported_family\.family_name/u);
+  assert.match(initializationSql, /requested_family\.family_name/u);
+  assert.match(initializationSql, /ON CONFLICT \([\s\S]*family[\s\S]*\) DO NOTHING/u);
+  assert.match(initializationSql, /'bootstrap','content','catalog','product','category'/u);
+  assert.match(initializationSql, /'collection','search','sitemap','media'/u);
 });
