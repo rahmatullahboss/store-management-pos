@@ -29,6 +29,8 @@ const AVAILABILITY_LABELS: Record<StorefrontPublicVariantV1["availability"], str
   preorder: "Available for preorder",
   unknown: "Availability pending",
 };
+const DISCOVERY_RESPONSIVE_STYLE =
+  '<style>.header-row{flex-wrap:wrap}.nav{min-width:0}.nav>ul{flex-wrap:wrap}</style>';
 
 function escapeHtml(value: string): string {
   return value
@@ -98,7 +100,7 @@ function categoryModel(
     ? ""
     : `<nav class="discovery-children" aria-label="Subcategories"><h2>Explore subcategories</h2><ul>${category.children.map((entry) => `<li><a href="/categories/${encodeURIComponent(entry.slug)}">${escapeHtml(entry.title)}</a></li>`).join("")}</ul></nav>`;
   const description = category.description ?? `Published products in ${category.title}.`;
-  const html = `<section class="catalog-page" aria-labelledby="category-title"><nav class="breadcrumbs" aria-label="Breadcrumb"><a href="/products">Products</a><span aria-hidden="true">/</span>${breadcrumbs}</nav><header class="page-heading"><p class="eyebrow">Published category</p><h1 id="category-title">${escapeHtml(category.title)}</h1><p>${escapeHtml(description)}</p></header>${children}${renderProducts(page.items, page.context.locale, "No published products in this category", "Only actively priced products explicitly published to this category appear here.")}${pagination(`/categories/${encodeURIComponent(category.slug)}`, page.nextCursor)}</section>`;
+  const html = `${DISCOVERY_RESPONSIVE_STYLE}<section class="catalog-page" aria-labelledby="category-title"><nav class="breadcrumbs" aria-label="Breadcrumb"><a href="/products">Products</a><span aria-hidden="true">/</span>${breadcrumbs}</nav><header class="page-heading"><p class="eyebrow">Published category</p><h1 id="category-title">${escapeHtml(category.title)}</h1><p>${escapeHtml(description)}</p></header>${children}${renderProducts(page.items, page.context.locale, "No published products in this category", "Only actively priced products explicitly published to this category appear here.")}${pagination(`/categories/${encodeURIComponent(category.slug)}`, page.nextCursor)}</section>`;
   return Object.freeze({
     title: category.title,
     description,
@@ -112,7 +114,7 @@ function collectionModel(
 ): StorefrontDiscoveryRenderModel {
   const collection = page.collection;
   const description = collection.description ?? `Published products in ${collection.title}.`;
-  const html = `<section class="catalog-page" aria-labelledby="collection-title"><nav class="breadcrumbs" aria-label="Breadcrumb"><a href="/products">Products</a><span aria-hidden="true">/</span><span aria-current="page">${escapeHtml(collection.title)}</span></nav><header class="page-heading"><p class="eyebrow">Curated collection</p><h1 id="collection-title">${escapeHtml(collection.title)}</h1><p>${escapeHtml(description)}</p></header>${renderProducts(page.items, page.context.locale, "No published products in this collection", "The collection remains visible, but no active priced products currently qualify for public display.")}${pagination(`/collections/${encodeURIComponent(collection.slug)}`, page.nextCursor)}</section>`;
+  const html = `${DISCOVERY_RESPONSIVE_STYLE}<section class="catalog-page" aria-labelledby="collection-title"><nav class="breadcrumbs" aria-label="Breadcrumb"><a href="/products">Products</a><span aria-hidden="true">/</span><span aria-current="page">${escapeHtml(collection.title)}</span></nav><header class="page-heading"><p class="eyebrow">Curated collection</p><h1 id="collection-title">${escapeHtml(collection.title)}</h1><p>${escapeHtml(description)}</p></header>${renderProducts(page.items, page.context.locale, "No published products in this collection", "The collection remains visible, but no active priced products currently qualify for public display.")}${pagination(`/collections/${encodeURIComponent(collection.slug)}`, page.nextCursor)}</section>`;
   return Object.freeze({
     title: collection.title,
     description,
@@ -132,7 +134,7 @@ function searchModel(page: StorefrontPublicSearchPageV1): StorefrontDiscoveryRen
   const facets = categoryFacets || availabilityFacets
     ? `<aside class="discovery-facets" aria-label="Search result facets">${categoryFacets}${availabilityFacets}</aside>`
     : "";
-  const html = `<section class="catalog-page" aria-labelledby="search-title"><header class="page-heading"><p class="eyebrow">Storefront search</p><h1 id="search-title">Results for “${escapeHtml(page.query)}”</h1><p>${escapeHtml(description)}</p><form class="search" action="/search" method="get" role="search"><label for="discovery-search">Search products</label><input id="discovery-search" name="q" type="search" autocomplete="off" value="${escapeHtml(page.query)}"><button type="submit">Search</button></form></header><div class="discovery-layout">${facets}<div>${renderProducts(page.items, page.context.locale, "No published products matched", "Try a different product name, code, SKU or keyword.")}${pagination("/search", page.nextCursor, page.query)}</div></div></section>`;
+  const html = `${DISCOVERY_RESPONSIVE_STYLE}<section class="catalog-page" aria-labelledby="search-title"><header class="page-heading"><p class="eyebrow">Storefront search</p><h1 id="search-title">Results for “${escapeHtml(page.query)}”</h1><p>${escapeHtml(description)}</p><form class="search" action="/search" method="get" role="search"><label for="discovery-search">Search products</label><input id="discovery-search" name="q" type="search" autocomplete="off" value="${escapeHtml(page.query)}"><button type="submit">Search</button></form></header><div class="discovery-layout">${facets}<div>${renderProducts(page.items, page.context.locale, "No published products matched", "Try a different product name, code, SKU or keyword.")}${pagination("/search", page.nextCursor, page.query)}</div></div></section>`;
   return Object.freeze({
     title: `Search: ${page.query}`,
     description,
