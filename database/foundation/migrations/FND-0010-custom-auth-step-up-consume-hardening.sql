@@ -10,16 +10,16 @@ SET search_path = pg_catalog, platform AS $$
   WITH authorized_session AS (
     SELECT s.id
     FROM platform.auth_sessions AS s
-    JOIN platform.auth_step_up_grants AS grant
-      ON grant.session_id = s.id
-     AND grant.user_id = s.user_id
-     AND grant.tenant_id = s.tenant_id
-     AND grant.token_hash = p_grant_hash
-     AND grant.permission_scope = p_permission_scope
-     AND grant.used_at IS NULL
-     AND grant.expires_at > now()
+    JOIN platform.auth_step_up_grants AS step_grant
+      ON step_grant.session_id = s.id
+     AND step_grant.user_id = s.user_id
+     AND step_grant.tenant_id = s.tenant_id
+     AND step_grant.token_hash = p_grant_hash
+     AND step_grant.permission_scope = p_permission_scope
+     AND step_grant.used_at IS NULL
+     AND step_grant.expires_at > now()
     JOIN platform.auth_mfa_factors AS factor
-      ON factor.id = grant.factor_id
+      ON factor.id = step_grant.factor_id
      AND factor.user_id = s.user_id
      AND factor.status = 'active'
     JOIN platform.memberships AS membership
@@ -46,15 +46,15 @@ SET search_path = pg_catalog, platform AS $$
     LIMIT 1
   ),
   consumed AS (
-    UPDATE platform.auth_step_up_grants AS grant
+    UPDATE platform.auth_step_up_grants AS step_grant
     SET used_at = now()
     FROM authorized_session AS session
-    WHERE grant.session_id = session.id
-      AND grant.token_hash = p_grant_hash
-      AND grant.permission_scope = p_permission_scope
-      AND grant.used_at IS NULL
-      AND grant.expires_at > now()
-    RETURNING grant.id
+    WHERE step_grant.session_id = session.id
+      AND step_grant.token_hash = p_grant_hash
+      AND step_grant.permission_scope = p_permission_scope
+      AND step_grant.used_at IS NULL
+      AND step_grant.expires_at > now()
+    RETURNING step_grant.id
   )
   SELECT EXISTS (SELECT 1 FROM consumed);
 $$;
