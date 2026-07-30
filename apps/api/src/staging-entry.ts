@@ -1,5 +1,7 @@
 import stagingWorker, { type StagingEnvironment } from "./staging.js";
 import {
+  decryptTotpSecret,
+  encryptTotpSecret,
   handleStagingMfaRequest,
   type StagingMfaEnvironment,
 } from "./staging-mfa.js";
@@ -42,6 +44,64 @@ function statusHeaders(): HeadersInit {
   };
 }
 
+async function mfaCryptoSelfCheck(
+  request: Request,
+  env: PersistentStagingEnvironment,
+): Promise<Response> {
+  if (env.APP_ENV !== "staging") return new Response(null, { status: 404 });
+  try {
+    const secret = new Uint8Array(20);
+    crypto.getRandomValues(secret);
+    const factorId = crypto.randomUUID();
+    const encrypted = await encryptTotpSecret(
+      secret,
+      "staging-crypto-self-check-password",
+      factorId,
+    );
+    const decrypted = await decryptTotpSecret(
+      {
+        id: factorId,
+        userId: crypto.randomUUID(),
+        tenantId: crypto.randomUUID(),
+        status: "pending",
+        label: "Self check",
+        ...encrypted,
+      },
+      "staging-crypto-self-check-password",
+    );
+    const passed =
+      decrypted.length === secret.length &&
+      decrypted.every((value, index) => value === secret[index]);
+    return new Response(
+      request.method === "HEAD"
+        ? null
+        : JSON.stringify({
+            status: passed ? "passed" : "failed",
+            algorithm: "PBKDF2-SHA256+A256GCM",
+            iterations: encrypted.iterations,
+            ciphertextLength: encrypted.ciphertext.length,
+            ivLength: encrypted.iv.length,
+            saltLength: encrypted.salt.length,
+          }),
+      { status: passed ? 200 : 500, headers: statusHeaders() },
+    );
+  } catch (error) {
+    return new Response(
+      request.method === "HEAD"
+        ? null
+        : JSON.stringify({
+            status: "failed",
+            stage: "worker-web-crypto",
+            errorName: error instanceof Error ? error.name : "unknown",
+            errorMessage: error instanceof Error
+              ? error.message.slice(0, 180)
+              : "Unknown Web Crypto error",
+          }),
+      { status: 500, headers: statusHeaders() },
+    );
+  }
+}
+
 export default {
   async fetch(
     request: Request,
@@ -50,6 +110,12 @@ export default {
     const url = new URL(request.url);
     if (url.pathname === "/auth/context") {
       return await handleStagingReadContext(request, env);
+    }
+    if (
+      url.pathname === "/staging/mfa-crypto-check" &&
+      (request.method === "GET" || request.method === "HEAD")
+    ) {
+      return await mfaCryptoSelfCheck(request, env);
     }
     const mfa = await handleStagingMfaRequest(request, url, env);
     if (mfa) return mfa;
