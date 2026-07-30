@@ -77,8 +77,13 @@ await cleanupCurrentRunWorker();
 
 const source = await readFile(sourcePath, "utf8");
 const eagerCleanup = `  try {\n    if (await deleteWorker()) console.log(\`deleted Cloudflare preview worker \${workerName}\`);\n  } catch (error) {\n    console.error(\`failed to delete Cloudflare preview worker \${workerName}: \${error.message}\`);\n    process.exitCode = 1;\n  }\n`;
-const runtimeSource = source.replace(eagerCleanup, "");
+const eagerPreviewEnable = `async function ensurePreviewUrls() {\n  const result = await cloudflare(\`/workers/scripts/\${encodeURIComponent(workerName)}/subdomain\`, {\n    method: "POST",\n    body: JSON.stringify({ enabled: true, previews_enabled: true })\n  });\n  if (!result?.previews_enabled) throw new Error("Cloudflare Worker preview URLs could not be enabled");\n  return result;\n}\n`;
+const resilientPreviewEnable = `async function ensurePreviewUrls() {\n  let lastError;\n  for (let attempt = 1; attempt <= 8; attempt += 1) {\n    try {\n      const result = await cloudflare(\`/workers/scripts/\${encodeURIComponent(workerName)}/subdomain\`, {\n        method: "POST",\n        body: JSON.stringify({ enabled: true, previews_enabled: true })\n      });\n      if (!result?.previews_enabled) throw new Error("Cloudflare Worker preview URLs could not be enabled");\n      return result;\n    } catch (error) {\n      lastError = error;\n      const message = String(error?.message || error);\n      if (!message.includes("10007") && !message.includes("does not exist") && !message.includes("not found")) throw error;\n      if (attempt < 8) await sleep(2000);\n    }\n  }\n  throw lastError || new Error("Cloudflare Worker preview URL propagation timed out");\n}\n`;
+let runtimeSource = source.replace(eagerCleanup, "");
 if (runtimeSource === source) throw new Error("Cloudflare deferred-cleanup transformation did not match the expected cleanup block");
+const previewPatchedSource = runtimeSource.replace(eagerPreviewEnable, resilientPreviewEnable);
+if (previewPatchedSource === runtimeSource) throw new Error("Cloudflare preview propagation transformation did not match the expected enable block");
+runtimeSource = previewPatchedSource;
 await writeFile(runtimePath, runtimeSource, "utf8");
 
 const child = spawn(process.execPath, [runtimePath], {
