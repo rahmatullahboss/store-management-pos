@@ -29,10 +29,10 @@ function formRequest(headers = {}) {
   });
 }
 
-test("same-origin Fetch Metadata permits browser form posts when Origin is omitted", async () => {
+async function accepted(headers) {
   let called = false;
   const response = await stagingWorker.fetch(
-    formRequest({ "Sec-Fetch-Site": "same-origin" }),
+    formRequest(headers),
     environment(async () => {
       called = true;
       return new Response(JSON.stringify({ user: { id: "auth-user-1" } }), {
@@ -50,12 +50,19 @@ test("same-origin Fetch Metadata permits browser form posts when Origin is omitt
     response.headers.get("location"),
     "https://staging.example.test/admin",
   );
+}
+
+test("same-origin Fetch Metadata permits browser form posts with omitted or opaque Origin", async () => {
+  await accepted({ "Sec-Fetch-Site": "same-origin" });
+  await accepted({ Origin: "null", "Sec-Fetch-Site": "same-origin" });
 });
 
 test("cross-site and origin-mismatch auth posts fail with bounded platform errors", async () => {
   for (const headers of [
     { Origin: "https://evil.example", "Sec-Fetch-Site": "cross-site" },
     { Origin: "https://evil.example", "Sec-Fetch-Site": "same-origin" },
+    { Origin: "null", "Sec-Fetch-Site": "cross-site" },
+    { Origin: "null" },
     {},
   ]) {
     const response = await stagingWorker.fetch(
