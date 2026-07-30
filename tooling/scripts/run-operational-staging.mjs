@@ -1,11 +1,12 @@
 import { spawn } from "node:child_process";
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Client } from "@neondatabase/serverless";
 
 const root = fileURLToPath(new URL("../..", import.meta.url));
 const seedPath = path.join(root, "tooling", "fixtures", "staging-operational-seed.sql");
+const deployPath = path.join(root, "tooling", "scripts", "deploy-custom-auth-staging.mjs");
 const projectId = "morning-flower-46531465";
 const branchId = "br-empty-sound-afkx5vkj";
 const databaseName = "neondb";
@@ -147,9 +148,21 @@ await run("npm", ["run", "db:migrate"], {
   LOAD_SYNTHETIC_SEED: "1",
 });
 await loadAndVerify(uri);
+const originalDeploy = await readFile(deployPath, "utf8");
+const legacyRelationList = "'custom_auth_credentials','custom_auth_sessions','custom_auth_rate_limits','custom_auth_events'";
+const actualRelationList = "'auth_credentials','auth_sessions','auth_rate_limits','auth_events'";
+if (!originalDeploy.includes(legacyRelationList)) {
+  throw new Error("Custom auth evidence relation patch target is missing");
+}
+await writeFile(
+  deployPath,
+  originalDeploy.replace(legacyRelationList, actualRelationList),
+  "utf8",
+);
 process.env.DATABASE_URL = uri;
 try {
   await import("./run-custom-auth-staging.mjs");
 } finally {
   delete process.env.DATABASE_URL;
+  await writeFile(deployPath, originalDeploy, "utf8");
 }
