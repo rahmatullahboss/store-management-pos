@@ -81,6 +81,11 @@
       "id": "STF-0016",
       "file": "STF-0016-cache-generation-families.sql",
       "sha256": "42ee4f36ebce0d701ce96919f9bb4be3087f3100d4ed3e18ae0e12753783b8dd"
+    },
+    {
+      "id": "STF-0017",
+      "file": "STF-0017-cache-family-initialization.sql",
+      "sha256": "704a89cf9f72e5cd680cab477d231d818c764f6f08b12051d349abb7b1e5be6b"
     }
   ]
 }
