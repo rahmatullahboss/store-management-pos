@@ -1,9 +1,8 @@
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
-import { spawn } from "node:child_process";
 import puppeteer from "puppeteer-core";
 
 const execFileAsync = promisify(execFile);
@@ -28,7 +27,6 @@ const scenarios = [
     direction: "ltr",
     width: 1440,
     height: 1000,
-    screenshot: true,
   },
   {
     id: "storefront-en-mobile",
@@ -36,7 +34,6 @@ const scenarios = [
     direction: "ltr",
     width: 390,
     height: 844,
-    screenshot: true,
   },
   {
     id: "storefront-ar-tablet",
@@ -44,9 +41,19 @@ const scenarios = [
     direction: "rtl",
     width: 820,
     height: 1000,
-    screenshot: true,
   },
 ];
+
+function withTimeout(promise, milliseconds, label) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error(`${label} exceeded ${milliseconds}ms`)),
+      milliseconds,
+    );
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
 
 function startStorefront() {
   const child = spawn(
@@ -119,7 +126,7 @@ async function runDetector() {
       "--json",
       "apps/storefront-web",
     ],
-    { cwd: root },
+    { cwd: root, timeout: 30_000 },
   );
   return JSON.parse(stdout || "[]");
 }
@@ -130,26 +137,11 @@ function scenarioUrl(scenario) {
   return url.toString();
 }
 
-await mkdir(outputDir, { recursive: true });
-const server = startStorefront();
-let browser;
-const results = [];
-
-try {
-  await waitForServer(server);
-  browser = await puppeteer.launch({
-    executablePath: chromePath,
-    headless: true,
-    args: [
-      "--no-sandbox",
-      "--disable-dev-shm-usage",
-      "--font-render-hinting=none",
-    ],
-  });
-  const axeSource = await readFile(axePath, "utf8");
-
-  for (const scenario of scenarios) {
-    const page = await browser.newPage();
+async function collectScenario(browser, axeSource, scenario) {
+  const page = await browser.newPage();
+  page.setDefaultTimeout(15_000);
+  page.setDefaultNavigationTimeout(30_000);
+  try {
     await page.setViewport({
       width: scenario.width,
       height: scenario.height,
@@ -159,18 +151,26 @@ try {
       { name: "prefers-reduced-motion", value: "reduce" },
     ]);
     await page.goto(scenarioUrl(scenario), {
-      waitUntil: "networkidle0",
+      waitUntil: "domcontentloaded",
       timeout: 30_000,
     });
+    await page.waitForFunction(
+      () => document.querySelectorAll("article.product-card").length === 4,
+      { timeout: 15_000 },
+    );
     await page.addScriptTag({ content: axeSource });
 
-    const accessibility = await page.evaluate(async () =>
-      globalThis.axe.run(document, {
-        runOnly: {
-          type: "tag",
-          values: ["wcag2a", "wcag2aa", "wcag21aa"],
-        },
-      }),
+    const accessibility = await withTimeout(
+      page.evaluate(async () =>
+        globalThis.axe.run(document, {
+          runOnly: {
+            type: "tag",
+            values: ["wcag2a", "wcag2aa", "wcag21aa"],
+          },
+        }),
+      ),
+      30_000,
+      `${scenario.id} axe evaluation`,
     );
 
     const layout = await page.evaluate(() => {
@@ -250,6 +250,10 @@ try {
         : "none",
     }));
     await page.keyboard.press("Enter");
+    await page.waitForFunction(
+      () => document.activeElement?.id === "main-content",
+      { timeout: 5_000 },
+    );
     const skipTarget = await page.evaluate(
       () => document.activeElement?.id ?? "",
     );
@@ -265,12 +269,16 @@ try {
     });
 
     const screenshotPath = path.join(outputDir, `${scenario.id}.jpg`);
-    await page.screenshot({
-      path: screenshotPath,
-      type: "jpeg",
-      quality: 82,
-      fullPage: true,
-    });
+    await withTimeout(
+      page.screenshot({
+        path: screenshotPath,
+        type: "jpeg",
+        quality: 82,
+        fullPage: true,
+      }),
+      30_000,
+      `${scenario.id} screenshot`,
+    );
 
     const violations = accessibility.violations.map((violation) => ({
       id: violation.id,
@@ -300,15 +308,44 @@ try {
       skipTarget === "main-content" &&
       layout.scaledTextViewportOverflow !== true;
 
-    results.push({
+    return {
       ...scenario,
       screenshot: path.relative(root, screenshotPath),
       violations,
       layout,
       keyboard: { firstFocus, skipTarget },
       passed,
-    });
+    };
+  } finally {
     await page.close();
+  }
+}
+
+await mkdir(outputDir, { recursive: true });
+const server = startStorefront();
+let browser;
+const results = [];
+
+try {
+  await waitForServer(server);
+  browser = await puppeteer.launch({
+    executablePath: chromePath,
+    headless: true,
+    args: [
+      "--no-sandbox",
+      "--disable-dev-shm-usage",
+      "--font-render-hinting=none",
+    ],
+  });
+  const axeSource = await readFile(axePath, "utf8");
+  for (const scenario of scenarios) {
+    results.push(
+      await withTimeout(
+        collectScenario(browser, axeSource, scenario),
+        90_000,
+        `${scenario.id} complete evidence`,
+      ),
+    );
   }
 } finally {
   await browser?.close();
