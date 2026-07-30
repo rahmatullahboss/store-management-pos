@@ -1,7 +1,7 @@
 # Usable Admin/POS operability implementation checkpoint
 
-Status: synthetic outbox publisher implementation complete; schema-v7 live evidence pending
-Previous verified implementation head: `46f21db536ccbdc4f3937373543d43bbd9e815b6`
+Status: synthetic outbox publisher live evidence complete; operability gate clear
+Verified implementation head: `cdf00d6efd4a6a0bedbe130ddc9ddf21509ce8d8`
 Persistent URL: `https://store-pos-staging.rahmatullahzisan.workers.dev`
 Date: 2026-07-31
 
@@ -186,18 +186,24 @@ Implementation evidence:
 - `docs/superpowers/plans/2026-07-31-staging-outbox-publisher.md`;
 - `docs/superpowers/plans/2026-07-31-staging-operability-hardening.md`.
 
-A new exact-head persistent staging workflow must now produce and independently verify schema-v7 publisher evidence. Until that succeeds, the prior schema-v6 evidence remains the last verified live result:
+Exact-head schema-v7 publisher evidence was produced and independently inspected:
 
-- implementation head: `46f21db536ccbdc4f3937373543d43bbd9e815b6`;
-- Persistent Admin POS Staging run/job: `30574918673 / 90980664683`;
-- artifact/digest: `8772324055 / sha256:ec184485ac425ba84945ec0f312a1d174b22610e3d3bffdb7289579916063e91`;
-- report/policy schema: `6 / 1`;
+- implementation/workflow head: `cdf00d6efd4a6a0bedbe130ddc9ddf21509ce8d8`;
+- report Git SHA: `6e198886d65cd4bd9b92d2a9eaf15d99a1c16795`;
+- Persistent Admin POS Staging run/job: `30576767204 / 90986869168`;
+- artifact/digest: `8773038947 / sha256:6177f542d66eeef1987f92bb4289af0f3ea29df138da77be20142c023275ac04`;
+- report/publisher/policy schema: `7 / 1 / 1`;
 - HTTP probes and browser scenarios: `24/24` and `6/6`;
-- critical alerts: `0`;
-- prior outbox backlog/oldest age: `40 / 9,751 seconds`;
-- prior status/gate: `degraded / review` because no publisher existed at that checkpoint.
+- Axe violations / horizontal-overflow failures: `0 / 0`;
+- outbox batches / claimed / delivered / replayed: `2 / 44 / 44 / 0`;
+- outbox failed / remaining / exhausted / oldest age: `0 / 0 / 0 / 0 seconds`;
+- all twelve operability signals: `0`;
+- warnings / critical alerts: `0 / 0`;
+- status / launch gate: `healthy / clear`;
+- payloads persisted in artifacts: `false`;
+- external delivery: `false`.
 
-Production message transport, alert delivery, paging and approved SLOs are not configured by this checkpoint.
+Independent inspection found no database URL, bearer/JWT, raw action token, cookie header, password field, TOTP secret field or raw publisher event/tenant/payload/metadata/correlation/aggregate identifier. Production message transport, alert delivery, paging, dead-letter ownership and approved SLOs are not configured by this checkpoint.
 
 ## Previous exact staging evidence
 

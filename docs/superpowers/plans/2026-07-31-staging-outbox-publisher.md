@@ -118,10 +118,10 @@ Expected: format, lint, boundaries, TypeScript, migrations, all tests, secret sc
 
 Confirm no production resource, provider, secret, customer data, runtime permission or additional authoritative command. Commit and push to `ops/persistent-admin-pos-staging-v1`.
 
-- [ ] **Step 4: Inspect exact-head CI and artifact**
+- [x] **Step 4: Inspect exact-head CI and artifact**
 
 Require persistent staging deploy success, schema-v7 artifact, durable receipt evidence, zero critical publisher/integrity failures and either a clear gate or an explicitly justified bounded review warning.
 
-- [ ] **Step 5: Record live evidence**
+- [x] **Step 5: Record live evidence**
 
 Update tracker/checkpoint and PR #58 with exact run, job, artifact, digest, signal totals and remaining production blockers; keep the PR draft.
