@@ -9,10 +9,10 @@ const environment = {
   STAGING_GIT_SHA: "0123456789abcdef",
 };
 
-async function request(path, init) {
+async function request(path, init, bindings = environment) {
   return await stagingWorker.fetch(
     new Request(`https://staging.example.test${path}`, init),
-    environment,
+    bindings,
   );
 }
 
@@ -70,6 +70,7 @@ test("persistent staging exposes a bounded status document", async () => {
     version: "0123456789ab",
     database: "dedicated-neon-staging",
     browserMode: "synthetic-read-only",
+    authentication: "not-required",
   });
 });
 
@@ -85,4 +86,119 @@ test("persistent staging preserves HEAD and fail-closed method and route behavio
   const missing = await request("/not-found");
   assert.equal(missing.status, 404);
   assert.match(await missing.text(), /Staging route not found/u);
+});
+
+test("Neon Auth requirement redirects anonymous Admin and POS requests to the login page", async () => {
+  const bindings = {
+    ...environment,
+    STAGING_AUTH_REQUIRED: "1",
+    NEON_AUTH_URL: "https://auth.example.test/neondb/auth",
+    STAGING_AUTH_FETCH: async () => Response.json(null),
+  };
+  for (const path of ["/admin", "/pos"]) {
+    const response = await request(path, undefined, bindings);
+    assert.equal(response.status, 302);
+    const location = new URL(response.headers.get("location"));
+    assert.equal(location.pathname, "/login");
+    assert.equal(location.searchParams.get("returnTo"), path);
+  }
+
+  const login = await request("/login?returnTo=%2Fpos", undefined, bindings);
+  const html = await login.text();
+  assert.equal(login.status, 200);
+  assert.match(html, /Sign in to staging/u);
+  assert.match(html, /Create staging account/u);
+  assert.match(html, /name="returnTo" value="\/pos"/u);
+  assert.equal(login.headers.get("x-robots-tag"), "noindex, nofollow, noarchive");
+});
+
+test("Neon Auth sign-up is same-origin and forwards a localized secure session cookie", async () => {
+  let observedUrl = "";
+  let observedBody = null;
+  const bindings = {
+    ...environment,
+    STAGING_AUTH_REQUIRED: "1",
+    NEON_AUTH_URL: "https://auth.example.test/neondb/auth",
+    STAGING_AUTH_FETCH: async (input, init) => {
+      observedUrl = String(input);
+      observedBody = JSON.parse(String(init?.body));
+      return new Response(
+        JSON.stringify({ user: { id: "auth-user-1" } }),
+        {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+            "Set-Cookie": "better-auth.session_token=provider-session; Domain=auth.example.test; Path=/neondb/auth; HttpOnly; Secure; SameSite=None",
+          },
+        },
+      );
+    },
+  };
+  const response = await request(
+    "/auth/sign-up",
+    {
+      method: "POST",
+      headers: {
+        Origin: "https://staging.example.test",
+        "Sec-Fetch-Site": "same-origin",
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        name: "Staging User",
+        email: "staging.user@example.com",
+        password: "correct-horse-battery-staple",
+        returnTo: "/admin/inventory",
+      }),
+    },
+    bindings,
+  );
+  assert.equal(observedUrl, "https://auth.example.test/neondb/auth/sign-up/email");
+  assert.deepEqual(observedBody, {
+    email: "staging.user@example.com",
+    password: "correct-horse-battery-staple",
+    name: "Staging User",
+  });
+  assert.equal(response.status, 303);
+  assert.equal(response.headers.get("location"), "https://staging.example.test/admin/inventory");
+  const cookie = response.headers.get("set-cookie") ?? "";
+  assert.match(cookie, /better-auth\.session_token=provider-session/u);
+  assert.match(cookie, /Path=\//u);
+  assert.match(cookie, /HttpOnly/u);
+  assert.match(cookie, /Secure/u);
+  assert.match(cookie, /SameSite=Lax/u);
+  assert.doesNotMatch(cookie, /Domain=/u);
+});
+
+test("authenticated Neon Auth session unlocks read-only Admin rendering without granting API writes", async () => {
+  const bindings = {
+    ...environment,
+    STAGING_AUTH_REQUIRED: "1",
+    NEON_AUTH_URL: "https://auth.example.test/neondb/auth",
+    STAGING_AUTH_FETCH: async (input) => {
+      assert.equal(String(input), "https://auth.example.test/neondb/auth/get-session");
+      return Response.json({
+        user: {
+          id: "auth-user-1",
+          email: "staging.user@example.com",
+          name: "Staging User",
+        },
+        session: {
+          id: "session-1",
+          expiresAt: "2030-01-01T00:00:00.000Z",
+        },
+      });
+    },
+  };
+  const response = await request(
+    "/admin/inventory",
+    { headers: { Cookie: "better-auth.session_token=provider-session" } },
+    bindings,
+  );
+  const html = await response.text();
+  assert.equal(response.status, 200);
+  assert.match(html, /Signed in as/u);
+  assert.match(html, /Staging User/u);
+  assert.match(html, /staging\.user@example\.com/u);
+  assert.match(html, /action="\/auth\/sign-out"/u);
+  assert.match(html, /Read-only browser milestone/u);
 });
