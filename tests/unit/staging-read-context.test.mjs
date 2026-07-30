@@ -109,7 +109,7 @@ test("read context is GET and HEAD only", async () => {
   assert.equal(post.headers.get("allow"), "GET, HEAD");
 });
 
-test("persistent status advertises MFA-gated controlled reservations", async () => {
+test("persistent status advertises MFA-gated controlled reservations and bounded recovery", async () => {
   const response = await request("/staging/status");
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), {
@@ -122,10 +122,14 @@ test("persistent status advertises MFA-gated controlled reservations", async () 
     authentication: "custom-auth-required",
     authorization: "database-resolved-read-plus-mfa-step-up",
     mfa: "encrypted-totp-current-password-step-up",
+    accountRecovery: "hashed-single-use-token-lifecycle",
+    productionEmailDelivery: false,
     protectedReadTransport: "short-lived-internal-token",
     internalReadTokenLifetimeSeconds: 300,
     internalCommandTokenLifetimeSeconds: 60,
     stepUpGrantLifetimeSeconds: 300,
+    passwordRecoveryLifetimeSeconds: 900,
+    emailVerificationLifetimeSeconds: 86_400,
     controlledWrites: [
       "inventory.reservation.create",
       "inventory.reservation.release",
