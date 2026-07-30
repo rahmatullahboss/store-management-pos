@@ -1,9 +1,9 @@
-schema_version: 3
+schema_version: 4
 workstream: persistent-admin-pos-staging
-status: custom_read_only_identity_complete
+status: custom_identity_and_read_context_complete
 branch: ops/persistent-admin-pos-staging-v1
 base_sha: 3a414363a40f48bd6e526418d9e82679501b170e
-verified_implementation_head: c7d8822e580aa6fa41f7d6f12b69446ab6e68ae6
+verified_implementation_head: b578e6c403ae2d5a816eab79ff69c09dd9bca757
 resources:
   cloudflare_worker: store-pos-staging
   base_url: https://store-pos-staging.rahmatullahzisan.workers.dev
@@ -25,14 +25,14 @@ checkpoints:
     cleanup_on_success: false
   migration_replay:
     status: complete
-    registered_migrations: 57
+    registered_migrations: 58
     synthetic_tenants: 2
     custom_auth_tables: 4
     legacy_neon_auth_tables: 0
   http_smoke:
     status: complete
-    routes_passed: 10
-    routes_total: 10
+    routes_passed: 11
+    routes_total: 11
   browser_smoke:
     status: complete
     scenarios_passed: 3
@@ -60,25 +60,40 @@ checkpoints:
     credential_lockout: configured
     synthetic_account_cleanup: passed
     credentials_persisted: false
+  database_read_authorization:
+    status: complete
+    endpoint: /auth/context
+    role: staging-read-only
+    permission_source: platform_role_grants
+    permission_count: 16
+    allowed_risk_level: standard
+    browser_supplied_permissions: false
+    tenant_membership_required: true
+    scoped_legal_entity: true
+    scoped_store: true
+    scoped_warehouse: true
+    scoped_register: true
+    inactive_or_missing_context: fail_closed
+    live_probe: passed
   business_api_token_exchange:
     status: pending
-  business_permission_mapping:
+  authoritative_business_reads:
     status: pending
   authoritative_browser_writes:
     status: pending
   custom_domain:
     status: pending
 evidence:
-  workflow_run_id: 30534575070
-  workflow_job_id: 90844868908
-  artifact_id: 8756134289
-  artifact_digest: sha256:945727d700ec6fca9aa3155b69c5e2fd5cb4e66303da3443259d6fee79e85222
-  deployed_merge_sha: abffdfa45249c2662a629f648529aa636c6fcabe
+  workflow_run_id: 30535437966
+  workflow_job_id: 90847641243
+  artifact_id: 8756477049
+  artifact_digest: sha256:0b7c2b3c6d7d20ffdbc5e2ffa5ac45729e9a887028e68c4386cef31611ffe424
+  deployed_merge_sha: d54491f50791f88fbadb55050f3771ee023b28f2
   first_milestone_checkpoint: docs/architecture/staging/persistent-admin-pos-staging-checkpoint.md
   identity_checkpoint: docs/architecture/staging/staging-identity-checkpoint.md
 limitations:
   - browser surfaces and business data remain synthetic
-  - custom auth currently protects read-only Admin and POS presentation only
-  - browser sessions do not grant business permissions, MFA evidence or scoped API authority
-  - authoritative write journeys remain disabled until server-side permission resolution and token exchange pass
+  - custom auth and database-resolved context currently protect read-only presentation and context discovery
+  - browser sessions do not yet become strict business API bearer tokens
+  - authoritative business reads and writes remain disabled until token exchange and API gates pass
   - no custom staging domain is assigned yet
