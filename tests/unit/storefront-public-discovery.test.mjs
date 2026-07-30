@@ -3,6 +3,12 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
+  createStorefrontWorker,
+} from "../../build/apps/storefront-web/src/index.js";
+import {
+  parseStorefrontBootstrapV1,
+} from "../../build/packages/storefront-contracts/src/index.js";
+import {
   parseStorefrontPublicCategoryPageV1,
   parseStorefrontPublicCollectionPageV1,
   parseStorefrontPublicSearchPageV1,
@@ -126,17 +132,48 @@ const searchPayload = {
   hasMore: false,
 };
 
-test("public discovery contracts reuse exact public product documents", () => {
-  const category = parseStorefrontPublicCategoryPageV1(categoryPayload);
-  const collection = parseStorefrontPublicCollectionPageV1(collectionPayload);
-  const search = parseStorefrontPublicSearchPageV1(searchPayload);
+const categoryPage = parseStorefrontPublicCategoryPageV1(categoryPayload);
+const collectionPage = parseStorefrontPublicCollectionPageV1(collectionPayload);
+const searchPage = parseStorefrontPublicSearchPageV1(searchPayload);
+const bootstrap = parseStorefrontBootstrapV1({
+  contractVersion: "storefront-bootstrap.v1",
+  context,
+  themeRevision: "theme:1",
+  layoutRevision: "layout:1",
+  capabilities: ["catalog.read"],
+});
+const environment = {
+  STOREFRONT_STAGE: "production",
+  STOREFRONT_API_BASE_URL: "https://api.example.com",
+  STOREFRONT_PLATFORM_BASE_DOMAIN: "shops.example.com",
+  STOREFRONT_BUILD_ID: "build-discovery-1",
+};
 
-  assert.equal(category.category.breadcrumbs.at(-1)?.slug, "shirts");
-  assert.equal(category.items[0].summary.price.minor, "2599");
-  assert.equal(collection.collection.version, "2");
-  assert.equal(collection.items[0].variants[0].quantity.amount, "7");
-  assert.equal(search.facets.categories[0].count, 1);
-  assert.equal(search.facets.availability[0].value, "available");
+function discoveryResolver(overrides = {}) {
+  return {
+    async resolveCatalog() { return null; },
+    async resolveProduct() { return null; },
+    async resolveCategory() { return categoryPage; },
+    async resolveCollection() { return collectionPage; },
+    async resolveSearch() { return searchPage; },
+    ...overrides,
+  };
+}
+
+function discoveryWorker(resolver = discoveryResolver()) {
+  return createStorefrontWorker({
+    resolverFactory: () => ({ async resolve() { return bootstrap; } }),
+    catalogResolverFactory: () => resolver,
+  });
+}
+
+test("public discovery contracts reuse exact public product documents", () => {
+  assert.equal(categoryPage.category.breadcrumbs.at(-1)?.slug, "shirts");
+  assert.equal(categoryPage.items[0].summary.price.minor, "2599");
+  assert.equal(collectionPage.collection.version, "2");
+  assert.equal(collectionPage.items[0].variants[0].quantity.amount, "7");
+  assert.equal(searchPage.facets.categories[0].count, 1);
+  assert.equal(searchPage.facets.availability[0].value, "available");
 });
 
 test("public discovery contracts fail closed on malformed hierarchy, query and cursor state", () => {
@@ -181,6 +218,78 @@ test("public discovery contracts fail closed on malformed hierarchy, query and c
     }),
     /category facets are invalid/u,
   );
+});
+
+test("buyer worker renders category collection and search without scope identifiers", async () => {
+  const worker = discoveryWorker();
+  const category = await worker.fetch(
+    new Request("https://shop.example.com/categories/shirts"),
+    environment,
+  );
+  const categoryHtml = await category.text();
+  assert.equal(category.status, 200);
+  assert.match(categoryHtml, /Published category/u);
+  assert.match(categoryHtml, /Shirts/u);
+  assert.match(categoryHtml, /£25\.99/u);
+  assert.doesNotMatch(categoryHtml, /tenant-1/u);
+
+  const collection = await worker.fetch(
+    new Request("https://shop.example.com/collections/summer-edit"),
+    environment,
+  );
+  assert.equal(collection.status, 200);
+  assert.match(await collection.text(), /Summer Edit/u);
+
+  const search = await worker.fetch(
+    new Request("https://shop.example.com/search?q=linen%20shirt"),
+    environment,
+  );
+  const searchHtml = await search.text();
+  assert.equal(search.status, 200);
+  assert.match(searchHtml, /Results for “linen shirt”/u);
+  assert.match(searchHtml, /Categories/u);
+  assert.match(searchHtml, /Limited availability|Available/u);
+  assert.match(searchHtml, /action="\/search"/u);
+});
+
+test("buyer discovery routes preserve HEAD, bounded not-found and scope mismatch behavior", async () => {
+  const worker = discoveryWorker();
+  const head = await worker.fetch(
+    new Request("https://shop.example.com/categories/shirts", { method: "HEAD" }),
+    environment,
+  );
+  assert.equal(head.status, 200);
+  assert.equal(await head.text(), "");
+
+  const missingCollectionWorker = discoveryWorker(
+    discoveryResolver({ async resolveCollection() { return null; } }),
+  );
+  const missing = await missingCollectionWorker.fetch(
+    new Request("https://shop.example.com/collections/missing"),
+    environment,
+  );
+  assert.equal(missing.status, 404);
+  assert.equal((await missing.json()).error.code, "COLLECTION_NOT_FOUND");
+
+  const mismatch = parseStorefrontPublicCategoryPageV1({
+    ...categoryPayload,
+    context: { ...context, tenantId: "tenant-2" },
+  });
+  const mismatchWorker = discoveryWorker(
+    discoveryResolver({ async resolveCategory() { return mismatch; } }),
+  );
+  const denied = await mismatchWorker.fetch(
+    new Request("https://shop.example.com/categories/shirts"),
+    environment,
+  );
+  assert.equal(denied.status, 404);
+  assert.doesNotMatch(await denied.text(), /tenant-2/u);
+
+  const invalidSearch = await worker.fetch(
+    new Request("https://shop.example.com/search?q=x"),
+    environment,
+  );
+  assert.equal(invalidSearch.status, 404);
 });
 
 test("public discovery migrations are read-only, literal-search bounded and runtime scoped", async () => {
