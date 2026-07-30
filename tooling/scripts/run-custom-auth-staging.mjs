@@ -6,6 +6,7 @@ import { Client, neon } from "@neondatabase/serverless";
 
 const root = fileURLToPath(new URL("../..", import.meta.url));
 const entryPath = path.join(root, "apps", "api", "src", "staging.ts");
+const authPath = path.join(root, "apps", "api", "src", "staging-auth.ts");
 const deployPath = path.join(
   root,
   "tooling",
@@ -13,6 +14,7 @@ const deployPath = path.join(
   "deploy-custom-auth-staging.mjs",
 );
 const originalEntry = await readFile(entryPath, "utf8");
+const originalAuth = await readFile(authPath, "utf8");
 const originalDeploy = await readFile(deployPath, "utf8");
 const legacyMarker = '"neon-auth-required"';
 const customMarker = '"custom-auth-required"';
@@ -26,6 +28,43 @@ const redactNeedle =
   '.replaceAll(connectionString, "[REDACTED_DATABASE_URL]")';
 if (!originalDeploy.includes(redactNeedle)) {
   throw new Error("Custom staging redaction patch target is missing");
+}
+const diagnosticNeedle = `  } catch (error) {
+    return errorResponse(error, requestId(request));
+  }
+}`;
+const diagnosticReplacement = `  } catch (error) {
+    const diagnostic = error instanceof Error ? error : new Error(String(error));
+    const record = diagnostic as Error & {
+      readonly code?: unknown;
+      readonly detail?: unknown;
+      readonly constraint?: unknown;
+      readonly routine?: unknown;
+    };
+    const safeMessage = diagnostic.message
+      .replace(/postgres(?:ql)?:\\/\\/[^\\s\"']+/giu, "[REDACTED_DATABASE_URL]")
+      .slice(0, 600);
+    return Response.json(
+      {
+        error: {
+          code: "STAGING_AUTH_DIAGNOSTIC",
+          message: safeMessage,
+          requestId: requestId(request),
+          details: {
+            name: diagnostic.name,
+            databaseCode: typeof record.code === "string" ? record.code : null,
+            detail: typeof record.detail === "string" ? record.detail.slice(0, 300) : null,
+            constraint: typeof record.constraint === "string" ? record.constraint : null,
+            routine: typeof record.routine === "string" ? record.routine : null,
+          },
+        },
+      },
+      { status: 500, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+}`;
+if (!originalAuth.includes(diagnosticNeedle)) {
+  throw new Error("Custom auth diagnostic patch target is missing");
 }
 
 const { NEON_API_KEY, GITHUB_RUN_ID } = process.env;
@@ -163,6 +202,11 @@ await writeFile(
   "utf8",
 );
 await writeFile(
+  authPath,
+  originalAuth.replace(diagnosticNeedle, diagnosticReplacement),
+  "utf8",
+);
+await writeFile(
   deployPath,
   originalDeploy.replace(
     redactNeedle,
@@ -174,5 +218,6 @@ try {
   await import("./deploy-custom-auth-staging.mjs");
 } finally {
   await writeFile(entryPath, originalEntry, "utf8");
+  await writeFile(authPath, originalAuth, "utf8");
   await writeFile(deployPath, originalDeploy, "utf8");
 }
