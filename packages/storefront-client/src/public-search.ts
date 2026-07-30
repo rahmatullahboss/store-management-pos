@@ -22,6 +22,12 @@ export interface StorefrontPublicSearchClientConfiguration {
   readonly timeoutMs?: number;
 }
 
+export interface StorefrontPublicSearchSelectionV1
+  extends StorefrontPublicSearchPageV1 {
+  readonly selectedCategory: string | null;
+  readonly selectedAvailability: StorefrontPublicAvailabilityFacetValueV1 | null;
+}
+
 function normalizeBaseUrl(value: string): URL {
   const url = new URL(value);
   if (url.protocol !== "https:" && url.hostname !== "localhost") {
@@ -78,7 +84,7 @@ export async function requestStorefrontPublicSearch(
   hostname: string,
   query: string,
   options: StorefrontPublicSearchClientOptions = {},
-): Promise<StorefrontPublicSearchPageV1> {
+): Promise<StorefrontPublicSearchSelectionV1> {
   const baseUrl = normalizeBaseUrl(configuration.baseUrl);
   const target = new URL(`${baseUrl.pathname}/v1/storefront/search`, baseUrl);
   target.searchParams.set("hostname", normalizeHostname(hostname));
@@ -113,7 +119,12 @@ export async function requestStorefrontPublicSearch(
         response.status,
       );
     }
-    return parseStorefrontPublicSearchPageV1(await response.json());
+    const page = parseStorefrontPublicSearchPageV1(await response.json());
+    return Object.freeze({
+      ...page,
+      selectedCategory: options.category ?? null,
+      selectedAvailability: options.availability ?? null,
+    });
   } finally {
     clearTimeout(timeout);
     options.signal?.removeEventListener("abort", onAbort);
