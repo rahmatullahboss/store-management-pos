@@ -220,12 +220,13 @@ test("worker fails closed on content scope mismatch and returns bounded CMS not-
   assert.equal((await missing.json()).error.code, "CONTENT_NOT_FOUND");
 });
 
-test("STF-0006 and STF-0007 are registered with safe public execution boundaries", async () => {
+test("STF-0006 through STF-0008 preserve safe public execution boundaries", async () => {
   const manifest = JSON.parse(
     await readFile(new URL("../../database/modules/storefront/manifest.json", import.meta.url), "utf8"),
   );
   assert.ok(manifest.migrations.some(({ id }) => id === "STF-0006"));
-  assert.equal(manifest.migrations.at(-1).id, "STF-0007");
+  assert.ok(manifest.migrations.some(({ id }) => id === "STF-0007"));
+  assert.equal(manifest.migrations.at(-1).id, "STF-0008");
   const contentSql = await readFile(
     new URL("../../database/modules/storefront/migrations/STF-0006-public-content-resolution.sql", import.meta.url),
     "utf8",
@@ -236,12 +237,32 @@ test("STF-0006 and STF-0007 are registered with safe public execution boundaries
   assert.match(contentSql, /WHERE cp\.status = 'published'/u);
   assert.match(contentSql, /REVOKE ALL ON FUNCTION storefront\.resolve_public_content_bundle\(text,text\) FROM PUBLIC/u);
   assert.match(contentSql, /GRANT EXECUTE ON FUNCTION storefront\.resolve_public_content_bundle\(text,text\) TO store_app_runtime/u);
-  const qualificationSql = await readFile(
+  const variantSql = await readFile(
     new URL("../../database/modules/storefront/migrations/STF-0007-qualified-product-publication-reference.sql", import.meta.url),
     "utf8",
   );
-  assert.match(qualificationSql, /SELECT product_publication\.publication_state INTO v_product_state/u);
-  assert.match(qualificationSql, /FROM storefront\.product_publications AS product_publication/u);
-  assert.match(qualificationSql, /REVOKE ALL ON FUNCTION storefront\.set_variant_publication/u);
-  assert.match(qualificationSql, /GRANT EXECUTE ON FUNCTION storefront\.set_variant_publication/u);
+  assert.match(variantSql, /SELECT product_publication\.publication_state INTO v_product_state/u);
+  assert.match(variantSql, /FROM storefront\.product_publications AS product_publication/u);
+  assert.match(variantSql, /REVOKE ALL ON FUNCTION storefront\.set_variant_publication/u);
+  assert.match(variantSql, /GRANT EXECUTE ON FUNCTION storefront\.set_variant_publication/u);
+  const commandSql = await readFile(
+    new URL("../../database/modules/storefront/migrations/STF-0008-qualified-publication-command-references.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(commandSql, /parent_publication\.publication_state <> 'archived'/u);
+  assert.match(commandSql, /collection_member\.collection_id = p_collection_id/u);
+  assert.match(commandSql, /max\(navigation_row\.revision\)/u);
+  assert.match(commandSql, /SELECT storefront_row\.status INTO v_storefront_status/u);
+  assert.match(commandSql, /max\(content_page\.revision\)/u);
+  assert.match(commandSql, /max\(homepage_row\.revision\)/u);
+  for (const functionName of [
+    "set_category_publication",
+    "replace_collection_members",
+    "publish_navigation_revision",
+    "publish_content_page_revision",
+    "publish_homepage_revision",
+  ]) {
+    assert.match(commandSql, new RegExp(`REVOKE ALL ON FUNCTION storefront\\.${functionName}`, "u"));
+    assert.match(commandSql, new RegExp(`GRANT EXECUTE ON FUNCTION storefront\\.${functionName}`, "u"));
+  }
 });
