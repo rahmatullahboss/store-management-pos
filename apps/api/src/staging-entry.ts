@@ -7,11 +7,16 @@ import {
   handleStagingReadContext,
   type StagingReadContextEnvironment,
 } from "./staging-read-context.js";
+import {
+  handleExactStagingPos,
+  type StagingPosReleaseEnvironment,
+} from "./staging-pos-release.js";
 
 export interface PersistentStagingEnvironment
   extends StagingEnvironment,
     StagingReadContextEnvironment,
-    OperationalStagingEnvironment {}
+    OperationalStagingEnvironment,
+    StagingPosReleaseEnvironment {}
 
 function statusHeaders(): HeadersInit {
   return {
@@ -56,6 +61,8 @@ export default {
         { status: 200, headers: statusHeaders() },
       );
     }
+    const exactPos = await handleExactStagingPos(request, env);
+    if (exactPos) return exactPos;
     const operational = await handleOperationalStagingRequest(request, env);
     if (operational) return operational;
     return await stagingWorker.fetch(request, env);
