@@ -31,6 +31,27 @@ The companion generic Neon preview uses the same shared migration-registry execu
 
 The schema-v2 recovery artifact contains bounded timing, manifest/migration/module totals, aggregate marker controls and disposable lifecycle identifiers required for cleanup audit. It must never contain a database connection URI, API key, SQL contents, production row values or raw provider failure payload.
 
+## Verified disposable rehearsal
+
+Exact-head disposable recovery evidence for implementation `2f589e3de7a7352757172fbb19937885487f04a2`:
+
+- Foundation CI run/job: `30579560300 / 90996224407`;
+- artifact/digest: `8774068031 / sha256:4a653575a5b315e11cdb25ffbcfcee71e00a3b0e300833fb03d10e6a48639e74`;
+- report Git SHA: `c8f8e0d7fda3ffb1b5ed0331d9ab43eb60c09b79`;
+- report schema: `2`;
+- manifests / registered migrations: `17 / 64`;
+- checkpoint tenant, reference, audit, outbox, idempotency and migration-registry controls: all exact;
+- destructive mutation observed: `true`;
+- exact checkpoint restore / marker reconciliation: `true / true`;
+- restore-ready / reconciliation / total recovery: `2,388.30 / 1,368.19 / 3,756.49 ms`;
+- disposable project cleanup: `true`;
+- failure category: `null`;
+- credential-like artifact markers: `0`.
+
+The exact-head generic Neon preview job `90996337636` completed successfully but intentionally emitted a skipped lifecycle record because this branch uses the dedicated persistent-staging Neon project. Its shared-executor wiring is source- and test-verified; the disposable recovery job above is the live fresh-project proof that all 64 migrations apply in order. The dedicated persistent staging run `30579560264 / 90996127068` also remained healthy with a clear operability gate.
+
+This evidence satisfies the disposable CI rehearsal gate only. It does not approve production retention, encrypted logical exports, regional recovery, production RPO/RTO, production credentials, traffic cutover or a production restore.
+
 ## Candidate production objectives
 
 The following are candidate acceptance targets and require product, platform, security, finance and operations approval before they become contractual:

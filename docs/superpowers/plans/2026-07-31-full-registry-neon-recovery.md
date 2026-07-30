@@ -133,10 +133,10 @@ Expected: all gates pass.
 
 Confirm only disposable CI/staging resources are affected. No production project, branch, secret, retention policy or launch approval is created.
 
-- [ ] **Step 4: Inspect exact-head Foundation CI recovery artifact**
+- [x] **Step 4: Inspect exact-head Foundation CI recovery artifact**
 
 Require 64 migrations, exact registry equality, marker/audit/outbox/idempotency reconciliation, bounded RTO evidence, cleanup deletion and privacy-safe report.
 
-- [ ] **Step 5: Record live evidence and keep PR draft**
+- [x] **Step 5: Record live evidence and keep PR draft**
 
 Update tracker/checkpoint/PR with exact run, job, artifact and digest while retaining production backup/restore acceptance as blocked.

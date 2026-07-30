@@ -1,9 +1,9 @@
-schema_version: 13
+schema_version: 14
 workstream: persistent-admin-pos-staging
-status: full_registry_recovery_implemented_pending_live_evidence
+status: full_registry_recovery_live_evidence_complete_production_acceptance_pending
 branch: ops/persistent-admin-pos-staging-v1
 base_sha: 3a414363a40f48bd6e526418d9e82679501b170e
-verified_implementation_head: cdf00d6efd4a6a0bedbe130ddc9ddf21509ce8d8
+verified_implementation_head: 2f589e3de7a7352757172fbb19937885487f04a2
 resources:
   cloudflare_worker: store-pos-staging
   base_url: https://store-pos-staging.rahmatullahzisan.workers.dev
@@ -233,32 +233,51 @@ checkpoints:
   api_health:
     status: complete
   backup_restore_rehearsal:
-    status: implementation_complete_live_evidence_pending
+    status: live_evidence_complete_production_acceptance_pending
     environment: disposable_neon_project_only
     production_acceptance: false
     report_schema_version: 2
+    workflow_head_sha: 2f589e3de7a7352757172fbb19937885487f04a2
+    report_git_sha: c8f8e0d7fda3ffb1b5ed0331d9ab43eb60c09b79
+    workflow_run_id: 30579560300
+    workflow_job_id: 90996224407
+    artifact_id: 8774068031
+    artifact_digest: sha256:4a653575a5b315e11cdb25ffbcfcee71e00a3b0e300833fb03d10e6a48639e74
+    artifact_independent_inspection: passed
     shared_registry_executor: tooling/scripts/apply-migration-registry.mjs
     manifest_count: 17
     registered_migration_count: 64
     checksum_before_database_access: true
     exact_ordered_marker_verification: true
     synthetic_foundation_seed_only: true
-    checkpoint_marker_controls:
-      - tenant_state
-      - reference_record
-      - audit_event
-      - outbox_event
-      - idempotency_record
-      - migration_registry
-    destructive_mutation_observed: required
-    exact_checkpoint_restore: required
-    timing_evidence:
-      - restore_ready_ms
-      - reconciliation_ms
-      - total_recovery_ms
-    cleanup_failure_policy: fail_closed
+    checkpoint_controls:
+      tenant_restored: true
+      reference_count: 1
+      audit_count: 1
+      outbox_count: 1
+      idempotency_count: 1
+      migration_registry_exact: true
+    destructive_mutation_observed: true
+    restored_controls:
+      reference_count: 1
+      audit_count: 1
+      outbox_count: 1
+      idempotency_count: 1
+      migration_registry_exact: true
+    exact_checkpoint_restore: true
+    marker_reconciled: true
+    restore_ready_ms: 2388.3
+    reconciliation_ms: 1368.19
+    total_recovery_ms: 3756.49
+    cleanup_deleted: true
+    failure_category: null
     summary_disposable_identifiers: omitted
     summary_credentials_or_row_values: omitted
+    artifact_credential_like_markers: 0
+    generic_preview_job_id: 90996337636
+    generic_preview_result: skipped_by_dedicated_persistent_staging_policy
+    generic_preview_lifecycle_artifact_id: 8774083355
+    generic_preview_lifecycle_artifact_digest: sha256:f322060a79f6a428c5b1ddefc002fce5bf9531091063051351992d8a10047212
     production_retention_approved: false
     encrypted_logical_export_proven: false
     regional_recovery_approved: false
@@ -316,9 +335,9 @@ checkpoints:
       replay_safe: true
       stale_attempt_protection: true
       bounded_retry: true
-      batches: 2
-      claimed: 44
-      delivered: 44
+      batches: 1
+      claimed: 2
+      delivered: 2
       replayed: 0
       failed: 0
       remaining: 0
@@ -334,13 +353,13 @@ checkpoints:
   custom_domain:
     status: pending
 evidence:
-  implementation_head: cdf00d6efd4a6a0bedbe130ddc9ddf21509ce8d8
-  workflow_head_sha: cdf00d6efd4a6a0bedbe130ddc9ddf21509ce8d8
-  report_git_sha: 6e198886d65cd4bd9b92d2a9eaf15d99a1c16795
-  workflow_run_id: 30576767204
-  workflow_job_id: 90986869168
-  artifact_id: 8773038947
-  artifact_digest: sha256:6177f542d66eeef1987f92bb4289af0f3ea29df138da77be20142c023275ac04
+  implementation_head: 2f589e3de7a7352757172fbb19937885487f04a2
+  workflow_head_sha: 2f589e3de7a7352757172fbb19937885487f04a2
+  report_git_sha: c8f8e0d7fda3ffb1b5ed0331d9ab43eb60c09b79
+  workflow_run_id: 30579560264
+  workflow_job_id: 90996127068
+  artifact_id: 8774097295
+  artifact_digest: sha256:b2f3e18caf926a00494200ec51dc864d8837a9271c0afc8fb24a84b3e0a7be43
   artifact_independent_inspection: passed
   previous_live_operability:
     report_schema_version: 6
@@ -351,16 +370,16 @@ evidence:
     outbox_backlog_count: 40
     outbox_oldest_unpublished_seconds: 9751
     active_alert: staging.outbox_oldest_unpublished_seconds.warning
-  foundation_ci_run_id: 30576767401
-  foundation_verify_job_id: 90986870070
-  foundation_cloudflare_job_id: 90986977882
-  foundation_neon_recovery_job_id: 90986978132
-  foundation_neon_preview_job_id: 90987121406
-  foundation_design_run_id: 30576767579
-  foundation_design_job_id: 90986870158
-  marketing_preview_run_id: 30576767343
-  marketing_verify_job_id: 90986870002
-  marketing_deploy_job_id: 90986952059
+  foundation_ci_run_id: 30579560300
+  foundation_verify_job_id: 90996127047
+  foundation_cloudflare_job_id: 90996224201
+  foundation_neon_recovery_job_id: 90996224407
+  foundation_neon_preview_job_id: 90996337636
+  foundation_design_run_id: 30579560316
+  foundation_design_job_id: 90996127184
+  marketing_preview_run_id: 30579560245
+  marketing_verify_job_id: 90996127116
+  marketing_deploy_job_id: 90996291791
   identity_checkpoint: docs/architecture/staging/staging-identity-checkpoint.md
   usable_release_checkpoint: docs/architecture/staging/usable-release-candidate-checkpoint.md
   protected_read_plan: docs/architecture/staging/internal-token-read-api-plan.md
@@ -378,5 +397,5 @@ limitations:
   - only inventory reservation create and release are enabled as controlled business writes; payment, refund, journal, period-close, banking, fiscal, destructive and other inventory commands remain disabled
   - password recovery and email-verification token lifecycles are implemented, but production sender domain, transactional email provider, templates, bounce handling, delivery monitoring and support policy are not configured
   - schema-v7 synthetic outbox publisher live evidence is complete with a healthy clear gate; production transport/provider, SLO, paging and dead-letter ownership remain pending
-  - full-registry disposable preview/recovery implementation is complete but requires new exact-head live evidence; production PITR retention, encrypted logical export, regional recovery, approved RPO/RTO and production-class restore acceptance remain pending
+  - full-registry disposable PITR recovery live evidence is complete for 17 manifests and 64 migrations; generic preview was intentionally skipped by dedicated-branch policy, and production PITR retention, encrypted logical export, regional recovery, approved RPO/RTO and production-class restore acceptance remain pending
   - production domain, production MFA recovery and factor governance, asymmetric token lifecycle, production alert delivery and controlled launch approval remain pending

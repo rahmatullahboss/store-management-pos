@@ -1,7 +1,7 @@
-# Usable Admin/POS operability implementation checkpoint
+# Usable Admin/POS operability and recovery checkpoint
 
-Status: synthetic outbox publisher live evidence complete; operability gate clear
-Verified implementation head: `cdf00d6efd4a6a0bedbe130ddc9ddf21509ce8d8`
+Status: operability gate clear; disposable full-registry recovery verified; production acceptance pending
+Verified implementation head: `2f589e3de7a7352757172fbb19937885487f04a2`
 Persistent URL: `https://store-pos-staging.rahmatullahzisan.workers.dev`
 Date: 2026-07-31
 
@@ -204,6 +204,29 @@ Exact-head schema-v7 publisher evidence was produced and independently inspected
 - external delivery: `false`.
 
 Independent inspection found no database URL, bearer/JWT, raw action token, cookie header, password field, TOTP secret field or raw publisher event/tenant/payload/metadata/correlation/aggregate identifier. Production message transport, alert delivery, paging, dead-letter ownership and approved SLOs are not configured by this checkpoint.
+
+## Full-registry disposable recovery evidence
+
+The generic Neon preview and PITR recovery scripts now use one shared executor for all 17 manifests and 64 registered migrations. Every SQL checksum is verified before database access, migrations run in explicit dependency order, and `platform.schema_migrations` must match the complete ordered registry exactly.
+
+Exact-head disposable recovery evidence:
+
+- implementation/workflow head: `2f589e3de7a7352757172fbb19937885487f04a2`;
+- report Git SHA: `c8f8e0d7fda3ffb1b5ed0331d9ab43eb60c09b79`;
+- Foundation CI run/job: `30579560300 / 90996224407`;
+- artifact/digest: `8774068031 / sha256:4a653575a5b315e11cdb25ffbcfcee71e00a3b0e300833fb03d10e6a48639e74`;
+- report schema: `2`;
+- manifests / registered migrations: `17 / 64`;
+- checkpoint tenant, reference, audit, outbox, idempotency and registry controls: all exact;
+- destructive mutation observed: `true`;
+- exact checkpoint restore / marker reconciliation: `true / true`;
+- restore-ready / reconciliation / total recovery: `2,388.30 / 1,368.19 / 3,756.49 ms`;
+- cleanup deleted / failure category: `true / null`;
+- credential-like artifact markers: `0`.
+
+The exact-head generic preview job `90996337636` was intentionally skipped by the dedicated persistent-staging branch policy; it did not perform a second live migration apply. The disposable recovery project above is the fresh-project proof of all 64 migrations. The exact-head persistent staging run `30579560264 / 90996127068` also passed with artifact `8774097295`, digest `sha256:b2f3e18caf926a00494200ec51dc864d8837a9271c0afc8fb24a84b3e0a7be43`, a healthy/clear operability result and no credential-like markers.
+
+This is disposable synthetic CI evidence, not production backup/restore acceptance. Production retention, encrypted logical export, regional recovery, approved RPO/RTO, monitoring/paging, two-person authorization and a production-class isolated rehearsal remain blocked by `docs/architecture/staging/backup-restore-acceptance.md`.
 
 ## Previous exact staging evidence
 
