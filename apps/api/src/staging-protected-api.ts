@@ -79,6 +79,37 @@ function scopeProtectedRead(
   }
 }
 
+function diagnosticError(
+  error: unknown,
+  request: Request,
+  env: StagingProtectedApiEnvironment,
+): unknown {
+  if (
+    error instanceof PlatformError ||
+    env.APP_ENV !== "staging" ||
+    !request.headers.has("x-staging-smoke")
+  ) {
+    return error;
+  }
+  const record = typeof error === "object" && error !== null
+    ? error as { name?: unknown; message?: unknown; code?: unknown }
+    : { message: String(error) };
+  const redact = (value: unknown): string => String(value ?? "")
+    .replaceAll(env.DATABASE_URL, "[REDACTED_DATABASE_URL]")
+    .replaceAll(env.STAGING_INTERNAL_TOKEN_SECRET ?? "__never__", "[REDACTED_TOKEN_SECRET]")
+    .slice(0, 500);
+  return new PlatformError(
+    "INTERNAL_ERROR",
+    "Protected staging read failed",
+    500,
+    {
+      name: redact(record.name),
+      code: redact(record.code),
+      diagnostic: redact(record.message),
+    },
+  );
+}
+
 export async function handleStagingProtectedApi(
   request: Request,
   env: StagingProtectedApiEnvironment,
@@ -176,6 +207,6 @@ export async function handleStagingProtectedApi(
       headers: responseHeaders,
     });
   } catch (error) {
-    return errorResponse(error, id);
+    return errorResponse(diagnosticError(error, request, env), id);
   }
 }
