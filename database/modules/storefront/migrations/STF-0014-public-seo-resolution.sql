@@ -173,4 +173,8 @@ $$;
 REVOKE ALL ON FUNCTION storefront.resolve_public_seo(text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION storefront.resolve_public_seo(text) TO store_app_runtime;
 
+INSERT INTO platform.schema_migrations(migration_id, module, checksum)
+VALUES ('STF-0014','MOD-H-STOREFRONT','manifest:STF-0014-public-seo-resolution.sql')
+ON CONFLICT (migration_id) DO NOTHING;
+
 COMMIT;
