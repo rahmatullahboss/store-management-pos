@@ -26,6 +26,11 @@
       "id": "FND-0005",
       "file": "FND-0005-session-revocation-privilege-hardening.sql",
       "sha256": "ff50c6d4f607002540d9e3399ff7523de840ada8c6d0580ecf7f47a7b403ef00"
+    },
+    {
+      "id": "FND-0006",
+      "file": "FND-0006-custom-auth.sql",
+      "sha256": "e1e3dd5242e448c175895fbab3dda00118a2c7690663f54bad0b0e75cbd2c816"
     }
   ]
 }
