@@ -80,8 +80,11 @@ test("tampered and expired internal tokens fail closed", async () => {
     freshContext: async () => context,
     now: () => now + 1,
   });
-  const last = token.at(-1);
-  const tampered = `${token.slice(0, -1)}${last === "a" ? "b" : "a"}`;
+  const [header, claims, signature] = token.split(".");
+  assert.ok(header && claims && signature);
+  const first = signature[0];
+  const tamperedSignature = `${first === "a" ? "b" : "a"}${signature.slice(1)}`;
+  const tampered = `${header}.${claims}.${tamperedSignature}`;
   await assert.rejects(() => verifier.verify(tampered), /signature is invalid/u);
 
   const expiredVerifier = new StagingInternalTokenVerifier({
