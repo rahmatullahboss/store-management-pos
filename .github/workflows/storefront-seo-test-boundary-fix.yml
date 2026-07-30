@@ -29,19 +29,18 @@ jobs:
           set -euo pipefail
           python <<'PY'
           from pathlib import Path
+          import re
 
           discovery = Path("tests/unit/storefront-public-discovery.test.mjs")
           text = discovery.read_text()
-          old = '''  const registered = manifest.migrations.slice(-3);
-          assert.deepEqual(
-            registered.map((migration) => migration.id),
-            ["STF-0011", "STF-0012", "STF-0013"],
-          );
-          assert.deepEqual(
-            registered.map((migration) => migration.file),
-            expectedFiles,
-          );'''
-          new = '''  const expectedIds = ["STF-0011", "STF-0012", "STF-0013"];
+          pattern = re.compile(
+              r'  const registered = manifest\.migrations\.slice\(-3\);\n'
+              r'  assert\.deepEqual\(\n'
+              r'    registered\.map\(\(migration\) => migration\.id\),\n'
+              r'    \["STF-0011", "STF-0012", "STF-0013"\],\n'
+              r'  \);\n'
+          )
+          replacement = '''  const expectedIds = ["STF-0011", "STF-0012", "STF-0013"];
           const registered = expectedIds.map((id) =>
             manifest.migrations.find((migration) => migration.id === id)
           );
@@ -50,25 +49,26 @@ jobs:
             registered.map((migration) => migration.id),
             expectedIds,
           );
-          assert.deepEqual(
-            registered.map((migration) => migration.file),
-            expectedFiles,
-          );'''
-          if text.count(old) != 1:
-              raise SystemExit(f"Discovery migration assertion marker found {text.count(old)} times")
-          discovery.write_text(text.replace(old, new, 1))
+          '''
+          text, count = pattern.subn(replacement, text, count=1)
+          if count != 1:
+              raise SystemExit(f"Discovery migration assertion regex matched {count} times")
+          discovery.write_text(text)
 
           filters = Path("tests/unit/storefront-public-search-filters.test.mjs")
           text = filters.read_text()
-          old = '''  const migration = manifest.migrations.at(-1);
-          assert.equal(migration.id, "STF-0013");
-          assert.equal(migration.file, "STF-0013-public-search-filters.sql");'''
-          new = '''  const migration = manifest.migrations.find(({ id }) => id === "STF-0013");
+          pattern = re.compile(
+              r'  const migration = manifest\.migrations\.at\(-1\);\n'
+              r'  assert\.equal\(migration\.id, "STF-0013"\);\n'
+              r'  assert\.equal\(migration\.file, "STF-0013-public-search-filters\.sql"\);'
+          )
+          replacement = '''  const migration = manifest.migrations.find(({ id }) => id === "STF-0013");
           assert.ok(migration);
           assert.equal(migration.file, "STF-0013-public-search-filters.sql");'''
-          if text.count(old) != 1:
-              raise SystemExit(f"Search-filter migration assertion marker found {text.count(old)} times")
-          filters.write_text(text.replace(old, new, 1))
+          text, count = pattern.subn(replacement, text, count=1)
+          if count != 1:
+              raise SystemExit(f"Search-filter migration assertion regex matched {count} times")
+          filters.write_text(text)
           PY
       - name: Verify tests and formatting
         run: |
