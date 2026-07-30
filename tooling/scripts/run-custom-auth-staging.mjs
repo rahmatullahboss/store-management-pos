@@ -28,10 +28,7 @@ if (!originalDeploy.includes(redactNeedle)) {
   throw new Error("Custom staging redaction patch target is missing");
 }
 
-const {
-  NEON_API_KEY,
-  GITHUB_RUN_ID,
-} = process.env;
+const { NEON_API_KEY, GITHUB_RUN_ID } = process.env;
 if (!NEON_API_KEY) throw new Error("NEON_API_KEY is required");
 const projectId = "morning-flower-46531465";
 const branchId = "br-empty-sound-afkx5vkj";
@@ -45,9 +42,24 @@ async function connectionString() {
   );
   const body = await response.json();
   if (!response.ok || typeof body?.uri !== "string") {
-    throw new Error(`Custom auth preflight connection failed with HTTP ${response.status}`);
+    throw new Error(
+      `Custom auth preflight connection failed with HTTP ${response.status}`,
+    );
   }
   return body.uri;
+}
+
+async function customAuthMigrationExists(uri) {
+  const client = new Client({ connectionString: uri });
+  await client.connect();
+  try {
+    const result = await client.query(
+      "SELECT EXISTS(SELECT 1 FROM platform.schema_migrations WHERE migration_id = 'FND-0006') AS exists",
+    );
+    return result.rows[0]?.exists === true;
+  } finally {
+    await client.end();
+  }
 }
 
 async function httpDriverPreflight(uri) {
@@ -60,7 +72,7 @@ async function httpDriverPreflight(uri) {
   const query = neon(uri);
   let userId = "";
   try {
-    const rows = await query(
+    const rows = await query.query(
       `SELECT r.*, t.display_name AS tenant_name
        FROM platform.custom_auth_register(
          $1::text,$2::text,$3::text,$4::text,$5::text,$6::timestamptz,$7::text,$8::text,$9::text
@@ -139,7 +151,11 @@ async function httpDriverPreflight(uri) {
 }
 
 const uri = await connectionString();
-await httpDriverPreflight(uri);
+if (await customAuthMigrationExists(uri)) {
+  await httpDriverPreflight(uri);
+} else {
+  console.log("custom auth HTTP preflight deferred until FND-0006 is applied");
+}
 
 await writeFile(
   entryPath,
