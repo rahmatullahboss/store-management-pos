@@ -1,10 +1,11 @@
 # H3-CATALOG-02 — Public Catalog Checkpoint
 
-**Status:** implementation complete, exact-head evidence pending  
+**Status:** complete  
 **Workpack:** MOD-H — Storefront Commerce and Custom Domains  
 **Branch:** `module/storefront-commerce-v1`  
 **Integration target:** `program/integration-v1`  
-**Checkpoint date:** 2026-07-30
+**Checkpoint date:** 2026-07-30  
+**Verified implementation head:** `e5092766ff625e1bbf0f9cff191296e1fb1851a8`
 
 ## Purpose
 
@@ -54,7 +55,7 @@ The public catalog is a read composition. It does not create a second product, p
 - `GET|HEAD /v1/storefront/products/{slug}?hostname=...`;
 - all other methods return `405` with `Allow: GET, HEAD`;
 - unknown storefronts fail closed;
-- unpublished or unknown products return a bounded public `404`;
+- unpublished, unpriced or unknown products return a bounded public `404`;
 - responses use defensive security headers and short shared-cache windows.
 
 ### Buyer rendering
@@ -63,40 +64,58 @@ The public catalog is a read composition. It does not create a second product, p
 - public product listing route;
 - public product detail route;
 - exact-money rendering without browser arithmetic;
-- availability and tax-at-checkout messaging;
+- reservation-aware availability and tax-at-checkout messaging;
 - canonical host/context reconciliation before rendering;
 - safe empty, unavailable, malformed and not-found states;
 - responsive and RTL-compatible catalog/product layouts;
 - improved compare-at price contrast for accessibility.
 
-## Verification inventory
+## Exact verification evidence
 
-The branch includes:
+Storefront CI run `30519058955` verified implementation head `e5092766ff625e1bbf0f9cff191296e1fb1851a8`:
 
-- unit coverage for contract parsing, exact money, pagination, invalid inputs, public API handling and buyer rendering;
-- PostgreSQL 17 migration and public-catalog rehearsal covering publication visibility, tenant isolation, price-list revision selection, warehouse scope, reservations, exact quantities, fail-closed behavior and deterministic replay;
-- deterministic buyer browser/accessibility evidence for public listing and detail;
-- Cloudflare preview/runtime/cleanup evidence;
-- non-destructive Neon recovery evidence while the dedicated MOD-H Neon branch remains blocked by the non-production project branch quota.
+- verify job `90795225080`: success;
+- PostgreSQL 17 rehearsal job `90795311940`: success;
+- buyer/admin/content/catalog browser job `90795311932`: success;
+- Cloudflare preview/runtime/cleanup job `90795311951`: success;
+- non-destructive Neon recovery job `90795311962`: success;
+- repository tests: 435/435;
+- base buyer browser scenarios: 3/3;
+- admin browser scenarios: 4/4;
+- public-content browser scenarios: 3/3;
+- public-catalog browser scenarios: 3/3;
+- public-catalog Axe violations: 0;
+- storefront migrations: 10;
+- storefront tables: 16;
+- forced-RLS tables: 16/16;
+- storefront audit events: 37;
+- storefront outbox events: 37;
+- command receipts: 23;
+- cache-generation rows: 1;
+- Cloudflare runtime requests/errors: 3/0;
+- Cloudflare preview Worker cleanup confirmed;
+- PostgreSQL raw log contained no `ERROR:` entry and included the public-catalog pass marker.
 
-Exact run IDs, job IDs, test totals, database counts and browser scenario totals must be recorded in `status.yaml` only after the current source head completes all required gates.
+Subsequent commits through `f4b9e93a50d60e22e98c5ef80a1542279000095a` changed only checkpoint/continuation documentation and the Foundation generic-Neon-preview quota guard. They did not alter the verified public-catalog implementation. The current documentation head is still required to pass its triggered checks before integration readiness is claimed.
 
 ## Security review note
 
 GitGuardian reported the historical CI-only value `POSTGRES_PASSWORD: postgres` from commit `31afafccaea8b6e16d76f677051c2de8b220b456`. It was an ephemeral GitHub Actions PostgreSQL service credential, not a production, Neon or external-service secret. The current workflow no longer contains that value: the isolated PostgreSQL service uses `POSTGRES_HOST_AUTH_METHOD: trust` and a loopback-only connection URL without a password. Repository history is not rewritten because the programme prohibits destructive history changes; the current tree and secret gate remain the release authority.
 
-## Acceptance gates
+The non-production Neon project remains at its 10-branch quota. MOD-H does not delete, reset or repurpose another branch. Its required database evidence remains PostgreSQL 17 full replay plus non-destructive Neon recovery until a safe dedicated branch slot exists.
 
-H3-CATALOG-02 may be marked complete only when one exact source head passes all of the following:
+## Acceptance result
 
-1. format, lint, module boundaries, strict typecheck, migration validation, build and repository tests;
-2. secret, licence, SBOM and dependency-audit gates;
-3. PostgreSQL 17 complete migration/replay and catalog rehearsal;
-4. buyer listing/detail browser evidence with zero Axe violations, keyboard access, mobile, RTL, 200% text and overflow checks;
-5. Cloudflare preview deployment, runtime metrics and cleanup;
-6. non-destructive Neon recovery;
-7. tracker and PR body updated with exact evidence;
-8. no production-compliance, final-tax or guaranteed-stock claim introduced by the public projection.
+H3-CATALOG-02 satisfies its listing/detail acceptance gates:
+
+1. format, lint, module boundaries, strict typecheck, migration validation, build and 435 repository tests passed;
+2. secret, licence, SBOM and high-severity dependency-audit gates passed;
+3. PostgreSQL 17 complete migration/replay and catalog rehearsal passed;
+4. buyer listing/detail evidence passed with zero Axe violations, keyboard access, mobile, RTL, 200% text and overflow checks;
+5. Cloudflare preview deployment, runtime metrics and cleanup passed;
+6. non-destructive Neon recovery passed;
+7. exact evidence is recorded in this checkpoint, `status.yaml` and PR #48;
+8. no production-compliance, final-tax or guaranteed-stock claim was introduced.
 
 ## Remaining H3 work after this checkpoint
 
