@@ -5,7 +5,8 @@
 **Branch:** `module/storefront-commerce-v1`  
 **Integration target:** `program/integration-v1`  
 **Checkpoint date:** 2026-07-30  
-**Verified implementation head:** `e5092766ff625e1bbf0f9cff191296e1fb1851a8`
+**Verified implementation head:** `e5092766ff625e1bbf0f9cff191296e1fb1851a8`  
+**Quota-safe validation head:** `f4b9e93a50d60e22e98c5ef80a1542279000095a`
 
 ## Purpose
 
@@ -70,7 +71,7 @@ The public catalog is a read composition. It does not create a second product, p
 - responsive and RTL-compatible catalog/product layouts;
 - improved compare-at price contrast for accessibility.
 
-## Exact verification evidence
+## Exact implementation evidence
 
 Storefront CI run `30519058955` verified implementation head `e5092766ff625e1bbf0f9cff191296e1fb1851a8`:
 
@@ -78,7 +79,7 @@ Storefront CI run `30519058955` verified implementation head `e5092766ff625e1bbf
 - PostgreSQL 17 rehearsal job `90795311940`: success;
 - buyer/admin/content/catalog browser job `90795311932`: success;
 - Cloudflare preview/runtime/cleanup job `90795311951`: success;
-- non-destructive Neon recovery job `90795311962`: success;
+- non-destructive Neon recovery job `90795312040`: success;
 - repository tests: 435/435;
 - base buyer browser scenarios: 3/3;
 - admin browser scenarios: 4/4;
@@ -96,7 +97,23 @@ Storefront CI run `30519058955` verified implementation head `e5092766ff625e1bbf
 - Cloudflare preview Worker cleanup confirmed;
 - PostgreSQL raw log contained no `ERROR:` entry and included the public-catalog pass marker.
 
-Subsequent commits through `f4b9e93a50d60e22e98c5ef80a1542279000095a` changed only checkpoint/continuation documentation and the Foundation generic-Neon-preview quota guard. They did not alter the verified public-catalog implementation. The current documentation head is still required to pass its triggered checks before integration readiness is claimed.
+## Quota-safe validation evidence
+
+Validation head `f4b9e93a50d60e22e98c5ef80a1542279000095a` changed only documentation and the Foundation generic-Neon-preview condition; it did not change the public-catalog implementation.
+
+- Storefront CI `30519327515`: success;
+  - verify `90796054506`;
+  - PostgreSQL `90796166102`;
+  - browser/accessibility `90796166119`;
+  - Cloudflare preview/runtime/cleanup `90796166055`;
+  - Neon recovery `90796166135`;
+- Foundation CI `30519327519`: success;
+  - verify `90796102893`;
+  - Cloudflare preview/runtime/cleanup `90796180051`;
+  - Neon recovery `90796180328`;
+  - generic disposable Neon preview `90796340548`: skipped as intended for the quota-blocked MOD-H branch;
+- Foundation Design CI `30519327509`: success;
+- Storefront Lockfile `30519327510`: success.
 
 ## Security review note
 
