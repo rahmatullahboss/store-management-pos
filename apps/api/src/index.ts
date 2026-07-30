@@ -18,11 +18,13 @@ import { handleStorefrontRequest } from "./modules/storefront/handler.js";
 import { handlePublicStorefrontRequest } from "./modules/storefront/public-handler.js";
 import { handleStorefrontReadRequest } from "./modules/storefront/read-handler.js";
 import { handleCreatePaymentIntent, handleCreateRefund, handleImportSettlement, handlePaymentAction } from "./payment-handler.js";
+import { handlePublicApiDiscovery } from "./public-api-discovery.js";
+import { handlePublicPartnerApi, type PublicPartnerApiBindings } from "./public-partner-api.js";
 import { buildRequestContext } from "./request-context.js";
 import { handleCreateReference } from "./reference-handler.js";
 import { createTokenVerifier } from "./token-verifier.js";
 
-export interface ApiEnvironment {
+export interface ApiEnvironment extends PublicPartnerApiBindings {
   readonly DATABASE_URL: string;
   readonly APP_ENV: string;
   readonly REGION: string;
@@ -39,10 +41,14 @@ export default {
     const requestId = request.headers.get("x-request-id") ?? uuidV7();
     try {
       const url = new URL(request.url);
+      const discoveryResponse = handlePublicApiDiscovery(request, url);
+      if (discoveryResponse) return discoveryResponse;
       if (request.method === "GET" && url.pathname === "/health") return Response.json({ status: "healthy", service: "api", databaseMode: "direct-neon", region: env.REGION });
       const database = new NeonDatabase({ connectionString: env.DATABASE_URL });
       const publicStorefrontResponse = await handlePublicStorefrontRequest(request, url, database);
       if (publicStorefrontResponse) return publicStorefrontResponse;
+      const publicPartnerResponse = await handlePublicPartnerApi({ request, url, database, bindings: env, requestId, region: env.REGION });
+      if (publicPartnerResponse) return publicPartnerResponse;
       const verifier = createTokenVerifier(env, database);
       const context = await buildRequestContext(new Request(request, { headers: new Headers([...request.headers, ["x-request-id", requestId]]) }), verifier, env.REGION);
       const financeObserver = env.FINANCE_METRICS ? { metrics: env.FINANCE_METRICS } : {};

@@ -1,20 +1,6 @@
-status=conflicted
-feature_head=7cb391e940bcfa0544e7dfd53c13e0d5d46336a9
+status=resolved_and_validated
+feature_head=5da77e8741147f58ae2d40edffcf5869e5da590b
 integration_head=fd63dfde4d5940112a9c77c2743b281e49ff6b55
-generated_at=2026-07-29T23:56:42Z
-conflict_files_begin
-apps/api/src/index.ts
-docs/agent-workpacks/program-board.yaml
-tooling/scripts/apply-migrations.mjs
-conflict_files_end
-unmerged_index_begin
-100644 27dc6ab07eede3a9d149654af862c7179cb8b95d 1	apps/api/src/index.ts
-100644 7d4dc6c6460e755bf7e8e630f9613903dc2e99b6 2	apps/api/src/index.ts
-100644 63584def9dff3be99ca368dde5baeebfac5000e2 3	apps/api/src/index.ts
-100644 9a0c199297906aad6e8f291ec0332b58522022da 1	docs/agent-workpacks/program-board.yaml
-100644 6c28dc605b43e41e3262477fa54aa5cfd70ab337 2	docs/agent-workpacks/program-board.yaml
-100644 ec5fdce6d3ea4960bffbba175b69ccd6367504d7 3	docs/agent-workpacks/program-board.yaml
-100644 5b896682eb7ca382ad4d44eaa41f8c83038e27b0 1	tooling/scripts/apply-migrations.mjs
-100644 e78ca59c2572e14e53f61d4003152c090c2a3263 2	tooling/scripts/apply-migrations.mjs
-100644 c6988756fe031610fddd600ea79ff2dac5b1ae4d 3	tooling/scripts/apply-migrations.mjs
-unmerged_index_end
+generated_at=2026-07-30T00:02:10Z
+validation=npm_ci,npm_verify,storefront_build
+resolved_files=apps/api/src/index.ts,docs/agent-workpacks/program-board.yaml,tooling/scripts/apply-migrations.mjs
