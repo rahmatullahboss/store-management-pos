@@ -1,9 +1,9 @@
-schema_version: 1
+schema_version: 2
 workstream: persistent-admin-pos-staging
-status: first_milestone_complete
+status: read_only_identity_complete
 branch: ops/persistent-admin-pos-staging-v1
 base_sha: 3a414363a40f48bd6e526418d9e82679501b170e
-verified_source_head: d48357b64ab267b0c191ff03e30bf75dbc85e9ec
+verified_implementation_head: 1771fa2bc03c14018ab53178979b5095a825d28f
 resources:
   cloudflare_worker: store-pos-staging
   base_url: https://store-pos-staging.rahmatullahzisan.workers.dev
@@ -12,6 +12,7 @@ resources:
   neon_branch_name: main
   neon_branch_id: br-empty-sound-afkx5vkj
   database: neondb
+  identity_provider: neon_auth
 checkpoints:
   documentation_first:
     status: complete
@@ -26,31 +27,47 @@ checkpoints:
     status: complete
     registered_migrations: 55
     synthetic_tenants: 2
+    neon_auth_tables: 9
   http_smoke:
     status: complete
-    routes_passed: 7
+    routes_passed: 10
   browser_smoke:
     status: complete
-    scenarios_passed: 2
-    scenarios_total: 2
+    scenarios_passed: 3
+    scenarios_total: 3
     axe_violations: 0
     horizontal_overflow_failures: 0
   api_health:
     status: complete
-  staging_auth:
+  staging_ui_auth:
+    status: complete
+    provider: neon_auth
+    anonymous_redirect: passed
+    session_probe: passed
+    browser_login: passed
+    browser_logout: passed
+    trusted_origin: configured
+    cookie_policy: secure_http_only_same_site_lax
+    synthetic_account_cleanup: passed
+    credentials_persisted: false
+  business_api_token_exchange:
+    status: pending
+  business_permission_mapping:
     status: pending
   authoritative_browser_writes:
     status: pending
   custom_domain:
     status: pending
 evidence:
-  workflow_run_id: 30527115140
-  workflow_job_id: 90820730822
-  artifact_id: 8753163579
-  artifact_digest: sha256:2a8b34fefa4dede45caac768f0405a515adaa34b85f8f1571118dae617a3a325
-  checkpoint: docs/architecture/staging/persistent-admin-pos-staging-checkpoint.md
+  workflow_run_id: 30530378430
+  workflow_job_id: 90831184879
+  artifact_id: 8754460568
+  artifact_digest: sha256:3f3575b1d15f86b03db64652526b92d6614edbd181c8f1beaf325beef33c3bfe
+  first_milestone_checkpoint: docs/architecture/staging/persistent-admin-pos-staging-checkpoint.md
+  identity_checkpoint: docs/architecture/staging/staging-identity-checkpoint.md
 limitations:
-  - browser surfaces use synthetic data in the first milestone
-  - authoritative write journeys remain disabled until staging OIDC is configured
-  - the dedicated staging OIDC issuer is not configured yet
+  - browser surfaces and business data remain synthetic
+  - Neon Auth currently protects read-only Admin and POS presentation only
+  - raw provider sessions do not grant tenant roles, permissions, MFA evidence or business API authority
+  - authoritative write journeys remain disabled until server-side identity mapping and token exchange pass
   - no custom staging domain is assigned yet
