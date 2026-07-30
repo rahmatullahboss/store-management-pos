@@ -243,9 +243,9 @@ test("STF-0013 is checksum-registered and keeps filtered search runtime-only", a
       "utf8",
     ),
   );
-  const migration = manifest.migrations.at(-1);
-  assert.equal(migration.id, "STF-0013");
-  assert.equal(migration.file, "STF-0013-public-search-filters.sql");
+  const migration = manifest.migrations.find(({ id }) => id === "STF-0013");
+assert.ok(migration);
+assert.equal(migration.file, "STF-0013-public-search-filters.sql");
   const sql = await readFile(
     new URL(
       `../../database/modules/storefront/migrations/${migration.file}`,
