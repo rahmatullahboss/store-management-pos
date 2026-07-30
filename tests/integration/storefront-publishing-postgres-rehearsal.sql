@@ -90,7 +90,7 @@ BEGIN
     '10000000-0000-4000-8000-000000000100',
     '10000000-0000-4000-8000-000000000110',
     '10000000-0000-4000-8000-000000000182',
-    NULL, 'shirts', 10, 'published', NULL,
+    NULL, 'publishing-shirts', 10, 'published', NULL,
     '30000000-0000-4000-8000-000000000001',
     'publish-category-a', repeat('c', 64),
     'publish-category-a', 'trace-storefront-publishing', DATE '2026-07-30'

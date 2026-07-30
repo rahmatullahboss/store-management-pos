@@ -127,6 +127,7 @@ jobs:
           npm ci --ignore-scripts
       - name: Run storefront PostgreSQL migration and command rehearsal
         run: |
+          set -o pipefail
           mkdir -p artifacts/storefront
           npm run db:validate
           npm run storefront:db:rehearsal | tee artifacts/storefront/postgres-rehearsal.txt
