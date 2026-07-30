@@ -1,6 +1,8 @@
 import type { NeonDatabase } from "../../../../../packages/foundation/src/db.js";
 import { PlatformError } from "../../../../../packages/foundation/src/errors.js";
+import type { StorefrontPublicAvailabilityFacetValueV1 } from "../../../../../packages/storefront-contracts/src/public-discovery.js";
 import { SqlStorefrontPublicRepository } from "../../../../../modules/storefront/src/public.js";
+import { resolveStorefrontPublicSearch } from "../../../../../modules/storefront/src/public-search.js";
 
 function publicHeaders(cacheControl: string): HeadersInit {
   return {
@@ -85,6 +87,13 @@ function publicJson(
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 const SLUG = /^[a-z0-9](?:[a-z0-9._~-]{0,178}[a-z0-9])?$/u;
+const AVAILABILITY = new Set<StorefrontPublicAvailabilityFacetValueV1>([
+  "available",
+  "limited",
+  "unavailable",
+  "preorder",
+  "unknown",
+]);
 
 function catalogLimit(url: URL): number {
   const raw = url.searchParams.get("limit");
@@ -126,8 +135,8 @@ function routeSlug(pathname: string, route: string, label: string): string | nul
 function searchQuery(url: URL): string {
   const query = url.searchParams.get("q")?.trim() ?? "";
   if (
-    query.length < 2 ||
-    query.length > 120 ||
+    [...query].length < 2 ||
+    [...query].length > 120 ||
     /[\u0000-\u001f\u007f]/u.test(query)
   ) {
     throw new PlatformError(
@@ -137,6 +146,30 @@ function searchQuery(url: URL): string {
     );
   }
   return query;
+}
+
+function searchCategory(url: URL): string | undefined {
+  const value = url.searchParams.get("category")?.trim().toLowerCase();
+  if (!value) return undefined;
+  if (!SLUG.test(value) || value === "." || value === "..") {
+    throw new PlatformError("VALIDATION_FAILED", "category must be a public slug.", 400);
+  }
+  return value;
+}
+
+function searchAvailability(
+  url: URL,
+): StorefrontPublicAvailabilityFacetValueV1 | undefined {
+  const value = url.searchParams.get("availability")?.trim().toLowerCase();
+  if (!value) return undefined;
+  if (!AVAILABILITY.has(value as StorefrontPublicAvailabilityFacetValueV1)) {
+    throw new PlatformError(
+      "VALIDATION_FAILED",
+      "availability is unsupported.",
+      400,
+    );
+  }
+  return value as StorefrontPublicAvailabilityFacetValueV1;
 }
 
 export async function handlePublicStorefrontRequest(
@@ -209,10 +242,17 @@ export async function handlePublicStorefrontRequest(
   }
 
   if (url.pathname === "/v1/storefront/search") {
-    const search = await repository.resolveSearch(
+    const category = searchCategory(url);
+    const availability = searchAvailability(url);
+    const search = await resolveStorefrontPublicSearch(
+      database,
       hostname,
       searchQuery(url),
-      pageOptions,
+      {
+        ...pageOptions,
+        ...(category ? { category } : {}),
+        ...(availability ? { availability } : {}),
+      },
     );
     if (!search) return unavailable(request);
     return publicJson(
