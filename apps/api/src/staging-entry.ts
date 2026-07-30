@@ -1,5 +1,9 @@
 import stagingWorker, { type StagingEnvironment } from "./staging.js";
 import {
+  handleStagingMfaRequest,
+  type StagingMfaEnvironment,
+} from "./staging-mfa.js";
+import {
   handleOperationalStagingRequest,
   type OperationalStagingEnvironment,
 } from "./staging-operational-worker.js";
@@ -11,6 +15,7 @@ import {
   handleStagingReadContext,
   type StagingReadContextEnvironment,
 } from "./staging-read-context.js";
+import { handleStagingReservationUi } from "./staging-reservation-ui.js";
 import {
   handleExactStagingPos,
   type StagingPosReleaseEnvironment,
@@ -19,6 +24,7 @@ import {
 export interface PersistentStagingEnvironment
   extends StagingEnvironment,
     StagingReadContextEnvironment,
+    StagingMfaEnvironment,
     OperationalStagingEnvironment,
     StagingPosReleaseEnvironment,
     StagingProtectedApiEnvironment {}
@@ -45,6 +51,8 @@ export default {
     if (url.pathname === "/auth/context") {
       return await handleStagingReadContext(request, env);
     }
+    const mfa = await handleStagingMfaRequest(request, url, env);
+    if (mfa) return mfa;
     if (url.pathname === "/staging/status") {
       return new Response(
         request.method === "HEAD"
@@ -54,20 +62,29 @@ export default {
               service: "persistent-admin-pos-staging",
               version: env.STAGING_GIT_SHA?.slice(0, 12) || "local",
               database: "dedicated-neon-staging",
-              browserMode: "operational-release-candidate",
+              browserMode: "controlled-reservation-release-candidate",
               dataMode: "deterministic-synthetic-module-records",
               authentication:
                 env.STAGING_AUTH_REQUIRED === "1"
                   ? "custom-auth-required"
                   : "not-required",
-              authorization: "database-resolved-read-only",
+              authorization: "database-resolved-read-plus-mfa-step-up",
+              mfa: "encrypted-totp-current-password-step-up",
               protectedReadTransport: "short-lived-internal-token",
-              internalTokenLifetimeSeconds: 300,
+              internalReadTokenLifetimeSeconds: 300,
+              internalCommandTokenLifetimeSeconds: 60,
+              stepUpGrantLifetimeSeconds: 300,
+              controlledWrites: [
+                "inventory.reservation.create",
+                "inventory.reservation.release",
+              ],
               authoritativeWrites: false,
             }),
         { status: 200, headers: statusHeaders() },
       );
     }
+    const reservationUi = await handleStagingReservationUi(request, url, env);
+    if (reservationUi) return reservationUi;
     const protectedApi = await handleStagingProtectedApi(request, env);
     if (protectedApi) return protectedApi;
     const exactPos = await handleExactStagingPos(request, env);
