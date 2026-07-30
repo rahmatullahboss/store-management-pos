@@ -83,7 +83,16 @@ BEGIN
   FROM storefront.resolve_public_content_bundle('missing.example.test', NULL);
   IF v_count <> 0 THEN RAISE EXCEPTION 'unknown hostname unexpectedly resolved'; END IF;
 
-  IF has_function_privilege('PUBLIC', 'storefront.resolve_public_content_bundle(text,text)', 'EXECUTE') THEN
+  IF EXISTS (
+    SELECT 1
+    FROM pg_proc AS procedure_row
+    CROSS JOIN LATERAL aclexplode(
+      COALESCE(procedure_row.proacl, acldefault('f', procedure_row.proowner))
+    ) AS function_acl
+    WHERE procedure_row.oid = 'storefront.resolve_public_content_bundle(text,text)'::regprocedure
+      AND function_acl.grantee = 0
+      AND function_acl.privilege_type = 'EXECUTE'
+  ) THEN
     RAISE EXCEPTION 'PUBLIC can execute public content resolver';
   END IF;
   IF NOT has_function_privilege('store_app_runtime', 'storefront.resolve_public_content_bundle(text,text)', 'EXECUTE') THEN
