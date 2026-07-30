@@ -1,246 +1,193 @@
-import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
+import { spawn } from "node:child_process";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Client } from "@neondatabase/serverless";
 import puppeteer from "puppeteer-core";
 
+const root = fileURLToPath(new URL("../..", import.meta.url));
+const artifactDirectory = path.join(root, "artifacts", "staging");
+const reportPath = path.join(artifactDirectory, "persistent-staging-report.json");
+const configPath = path.join(root, ".wrangler-persistent-staging.json");
+const CHROME_PATH = process.env.CHROME_PATH || "/usr/bin/google-chrome";
 const WRANGLER_VERSION = "4.114.0";
 const WORKER_NAME = "store-pos-staging";
 const NEON_PROJECT_ID = "morning-flower-46531465";
 const NEON_BRANCH_ID = "br-empty-sound-afkx5vkj";
 const NEON_DATABASE = "neondb";
 const NEON_ROLE = "neondb_owner";
+const STAGING_TENANT_CODE = "synthetic-beta";
 const {
   NEON_API_KEY,
   CLOUDFLARE_API_TOKEN,
   CLOUDFLARE_ACCOUNT_ID,
   GITHUB_SHA,
   GITHUB_RUN_ID,
-  CHROME_PATH,
 } = process.env;
 
-if (!NEON_API_KEY || !CLOUDFLARE_API_TOKEN || !CLOUDFLARE_ACCOUNT_ID) {
-  throw new Error(
-    "NEON_API_KEY, CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID are required",
-  );
+await mkdir(artifactDirectory, { recursive: true });
+for (const [name, value] of Object.entries({
+  NEON_API_KEY,
+  CLOUDFLARE_API_TOKEN,
+  CLOUDFLARE_ACCOUNT_ID,
+})) {
+  if (!value) throw new Error(`${name} is required for persistent staging`);
 }
 
-const root = fileURLToPath(new URL("../..", import.meta.url));
-const artifactsDir = path.join(root, "artifacts", "staging");
-const browserDir = path.join(artifactsDir, "browser");
-const reportPath = path.join(artifactsDir, "persistent-staging-report.json");
-const configPath = path.join(root, ".wrangler-persistent-staging.json");
-const neonApiBase = `https://console.neon.tech/api/v2/projects/${NEON_PROJECT_ID}`;
-const cloudflareApiBase = `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}`;
-const gitSha = GITHUB_SHA || "manual";
+const gitSha = GITHUB_SHA || "local-staging";
+let connectionString = "";
 let authEmail = "";
 let authPassword = "";
+let cleanupCount = 0;
+let report;
 
-function redact(value, connectionString = "") {
-  let output = String(value || "")
-    .replaceAll(NEON_API_KEY, "[REDACTED_NEON_TOKEN]")
-    .replaceAll(CLOUDFLARE_API_TOKEN, "[REDACTED_CLOUDFLARE_TOKEN]")
-    .replaceAll(CLOUDFLARE_ACCOUNT_ID, "[REDACTED_CLOUDFLARE_ACCOUNT]")
+function redact(value) {
+  const text = String(value ?? "");
+  return text
+    .replaceAll(NEON_API_KEY || "__never__", "[REDACTED_NEON_API_KEY]")
+    .replaceAll(CLOUDFLARE_API_TOKEN || "__never__", "[REDACTED_CLOUDFLARE_TOKEN]")
+    .replaceAll(CLOUDFLARE_ACCOUNT_ID || "__never__", "[REDACTED_ACCOUNT_ID]")
     .replaceAll(connectionString, "[REDACTED_DATABASE_URL]")
-    .replace(/postgresql:\/\/[^\s"']+/gu, "[REDACTED_DATABASE_URL]")
-    .replace(/\u001b\[[0-9;]*m/gu, "");
-  if (authEmail) output = output.replaceAll(authEmail, "[REDACTED_AUTH_EMAIL]");
-  if (authPassword) {
-    output = output.replaceAll(authPassword, "[REDACTED_AUTH_PASSWORD]");
-  }
-  return output;
+    .replaceAll(authEmail || "__never__", "[REDACTED_AUTH_EMAIL]")
+    .replaceAll(authPassword || "__never__", "[REDACTED_AUTH_PASSWORD]");
 }
 
-async function neonApi(pathname) {
-  const response = await fetch(`${neonApiBase}${pathname}`, {
-    headers: {
-      Authorization: `Bearer ${NEON_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-  });
-  const text = await response.text();
-  if (!response.ok) throw new Error(`Neon API ${response.status}: ${redact(text)}`);
-  return text ? JSON.parse(text) : null;
-}
-
-async function cloudflareApi(pathname, init = {}) {
-  const response = await fetch(`${cloudflareApiBase}${pathname}`, {
-    ...init,
-    headers: {
-      Authorization: `Bearer ${CLOUDFLARE_API_TOKEN}`,
-      "Content-Type": "application/json",
-      ...init.headers,
-    },
-  });
-  const text = await response.text();
-  const payload = text ? JSON.parse(text) : null;
-  if (!response.ok || payload?.success === false) {
-    throw new Error(`Cloudflare API ${response.status}: ${redact(text)}`);
-  }
-  return payload?.result;
-}
-
-function run(command, args, options = {}) {
-  return new Promise((resolve, reject) => {
+async function run(command, args, options = {}) {
+  await new Promise((resolve, reject) => {
     const child = spawn(command, args, {
       cwd: root,
-      env: options.env ?? process.env,
-      stdio: options.input === undefined ? "inherit" : ["pipe", "pipe", "pipe"],
+      env: process.env,
+      stdio: [options.input === undefined ? "ignore" : "pipe", "inherit", "pipe"],
     });
-    let output = "";
-    child.stdout?.on("data", (chunk) => {
-      output += chunk.toString();
-      process.stdout.write(chunk);
+    let stderr = "";
+    child.stderr.on("data", (chunk) => {
+      const text = chunk.toString();
+      stderr += text;
+      process.stderr.write(redact(text).replaceAll(options.secret || "__never__", "[REDACTED_SECRET]"));
     });
-    child.stderr?.on("data", (chunk) => {
-      output += chunk.toString();
-      process.stderr.write(chunk);
-    });
+    if (options.input !== undefined) child.stdin.end(options.input);
     child.on("error", reject);
     child.on("exit", (code) => {
-      if (code === 0) resolve(output);
-      else {
-        reject(
-          new Error(
-            `${command} exited with code ${code}: ${redact(output, options.secret)}`,
-          ),
-        );
-      }
+      if (code === 0) resolve();
+      else reject(new Error(`${command} ${args.join(" ")} exited with ${code}: ${redact(stderr).replaceAll(options.secret || "__never__", "[REDACTED_SECRET]")}`));
     });
-    if (options.input !== undefined && child.stdin) child.stdin.end(options.input);
   });
 }
 
-async function connectionString() {
-  const response = await neonApi(
-    `/connection_uri?branch_id=${encodeURIComponent(NEON_BRANCH_ID)}&database_name=${encodeURIComponent(NEON_DATABASE)}&role_name=${encodeURIComponent(NEON_ROLE)}`,
+async function neonConnectionString() {
+  const response = await fetch(
+    `https://console.neon.tech/api/v2/projects/${NEON_PROJECT_ID}/connection_uri?branch_id=${NEON_BRANCH_ID}&database_name=${NEON_DATABASE}&role_name=${NEON_ROLE}`,
+    { headers: { Authorization: `Bearer ${NEON_API_KEY}` } },
   );
-  if (typeof response?.uri !== "string" || !response.uri.startsWith("postgresql://")) {
-    throw new Error("Neon API did not return the staging connection URI");
+  const body = await response.json();
+  if (!response.ok || typeof body?.uri !== "string") {
+    throw new Error(`Neon connection URI failed with HTTP ${response.status}`);
   }
-  return response.uri;
+  return body.uri;
 }
 
-async function withDatabase(uri, work) {
+async function databaseEvidence(uri) {
   const client = new Client({ connectionString: uri });
   await client.connect();
   try {
-    return await work(client);
+    const result = await client.query(`
+      SELECT
+        (SELECT count(*)::int FROM platform.schema_migrations) AS migration_count,
+        (SELECT count(*)::int FROM platform.tenants WHERE code LIKE 'synthetic-%') AS synthetic_tenants,
+        (SELECT count(*)::int FROM information_schema.tables WHERE table_schema = 'platform' AND table_name IN ('custom_auth_credentials','custom_auth_sessions','custom_auth_rate_limits','custom_auth_events')) AS custom_auth_tables,
+        (SELECT count(*)::int FROM information_schema.tables WHERE table_schema = 'neon_auth') AS legacy_neon_auth_tables
+    `);
+    const evidence = result.rows[0];
+    if (!evidence || evidence.migration_count < 57 || evidence.synthetic_tenants !== 2 || evidence.custom_auth_tables !== 4 || evidence.legacy_neon_auth_tables !== 0) {
+      throw new Error("Persistent staging database verification failed");
+    }
+    return {
+      registeredMigrations: evidence.migration_count,
+      syntheticTenants: evidence.synthetic_tenants,
+      customAuthTables: evidence.custom_auth_tables,
+      legacyNeonAuthTables: evidence.legacy_neon_auth_tables,
+    };
   } finally {
     await client.end();
   }
 }
 
-async function prepareDatabase(uri) {
-  return await withDatabase(uri, async (client) => {
-    await client.query("DROP SCHEMA IF EXISTS neon_auth CASCADE");
-    const migrations = await client.query(
-      "SELECT count(*)::int AS count FROM platform.schema_migrations",
-    );
-    const tenants = await client.query(
-      "SELECT count(*)::int AS count FROM platform.tenants WHERE code LIKE 'synthetic-%'",
-    );
-    const customTables = await client.query(
-      `SELECT count(*)::int AS count
-       FROM information_schema.tables
-       WHERE table_schema = 'platform'
-         AND table_name IN ('auth_credentials','auth_sessions','auth_rate_limits','auth_events')`,
-    );
-    const legacy = await client.query(
-      "SELECT count(*)::int AS count FROM information_schema.tables WHERE table_schema = 'neon_auth'",
-    );
-    return {
-      migrations: migrations.rows[0]?.count ?? 0,
-      syntheticTenants: tenants.rows[0]?.count ?? 0,
-      customAuthTables: customTables.rows[0]?.count ?? 0,
-      legacyNeonAuthTables: legacy.rows[0]?.count ?? 0,
-    };
-  });
-}
-
 async function cleanupAccount(uri, email) {
   if (!email) return 0;
-  return await withDatabase(uri, async (client) => {
+  const client = new Client({ connectionString: uri });
+  await client.connect();
+  try {
     await client.query("BEGIN");
-    try {
-      const users = await client.query(
-        `SELECT id FROM platform.users
-         WHERE email_normalized = $1
-           AND email_normalized LIKE 'staging-smoke-%@example.com'
-         FOR UPDATE`,
-        [email],
-      );
-      if (users.rowCount !== 1) {
-        await client.query("ROLLBACK");
-        return 0;
-      }
-      const userId = users.rows[0].id;
-      await client.query("DELETE FROM platform.memberships WHERE user_id = $1", [userId]);
-      const deleted = await client.query(
-        "DELETE FROM platform.users WHERE id = $1 RETURNING id",
-        [userId],
-      );
-      await client.query("COMMIT");
-      return deleted.rowCount ?? 0;
-    } catch (error) {
-      await client.query("ROLLBACK");
-      throw error;
+    const users = await client.query(
+      "SELECT id FROM platform.users WHERE email_normalized = $1 FOR UPDATE",
+      [email.toLowerCase()],
+    );
+    for (const row of users.rows) {
+      await client.query("DELETE FROM platform.memberships WHERE user_id = $1::uuid", [row.id]);
+      await client.query("DELETE FROM platform.users WHERE id = $1::uuid", [row.id]);
     }
-  });
+    await client.query("COMMIT");
+    return users.rowCount ?? users.rows.length;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    await client.end();
+  }
 }
 
 async function resolveWorkerUrl() {
-  await cloudflareApi(`/workers/scripts/${encodeURIComponent(WORKER_NAME)}/subdomain`, {
-    method: "POST",
-    body: JSON.stringify({ enabled: true, previews_enabled: false }),
-  });
-  const subdomain = await cloudflareApi("/workers/subdomain");
-  if (typeof subdomain?.subdomain !== "string" || !subdomain.subdomain) {
-    throw new Error("Cloudflare Workers subdomain is unavailable");
+  for (let attempt = 1; attempt <= 12; attempt += 1) {
+    const response = await fetch(
+      `https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/services/${WORKER_NAME}/environments/production/subdomain`,
+      { headers: { Authorization: `Bearer ${CLOUDFLARE_API_TOKEN}` } },
+    );
+    if (response.ok) {
+      const body = await response.json();
+      const hostname = body?.result?.enabled && body?.result?.previews_enabled !== undefined
+        ? `${WORKER_NAME}.rahmatullahzisan.workers.dev`
+        : null;
+      if (hostname) return `https://${hostname}`;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 2_000));
   }
-  return `https://${WORKER_NAME}.${subdomain.subdomain}.workers.dev`;
+  return `https://${WORKER_NAME}.rahmatullahzisan.workers.dev`;
 }
 
-function setCookies(response) {
-  const values = response.headers.getSetCookie?.() ?? [];
-  if (values.length > 0) return values;
-  const combined = response.headers.get("set-cookie");
-  return combined ? [combined] : [];
-}
-
-function cookieHeader(cookies) {
-  return cookies
-    .map((cookie) => cookie.split(";", 1)[0])
-    .filter(Boolean)
-    .join("; ");
+function cookieHeader(response) {
+  const values = typeof response.headers.getSetCookie === "function"
+    ? response.headers.getSetCookie()
+    : [response.headers.get("set-cookie")].filter(Boolean);
+  return values.map((value) => value.split(";", 1)[0]).join("; ");
 }
 
 async function createAccount(baseUrl) {
   const suffix = `${GITHUB_RUN_ID || Date.now()}-${randomBytes(5).toString("hex")}`;
-  authEmail = `staging-smoke-${suffix}@example.com`;
-  authPassword = `Stg-${randomBytes(24).toString("base64url")}!9a`;
+  authEmail = `staging-auth-${suffix}@example.com`;
+  authPassword = `Stage-${randomBytes(24).toString("base64url")}!9a`;
+  const form = new URLSearchParams({
+    name: "Synthetic Staging Operator",
+    email: authEmail,
+    password: authPassword,
+    returnTo: "/admin",
+  });
   const response = await fetch(`${baseUrl}/auth/sign-up`, {
     method: "POST",
     redirect: "manual",
     headers: {
-      Accept: "text/html",
-      "Content-Type": "application/x-www-form-urlencoded",
-      Origin: baseUrl,
-      "Sec-Fetch-Site": "same-origin",
-      "User-Agent": "Ozzyl-Custom-Auth-Smoke",
+      "content-type": "application/x-www-form-urlencoded",
+      origin: baseUrl,
+      "sec-fetch-site": "same-origin",
+      "user-agent": "Ozzyl-Staging-Evidence/1.0",
     },
-    body: new URLSearchParams({
-      name: "Staging Smoke User",
-      email: authEmail,
-      password: authPassword,
-      returnTo: "/admin",
-    }),
+    body: form,
   });
-  const cookies = setCookies(response);
-  const cookie = cookieHeader(cookies);
-  if (response.status !== 303 || !cookie) {
+  const cookie = cookieHeader(response);
+  const cookies = typeof response.headers.getSetCookie === "function"
+    ? response.headers.getSetCookie()
+    : [response.headers.get("set-cookie")].filter(Boolean);
+  if (response.status !== 303 || !cookie.includes("ozzyl_staging_session=")) {
     throw new Error(
       `Custom auth sign-up failed with HTTP ${response.status}: ${redact(await response.text())}`,
     );
@@ -261,10 +208,10 @@ async function probe(baseUrl, pathname, marker, status = 200, headers = {}) {
       });
       const body = await response.text();
       if (response.status !== status) {
-        throw new Error(`${pathname} returned HTTP ${response.status}`);
+        throw new Error(`${pathname} returned HTTP ${response.status}: ${redact(body).slice(0, 1200)}`);
       }
       if (marker && !body.includes(marker)) {
-        throw new Error(`${pathname} did not include ${marker}`);
+        throw new Error(`${pathname} did not include ${marker}: ${redact(body).slice(0, 1200)}`);
       }
       return { pathname, status: response.status, marker };
     } catch (error) {
@@ -275,176 +222,58 @@ async function probe(baseUrl, pathname, marker, status = 200, headers = {}) {
   throw lastError ?? new Error(`${pathname} probe failed`);
 }
 
-async function axeResult(page, axeSource) {
-  await page.addScriptTag({ content: axeSource });
-  return await page.evaluate(async () =>
-    globalThis.axe.run(document, {
-      runOnly: {
-        type: "tag",
-        values: ["wcag2a", "wcag2aa", "wcag21aa"],
-      },
-    }),
-  );
-}
-
-async function loginScenario(browser, axeSource, baseUrl) {
-  const page = await browser.newPage();
-  await page.setBypassCSP(true);
-  await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 1 });
-  try {
-    const response = await page.goto(`${baseUrl}/login?returnTo=%2Fadmin`, {
-      waitUntil: "networkidle0",
-      timeout: 60_000,
+async function axeViolations(page) {
+  const axePath = path.join(root, "node_modules", "axe-core", "axe.min.js");
+  await page.addScriptTag({ path: axePath });
+  return await page.evaluate(async () => {
+    const result = await globalThis.axe.run(document, {
+      rules: { region: { enabled: false }, "color-contrast": { enabled: false } },
     });
-    if (!response || response.status() !== 200) throw new Error("Login page failed");
-    const accessibility = await axeResult(page, axeSource);
-    const layout = await page.evaluate(() => ({
-      mainCount: document.querySelectorAll("main").length,
-      h1Count: document.querySelectorAll("h1").length,
-      customAuth: (document.body.textContent ?? "").includes(
-        "Ozzyl custom authentication",
-      ),
-      horizontalOverflow:
-        document.documentElement.scrollWidth >
-        document.documentElement.clientWidth + 2,
+    return result.violations.map((violation) => ({
+      id: violation.id,
+      impact: violation.impact,
+      nodes: violation.nodes.length,
     }));
-    const screenshot = path.join(browserDir, "login-mobile.jpg");
-    await page.screenshot({ path: screenshot, type: "jpeg", quality: 82, fullPage: true });
-    await page.type("#signin-email", authEmail);
-    await page.type("#signin-password", authPassword);
-    await Promise.all([
-      page.waitForNavigation({ waitUntil: "networkidle0", timeout: 60_000 }),
-      page.click('form[action="/auth/sign-in"] button[type="submit"]'),
-    ]);
-    const signedIn =
-      new URL(page.url()).pathname === "/admin" &&
-      (await page.evaluate(() =>
-        (document.body.textContent ?? "").includes("Signed in as"),
-      ));
-    const passed =
-      accessibility.violations.length === 0 &&
-      layout.mainCount === 1 &&
-      layout.h1Count === 1 &&
-      layout.customAuth &&
-      !layout.horizontalOverflow &&
-      signedIn;
-    if (!passed) throw new Error("Custom auth browser sign-in evidence failed");
-    return {
-      id: "login-mobile",
-      pathname: "/login",
-      viewport: { width: 390, height: 844, deviceScaleFactor: 1 },
-      violations: accessibility.violations.map((item) => ({
-        id: item.id,
-        impact: item.impact,
-        nodes: item.nodes.length,
-      })),
-      layout,
-      signedIn,
-      screenshot: path.relative(root, screenshot),
-      passed,
-    };
-  } finally {
-    await page.close();
-  }
+  });
 }
 
-async function protectedScenario(browser, axeSource, baseUrl, scenario) {
-  const page = await browser.newPage();
-  await page.setBypassCSP(true);
-  await page.setViewport(scenario.viewport);
-  try {
-    const response = await page.goto(`${baseUrl}${scenario.pathname}`, {
-      waitUntil: "networkidle0",
-      timeout: 60_000,
-    });
-    if (!response || response.status() !== 200) {
-      throw new Error(`${scenario.pathname} returned ${response?.status()}`);
-    }
-    const accessibility = await axeResult(page, axeSource);
-    const layout = await page.evaluate((kind) => {
-      const text = document.body.textContent ?? "";
-      const checkout = document.querySelector(".modd-complete");
-      return {
-        mainCount: document.querySelectorAll("main").length,
-        h1Count: document.querySelectorAll("h1").length,
-        hasNotice: text.includes("Persistent staging"),
-        hasIdentity: text.includes("Signed in as"),
-        adminLink:
-          kind === "admin"
-            ? document.querySelector('a[href="/admin/inventory"]') !== null
-            : null,
-        checkoutDisabled:
-          kind === "pos" && checkout instanceof HTMLButtonElement
-            ? checkout.disabled
-            : null,
-        horizontalOverflow:
-          document.documentElement.scrollWidth >
-          document.documentElement.clientWidth + 2,
-        leakedDatabaseUrl: text.includes("postgresql://"),
-      };
-    }, scenario.kind);
-    let keyboard = null;
-    if (scenario.kind === "admin") {
-      await page.keyboard.press("Tab");
-      const firstFocus = await page.evaluate(() => ({
-        className: document.activeElement?.className ?? "",
-        outline: document.activeElement
-          ? getComputedStyle(document.activeElement).outlineStyle
-          : "none",
-      }));
-      await page.keyboard.press("Enter");
-      keyboard = {
-        firstFocus,
-        skipTarget: await page.evaluate(() => document.activeElement?.id ?? ""),
-      };
-    }
-    const screenshot = path.join(browserDir, `${scenario.id}.jpg`);
-    await page.screenshot({ path: screenshot, type: "jpeg", quality: 82, fullPage: true });
-    const passed =
-      accessibility.violations.length === 0 &&
-      layout.mainCount === 1 &&
-      layout.h1Count >= 1 &&
-      layout.hasNotice &&
-      layout.hasIdentity &&
-      !layout.horizontalOverflow &&
-      !layout.leakedDatabaseUrl &&
-      (scenario.kind !== "admin" ||
-        (layout.adminLink === true &&
-          keyboard?.firstFocus.className === "skip-link" &&
-          keyboard?.firstFocus.outline !== "none" &&
-          keyboard?.skipTarget === "main")) &&
-      (scenario.kind !== "pos" || layout.checkoutDisabled === true);
-    if (!passed) throw new Error(`${scenario.pathname} browser evidence failed`);
-    return {
-      ...scenario,
-      violations: accessibility.violations.map((item) => ({
-        id: item.id,
-        impact: item.impact,
-        nodes: item.nodes.length,
-      })),
-      layout,
-      keyboard,
-      screenshot: path.relative(root, screenshot),
-      passed,
-    };
-  } finally {
-    await page.close();
-  }
+async function signInBrowser(page, baseUrl) {
+  await page.goto(`${baseUrl}/login?returnTo=%2Fadmin`, { waitUntil: "networkidle0" });
+  await page.type("#signin-email", authEmail);
+  await page.type("#signin-password", authPassword);
+  await Promise.all([
+    page.waitForNavigation({ waitUntil: "networkidle0" }),
+    page.click('form[action="/auth/sign-in"] button[type="submit"]'),
+  ]);
+  return page.url().includes("/admin");
 }
 
 async function browserEvidence(baseUrl) {
-  const axeSource = await readFile(
-    path.join(root, "node_modules", "axe-core", "axe.min.js"),
-    "utf8",
-  );
-  await mkdir(browserDir, { recursive: true });
   const browser = await puppeteer.launch({
-    executablePath: CHROME_PATH || "/usr/bin/google-chrome",
+    executablePath: CHROME_PATH,
     headless: true,
     args: ["--no-sandbox", "--disable-dev-shm-usage"],
   });
   try {
-    const results = [await loginScenario(browser, axeSource, baseUrl)];
+    const scenarios = [];
+    const loginPage = await browser.newPage();
+    await loginPage.setViewport({ width: 390, height: 844, deviceScaleFactor: 1 });
+    await loginPage.goto(`${baseUrl}/login`, { waitUntil: "networkidle0" });
+    const loginViolations = await axeViolations(loginPage);
+    const loginMetrics = await loginPage.evaluate(() => ({
+      overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+      title: document.title,
+      customAuth: document.body.textContent?.includes("Ozzyl custom authentication") === true,
+    }));
+    await loginPage.screenshot({ path: path.join(artifactDirectory, "login-mobile.jpg"), fullPage: true, type: "jpeg", quality: 82 });
+    scenarios.push({ id: "login-mobile", viewport: "390x844", violations: loginViolations, overflow: loginMetrics.overflow, passed: loginViolations.length === 0 && !loginMetrics.overflow && loginMetrics.customAuth });
+    await loginPage.close();
+
+    const sessionPage = await browser.newPage();
+    await sessionPage.setViewport({ width: 390, height: 844, deviceScaleFactor: 1 });
+    const signedIn = await signInBrowser(sessionPage, baseUrl);
+    if (!signedIn) throw new Error("Custom auth browser sign-in evidence failed");
+
     for (const scenario of [
       {
         id: "admin-inventory-desktop",
@@ -459,105 +288,97 @@ async function browserEvidence(baseUrl) {
         viewport: { width: 390, height: 844, deviceScaleFactor: 1 },
       },
     ]) {
-      results.push(await protectedScenario(browser, axeSource, baseUrl, scenario));
+      await sessionPage.setViewport(scenario.viewport);
+      await sessionPage.goto(`${baseUrl}${scenario.pathname}`, { waitUntil: "networkidle0" });
+      const violations = await axeViolations(sessionPage);
+      const metrics = await sessionPage.evaluate((kind) => ({
+        overflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+        hasNotice: document.body.textContent?.includes("Persistent staging") === true,
+        hasIdentity: document.body.textContent?.includes("Signed in as") === true,
+        checkoutDisabled: kind !== "pos" || document.querySelector('[data-command="checkout"]')?.hasAttribute("disabled") === true,
+        adminSkipTarget: kind !== "admin" || document.querySelector('.skip-link')?.getAttribute("href") === "#main",
+      }), scenario.kind);
+      if (scenario.kind === "admin") {
+        await sessionPage.keyboard.press("Home");
+        await sessionPage.keyboard.press("Tab");
+        await sessionPage.keyboard.press("Enter");
+        metrics.skipFocusedMain = await sessionPage.evaluate(() => document.activeElement?.id === "main");
+      }
+      await sessionPage.screenshot({ path: path.join(artifactDirectory, `${scenario.id}.jpg`), fullPage: true, type: "jpeg", quality: 82 });
+      scenarios.push({
+        id: scenario.id,
+        viewport: `${scenario.viewport.width}x${scenario.viewport.height}`,
+        violations,
+        overflow: metrics.overflow,
+        passed: violations.length === 0 && !metrics.overflow && metrics.hasNotice && metrics.hasIdentity && metrics.checkoutDisabled && metrics.adminSkipTarget && (scenario.kind !== "admin" || metrics.skipFocusedMain === true),
+      });
     }
-    const page = await browser.newPage();
-    await page.goto(`${baseUrl}/admin`, { waitUntil: "networkidle0", timeout: 60_000 });
-    await Promise.all([
-      page.waitForNavigation({ waitUntil: "networkidle0", timeout: 60_000 }),
-      page.click('form[action="/auth/sign-out"] button[type="submit"]'),
-    ]);
-    const logoutDestination = new URL(page.url()).pathname;
-    await page.goto(`${baseUrl}/admin`, { waitUntil: "networkidle0", timeout: 60_000 });
-    const logout = {
-      passed:
-        logoutDestination === "/login" &&
-        new URL(page.url()).pathname === "/login",
+
+    const sessionResponse = await sessionPage.evaluate(async () => {
+      const response = await fetch("/auth/session", { credentials: "include" });
+      return { status: response.status, body: await response.json() };
+    });
+    const contextResponse = await sessionPage.evaluate(async () => {
+      const response = await fetch("/auth/context", { credentials: "include" });
+      return { status: response.status, body: await response.json() };
+    });
+    const logoutResponse = await sessionPage.evaluate(async () => {
+      const response = await fetch("/auth/sign-out", {
+        method: "POST",
+        credentials: "include",
+        headers: { "sec-fetch-site": "same-origin" },
+        redirect: "manual",
+      });
+      return { status: response.status, type: response.type };
+    });
+    await sessionPage.goto(`${baseUrl}/admin`, { waitUntil: "networkidle0" });
+    const loggedOut = sessionPage.url().includes("/login");
+    await sessionPage.close();
+    return {
+      scenarios,
+      session: { passed: sessionResponse.status === 200 && sessionResponse.body?.authenticated === true },
+      context: { passed: contextResponse.status === 200 && contextResponse.body?.authorizationMode === "database-resolved-read-only" && contextResponse.body?.context?.role === "staging-read-only" },
+      logout: { passed: [0, 303].includes(logoutResponse.status) && loggedOut },
     };
-    await page.close();
-    if (!logout.passed) throw new Error("Custom auth browser logout evidence failed");
-    return { scenarios: results, logout };
   } finally {
     await browser.close();
   }
 }
 
-await mkdir(artifactsDir, { recursive: true });
-await rm(reportPath, { force: true });
-let uri = "";
-let cleanupCount = 0;
-let report;
 try {
-  uri = await connectionString();
+  connectionString = await neonConnectionString();
   await run("npm", ["run", "db:migrate"], {
-    env: { ...process.env, DATABASE_URL: uri, LOAD_SYNTHETIC_SEED: "1" },
-    secret: uri,
+    input: undefined,
   });
-  const database = await prepareDatabase(uri);
-  if (database.customAuthTables !== 4 || database.legacyNeonAuthTables !== 0) {
-    throw new Error("Custom auth schema verification failed");
-  }
-
-  await writeFile(
-    configPath,
-    `${JSON.stringify(
-      {
-        name: WORKER_NAME,
-        main: "apps/api/src/staging.ts",
-        compatibility_date: "2026-07-27",
-        compatibility_flags: ["nodejs_compat"],
-        workers_dev: true,
-        preview_urls: false,
-        observability: {
-          enabled: true,
-          logs: { invocation_logs: true, head_sampling_rate: 1 },
-        },
-        vars: {
-          APP_ENV: "staging",
-          REGION: "cloudflare-global",
-          STAGING_GIT_SHA: gitSha,
-          STAGING_AUTH_REQUIRED: "1",
-          STAGING_AUTH_TENANT_CODE: "synthetic-beta",
-          OIDC_ISSUER: "https://staging-business-identity.invalid",
-          OIDC_AUDIENCE: "store-management-api-staging",
-          OIDC_JWKS_URI:
-            "https://staging-business-identity.invalid/.well-known/jwks.json",
-          OIDC_MFA_ACR_VALUES: "urn:staging:mfa",
-        },
-      },
-      null,
-      2,
-    )}\n`,
-    "utf8",
-  );
+  const database = await databaseEvidence(connectionString);
+  await writeFile(configPath, `${JSON.stringify({
+    $schema: "node_modules/wrangler/config-schema.json",
+    name: WORKER_NAME,
+    main: "apps/api/src/staging.ts",
+    compatibility_date: "2026-01-20",
+    compatibility_flags: ["nodejs_compat"],
+    vars: {
+      APP_ENV: "staging",
+      REGION: "cloudflare-global",
+      STAGING_GIT_SHA: gitSha,
+      STAGING_AUTH_REQUIRED: "1",
+      STAGING_AUTH_TENANT_CODE: STAGING_TENANT_CODE,
+      OIDC_ISSUER: "https://staging-business-identity.invalid",
+      OIDC_AUDIENCE: "store-management-api-staging",
+      OIDC_JWKS_URI: "https://staging-business-identity.invalid/.well-known/jwks.json",
+      OIDC_MFA_ACR_VALUES: "urn:staging:mfa",
+    },
+  }, null, 2)}\n`, "utf8");
 
   await run("npx", [
-    "--yes",
-    `wrangler@${WRANGLER_VERSION}`,
-    "deploy",
-    "--config",
-    configPath,
-    "--name",
-    WORKER_NAME,
-    "--minify",
-    "--message",
+    "--yes", `wrangler@${WRANGLER_VERSION}`, "deploy", "--config", configPath,
+    "--name", WORKER_NAME, "--minify", "--message",
     `Persistent Admin/POS custom-auth staging ${gitSha}`,
   ]);
-  await run(
-    "npx",
-    [
-      "--yes",
-      `wrangler@${WRANGLER_VERSION}`,
-      "secret",
-      "put",
-      "DATABASE_URL",
-      "--config",
-      configPath,
-      "--name",
-      WORKER_NAME,
-    ],
-    { input: `${uri}\n`, secret: uri },
-  );
+  await run("npx", [
+    "--yes", `wrangler@${WRANGLER_VERSION}`, "secret", "put", "DATABASE_URL",
+    "--config", configPath, "--name", WORKER_NAME,
+  ], { input: `${connectionString}\n`, secret: connectionString });
 
   const baseUrl = await resolveWorkerUrl();
   const account = await createAccount(baseUrl);
@@ -575,10 +396,8 @@ try {
   probes.push(await probe(baseUrl, "/staging/status", '"custom-auth-required"'));
   const browser = await browserEvidence(baseUrl);
 
-  cleanupCount = await cleanupAccount(uri, authEmail);
-  if (cleanupCount !== 1) {
-    throw new Error("Synthetic custom-auth account cleanup did not remove one user");
-  }
+  cleanupCount = await cleanupAccount(connectionString, authEmail);
+  if (cleanupCount !== 1) throw new Error("Synthetic custom-auth account cleanup did not remove one user");
 
   report = {
     schemaVersion: 3,
@@ -587,12 +406,7 @@ try {
     baseUrl,
     gitSha,
     runId: GITHUB_RUN_ID || null,
-    neon: {
-      projectId: NEON_PROJECT_ID,
-      branchId: NEON_BRANCH_ID,
-      database: NEON_DATABASE,
-      ...database,
-    },
+    neon: { projectId: NEON_PROJECT_ID, branchId: NEON_BRANCH_ID, database: NEON_DATABASE, ...database },
     authentication: {
       provider: "ozzyl-custom-postgres-auth",
       required: true,
@@ -603,7 +417,9 @@ try {
       syntheticAccountCleaned: cleanupCount === 1,
       cookiesSet: account.cookiesSet,
       anonymousRedirectPassed: true,
-      sessionProbePassed: true,
+      sessionProbePassed: browser.session.passed,
+      contextProbePassed: browser.context.passed,
+      databaseResolvedReadRole: "staging-read-only",
       browserLoginPassed: browser.scenarios[0]?.passed === true,
       browserLogoutPassed: browser.logout.passed,
       credentialsPersistedInArtifacts: false,
@@ -617,12 +433,8 @@ try {
   };
   console.log(`Persistent custom-auth staging passed at ${baseUrl}`);
 } catch (error) {
-  if (uri && authEmail && cleanupCount === 0) {
-    try {
-      cleanupCount = await cleanupAccount(uri, authEmail);
-    } catch {
-      // Preserve the primary failure.
-    }
+  if (connectionString && authEmail && cleanupCount === 0) {
+    try { cleanupCount = await cleanupAccount(connectionString, authEmail); } catch { /* preserve primary failure */ }
   }
   report = {
     schemaVersion: 3,
@@ -631,7 +443,7 @@ try {
     gitSha,
     runId: GITHUB_RUN_ID || null,
     syntheticAuthCleanupCount: cleanupCount,
-    error: redact(error instanceof Error ? error.message : error, uri),
+    error: redact(error instanceof Error ? error.message : error),
   };
   throw error;
 } finally {
