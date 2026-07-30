@@ -27,6 +27,12 @@ function cookieToken(cookie, name) {
   return "";
 }
 
+function normalizedLocation(value, baseUrl) {
+  if (!value) return "";
+  const url = new URL(value, baseUrl);
+  return `${url.pathname}${url.search}`;
+}
+
 async function postForm(baseUrl, pathname, fields, cookie = "") {
   return await fetch(`${baseUrl}${pathname}`, {
     method: "POST",
@@ -124,7 +130,15 @@ async function createOutstandingStepUp(client, oldSessionHash) {
 
 async function databaseEvidence(
   client,
-  { email, resetTokenHash, verificationTokenHash, oldSessionHash, grantId, rawResetToken, rawVerificationToken },
+  {
+    email,
+    resetTokenHash,
+    verificationTokenHash,
+    oldSessionHash,
+    grantId,
+    rawResetToken,
+    rawVerificationToken,
+  },
 ) {
   const result = await client.query(
     `SELECT
@@ -143,7 +157,7 @@ async function databaseEvidence(
            AND used_at IS NOT NULL) AS used_verification_tokens,
        (SELECT count(*)::int
           FROM platform.auth_action_tokens
-         WHERE token_hash IN ($7::text, $8::text)) AS plaintext_token_rows,
+         WHERE token_hash IN ($6::text, $7::text)) AS plaintext_token_rows,
        (SELECT count(*)::int
           FROM platform.auth_sessions
          WHERE token_hash = $4::text
@@ -181,7 +195,6 @@ async function databaseEvidence(
       verificationTokenHash,
       oldSessionHash,
       grantId,
-      email,
       rawResetToken,
       rawVerificationToken,
     ],
@@ -231,15 +244,28 @@ export async function runAccountRecoveryJourney({
       "/auth/password-recovery/request",
       { email: `missing-${runId || Date.now()}@example.test` },
     );
-    const knownLocation = knownRequest.headers.get("location");
-    const unknownLocation = unknownRequest.headers.get("location");
+    const knownLocation = normalizedLocation(
+      knownRequest.headers.get("location"),
+      baseUrl,
+    );
+    const unknownLocation = normalizedLocation(
+      unknownRequest.headers.get("location"),
+      baseUrl,
+    );
     if (
       knownRequest.status !== 303 ||
       unknownRequest.status !== 303 ||
       knownLocation !== unknownLocation ||
-      knownLocation !== `${baseUrl}/forgot-password?requested=1`
+      knownLocation !== "/forgot-password?requested=1"
     ) {
-      throw new Error("Password recovery request response disclosed account existence");
+      throw new Error(
+        `Password recovery request response mismatch: ${JSON.stringify({
+          knownStatus: knownRequest.status,
+          unknownStatus: unknownRequest.status,
+          knownLocation,
+          unknownLocation,
+        })}`,
+      );
     }
 
     const resetToken = randomToken();
@@ -276,7 +302,8 @@ export async function runAccountRecoveryJourney({
     const resetCookies = responseCookies(reset);
     if (
       reset.status !== 303 ||
-      reset.headers.get("location") !== `${baseUrl}/password-reset-complete` ||
+      normalizedLocation(reset.headers.get("location"), baseUrl) !==
+        "/password-reset-complete" ||
       !resetCookies.some((value) => value.startsWith(`${SESSION_COOKIE}=`)) ||
       !resetCookies.some((value) => value.startsWith("ozzyl_staging_step_up="))
     ) {
@@ -291,7 +318,10 @@ export async function runAccountRecoveryJourney({
     const oldLogin = await signIn(baseUrl, normalizedEmail, oldPassword);
     if (
       oldLogin.response.status !== 303 ||
-      !String(oldLogin.response.headers.get("location") || "").includes("/login?error=") ||
+      !normalizedLocation(
+        oldLogin.response.headers.get("location"),
+        baseUrl,
+      ).startsWith("/login?error=") ||
       oldLogin.cookie
     ) {
       throw new Error("Old password remained usable after reset");
@@ -300,7 +330,8 @@ export async function runAccountRecoveryJourney({
     const newLogin = await signIn(baseUrl, normalizedEmail, newPassword);
     if (
       newLogin.response.status !== 303 ||
-      newLogin.response.headers.get("location") !== `${baseUrl}/admin` ||
+      normalizedLocation(newLogin.response.headers.get("location"), baseUrl) !==
+        "/admin" ||
       !newLogin.cookie
     ) {
       throw new Error("New password could not create a fresh session");
@@ -323,7 +354,10 @@ export async function runAccountRecoveryJourney({
     );
     if (
       replay.status !== 303 ||
-      !String(replay.headers.get("location") || "").startsWith(`${baseUrl}/reset-password?error=`)
+      !normalizedLocation(
+        replay.headers.get("location"),
+        baseUrl,
+      ).startsWith("/reset-password?error=")
     ) {
       throw new Error("Used password recovery token replay was not rejected");
     }
@@ -354,7 +388,8 @@ export async function runAccountRecoveryJourney({
     );
     if (
       verification.status !== 303 ||
-      verification.headers.get("location") !== `${baseUrl}/email-verification-complete`
+      normalizedLocation(verification.headers.get("location"), baseUrl) !==
+        "/email-verification-complete"
     ) {
       throw new Error("Email verification token was not consumed");
     }
@@ -365,7 +400,10 @@ export async function runAccountRecoveryJourney({
     );
     if (
       verificationReplay.status !== 303 ||
-      !String(verificationReplay.headers.get("location") || "").startsWith(`${baseUrl}/verify-email?error=`)
+      !normalizedLocation(
+        verificationReplay.headers.get("location"),
+        baseUrl,
+      ).startsWith("/verify-email?error=")
     ) {
       throw new Error("Used email verification token replay was not rejected");
     }
@@ -393,7 +431,9 @@ export async function runAccountRecoveryJourney({
       database.passwordResetEvents < 1 ||
       database.emailVerifiedEvents < 1
     ) {
-      throw new Error("Account recovery database evidence failed");
+      throw new Error(
+        `Account recovery database evidence failed: ${JSON.stringify(database)}`,
+      );
     }
 
     return {
