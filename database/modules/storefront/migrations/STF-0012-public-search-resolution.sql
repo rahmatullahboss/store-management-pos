@@ -30,7 +30,7 @@ SET row_security = off AS $$
     SELECT * FROM storefront.resolve_public_host(p_hostname)
   ),
   search_query AS (
-    SELECT trim(p_query) AS value
+    SELECT trim(p_query) AS value, lower(trim(p_query)) AS folded_value
     WHERE char_length(trim(p_query)) BETWEEN 2 AND 120
       AND trim(p_query) !~ '[[:cntrl:]]'
   ),
@@ -50,10 +50,14 @@ SET row_security = off AS $$
     FROM public_documents document
     CROSS JOIN host
     CROSS JOIN search_query query
-    WHERE lower(document.product_document #>> '{summary,name}')
-            LIKE '%' || lower(query.value) || '%'
-       OR lower(document.product_document ->> 'code')
-            LIKE '%' || lower(query.value) || '%'
+    WHERE strpos(
+            lower(document.product_document #>> '{summary,name}'),
+            query.folded_value
+          ) > 0
+       OR strpos(
+            lower(document.product_document ->> 'code'),
+            query.folded_value
+          ) > 0
        OR EXISTS (
          SELECT 1
          FROM catalog.product_localizations localization
@@ -61,12 +65,12 @@ SET row_security = off AS $$
            AND localization.product_id = document.product_id
            AND (
              localization.search_vector @@ websearch_to_tsquery('simple', query.value)
-             OR lower(localization.display_name) LIKE '%' || lower(query.value) || '%'
-             OR lower(COALESCE(localization.description, '')) LIKE '%' || lower(query.value) || '%'
+             OR strpos(lower(localization.display_name), query.folded_value) > 0
+             OR strpos(lower(COALESCE(localization.description, '')), query.folded_value) > 0
              OR EXISTS (
                SELECT 1
                FROM unnest(localization.search_keywords) keyword
-               WHERE lower(keyword) LIKE '%' || lower(query.value) || '%'
+               WHERE strpos(lower(keyword), query.folded_value) > 0
              )
            )
        )
@@ -78,12 +82,12 @@ SET row_security = off AS $$
            AND search_document.status = 'active'
            AND (
              search_document.search_vector @@ websearch_to_tsquery('simple', query.value)
-             OR lower(search_document.sku) LIKE '%' || lower(query.value) || '%'
-             OR lower(search_document.product_code) LIKE '%' || lower(query.value) || '%'
+             OR strpos(lower(search_document.sku), query.folded_value) > 0
+             OR strpos(lower(search_document.product_code), query.folded_value) > 0
              OR EXISTS (
                SELECT 1
                FROM unnest(search_document.barcodes) barcode
-               WHERE lower(barcode) = lower(query.value)
+               WHERE lower(barcode) = query.folded_value
              )
            )
        )
@@ -111,7 +115,7 @@ SET row_security = off AS $$
      AND category.status = 'active'
     GROUP BY publication.category_id, publication.public_slug, category.display_name
     ORDER BY product_count DESC, category.display_name, publication.category_id
-    LIMIT 100
+    LIMIT 20
   ),
   availability_facets AS (
     SELECT
