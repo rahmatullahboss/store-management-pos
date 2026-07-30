@@ -20,6 +20,7 @@ export const STAGING_OPERABILITY_POLICIES = Object.freeze([
   policy("identity_control_failures", "security-operations", "identity-recovery-and-mfa-controls", { criticalResponseMinutes: 15 }),
   policy("controlled_command_failures", "inventory-operations", "controlled-reservation-command", { criticalResponseMinutes: 15 }),
   policy("artifact_secret_leaks", "security-operations", "artifact-or-secret-exposure", { criticalResponseMinutes: 5 }),
+  policy("outbox_publisher_failures", "platform-sre", "outbox-publisher", { criticalResponseMinutes: 15 }),
   policy("inventory_reconciliation_mismatches", "inventory-operations", "inventory-projection-reconciliation", { criticalResponseMinutes: 15 }),
   policy("journal_imbalance_count", "finance-operations", "journal-balance-integrity", { criticalResponseMinutes: 5 }),
   policy("outbox_backlog_count", "platform-sre", "outbox-backlog", {
@@ -59,6 +60,10 @@ function databaseInteger(value, name) {
 
 function booleanFailures(values) {
   return values.reduce((count, value) => count + (value === true ? 0 : 1), 0);
+}
+
+function reportEvidenceInteger(value) {
+  return Number.isSafeInteger(value) && value >= 0 ? value : 1;
 }
 
 export function evaluateStagingOperability(input) {
@@ -257,6 +262,7 @@ export function deriveStagingOperabilitySignals(report, databaseSignals) {
   const mfa = report.mfa ?? {};
   const recovery = report.accountRecovery ?? {};
   const command = report.controlledCommand ?? {};
+  const publisher = report.outboxPublisher ?? {};
 
   const identityControlFailures = booleanFailures([
     authentication.syntheticAccountCleaned,
@@ -291,6 +297,12 @@ export function deriveStagingOperabilitySignals(report, databaseSignals) {
     authentication.credentialsPersistedInArtifacts === false,
     recovery.tokenHashOnly,
   ]);
+  const outboxPublisherFailures = reportEvidenceInteger(publisher.failed)
+    + reportEvidenceInteger(publisher.remaining)
+    + booleanFailures([
+      publisher.payloadsPersistedInArtifacts === false,
+      publisher.externalDelivery === false,
+    ]);
 
   return Object.freeze({
     http_probe_failures: report.status === "passed" && probes.length > 0 ? 0 : 1,
@@ -303,6 +315,7 @@ export function deriveStagingOperabilitySignals(report, databaseSignals) {
     identity_control_failures: identityControlFailures,
     controlled_command_failures: controlledCommandFailures,
     artifact_secret_leaks: artifactSecretLeaks,
+    outbox_publisher_failures: outboxPublisherFailures,
     inventory_reconciliation_mismatches: assertSafeInteger(
       databaseSignals.inventory_reconciliation_mismatches,
       "inventory_reconciliation_mismatches",

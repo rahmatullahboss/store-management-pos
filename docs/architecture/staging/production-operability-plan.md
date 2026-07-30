@@ -146,10 +146,11 @@ Alert requirements:
 
 Implemented in synthetic staging on 2026-07-31:
 
-- eleven fixed low-cardinality aggregate signals covering HTTP/browser evidence, identity/recovery/MFA controls, controlled reservation evidence, artifact leakage, inventory reconciliation, journal balance and outbox health;
-- zero-tolerance critical gates for integrity, identity, accessibility and leakage failures;
-- warning-only outbox thresholds until a continuous publisher and approved production SLO exist;
-- schema-v6 atomic report enrichment that preserves evidence before a critical gate fails;
+- twelve fixed low-cardinality aggregate signals covering HTTP/browser evidence, identity/recovery/MFA controls, controlled reservation evidence, artifact leakage, synthetic outbox publisher delivery, inventory reconciliation, journal balance and post-publisher outbox health;
+- zero-tolerance critical gates for publisher, integrity, identity, accessibility and leakage failures;
+- a staging-only, lease-based synthetic outbox publisher with canonical envelope hashing, durable hash-only inbox receipts, replay-safe acknowledgement and bounded retry;
+- warning-only post-publisher outbox thresholds until a production transport and approved production SLO exist;
+- schema-v7 atomic report enrichment that preserves publisher and operability evidence before a critical gate fails;
 - bounded GitHub Actions summaries containing fixed alert IDs, severity, owner and runbook path rather than raw metric payloads;
 - `docs/architecture/staging/operability-alerts-runbook.md` with ownership, response objectives, containment and recovery verification.
 

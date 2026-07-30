@@ -75,12 +75,14 @@ test("persistent deployment proves useful routes and responsive browser surfaces
 
 test("operational staging persists aggregate operability evidence before enforcing critical alerts", async () => {
   const loader = await source("tooling/scripts/run-operational-staging.mjs");
+  assert.match(loader, /drainSyntheticOutbox/u);
   assert.match(loader, /collectStagingDatabaseSignals/u);
   assert.match(loader, /deriveStagingOperabilitySignals/u);
   assert.match(loader, /evaluateStagingOperability/u);
   assert.match(loader, /persistent-staging-report\.json/u);
   assert.match(loader, /persistent-staging-report\.json\.tmp/u);
-  assert.match(loader, /schemaVersion:\s*6/u);
+  assert.match(loader, /outboxPublisher/u);
+  assert.match(loader, /schemaVersion:\s*7/u);
   assert.match(loader, /await rename\(operabilityReportTemporaryPath, operabilityReportPath\)/u);
   assert.match(loader, /operability\.launchGate === "blocked"/u);
   assert.match(loader, /alert\.alertId/u);
@@ -91,8 +93,14 @@ test("persistent staging workflow publishes bounded operability summary and evid
   const workflow = await source(".github/workflows/persistent-admin-pos-staging.yml");
   for (const path of [
     '"tooling/scripts/staging-operability.mjs"',
+    '"tooling/scripts/staging-outbox-publisher.mjs"',
     '"tests/unit/staging-operability.test.mjs"',
+    '"tests/unit/staging-outbox-publisher.test.mjs"',
   ]) assert.ok(workflow.includes(path), `missing workflow path ${path}`);
+  assert.match(workflow, /Outbox claimed\/delivered\/replayed:/u);
+  assert.match(workflow, /Outbox failed\/remaining\/exhausted:/u);
+  assert.match(workflow, /Outbox payloads in artifacts:/u);
+  assert.match(workflow, /External outbox delivery:/u);
   assert.match(workflow, /Operability status:/u);
   assert.match(workflow, /Operability launch gate:/u);
   assert.match(workflow, /Operability warnings:/u);
@@ -114,21 +122,26 @@ test("operability documentation fixes ownership while preserving production bloc
     "http_probe_failures",
     "identity_control_failures",
     "artifact_secret_leaks",
+    "outbox_publisher_failures",
     "inventory_reconciliation_mismatches",
     "journal_imbalance_count",
     "outbox_backlog_count",
   ]) assert.ok(runbook.includes(metric), `missing runbook metric ${metric}`);
-  assert.match(runbook, /Outbox backlog alerts remain review-only/u);
+  assert.match(runbook, /Synthetic outbox publisher failures are critical/u);
+  assert.match(runbook, /FOR UPDATE SKIP LOCKED/u);
   assert.match(runbook, /production monitoring vendor/u);
-  assert.match(plan, /eleven fixed low-cardinality aggregate signals/u);
+  assert.match(plan, /twelve fixed low-cardinality aggregate signals/u);
+  assert.match(plan, /schema-v7 atomic report enrichment/u);
   assert.match(plan, /production monitoring backend, alert delivery, paging and approved SLOs/u);
-  assert.match(status, /schema_version: 10/u);
-  assert.match(status, /report_schema_version: 6/u);
-  assert.match(status, /launch_gate: review/u);
-  assert.match(status, /critical_count: 0/u);
-  assert.match(status, /active_alert: staging\.outbox_oldest_unpublished_seconds\.warning/u);
+  assert.match(status, /schema_version: 11/u);
+  assert.match(status, /report_schema_version: 7/u);
+  assert.match(status, /signal_count: 12/u);
+  assert.match(status, /live_evidence_state: pending_exact_head_workflow/u);
+  assert.match(status, /consumer: staging-operability-evidence-v1/u);
+  assert.match(status, /payloads_persisted_in_artifacts: false/u);
+  assert.match(status, /external_delivery: false/u);
   assert.match(status, /production_alert_delivery: false/u);
-  assert.match(checkpoint, /aggregate operability live evidence complete/u);
-  assert.match(checkpoint, /operability warnings \/ critical alerts: `1 \/ 0`/u);
-  assert.match(checkpoint, /Production alert delivery, paging and approved SLOs are not configured/u);
+  assert.match(checkpoint, /synthetic outbox publisher implementation complete; schema-v7 live evidence pending/u);
+  assert.match(checkpoint, /canonical SHA-256 envelope digest/u);
+  assert.match(checkpoint, /Production message transport, alert delivery, paging and approved SLOs are not configured/u);
 });

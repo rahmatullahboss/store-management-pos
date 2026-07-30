@@ -3,6 +3,7 @@ import { readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Client } from "@neondatabase/serverless";
+import { drainSyntheticOutbox } from "./staging-outbox-publisher.mjs";
 import {
   collectStagingDatabaseSignals,
   deriveStagingOperabilitySignals,
@@ -152,18 +153,21 @@ async function persistOperabilityEvidence(uri) {
   const client = new Client({ connectionString: uri });
   await client.connect();
   let databaseSignals;
+  let outboxPublisher;
   try {
+    outboxPublisher = await drainSyntheticOutbox(client);
     databaseSignals = await collectStagingDatabaseSignals(client);
   } finally {
     await client.end();
   }
 
   const report = JSON.parse(await readFile(operabilityReportPath, "utf8"));
-  const signals = deriveStagingOperabilitySignals(report, databaseSignals);
+  const reportWithPublisher = { ...report, outboxPublisher };
+  const signals = deriveStagingOperabilitySignals(reportWithPublisher, databaseSignals);
   const operability = evaluateStagingOperability(signals);
   const enrichedReport = {
-    ...report,
-    schemaVersion: 6,
+    ...reportWithPublisher,
+    schemaVersion: 7,
     operability,
   };
   try {

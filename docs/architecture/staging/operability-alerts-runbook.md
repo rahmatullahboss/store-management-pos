@@ -15,7 +15,7 @@ Alerts, workflow summaries and retained artifacts must never include:
 - database URLs, query parameters, row payloads, document contents or customer email addresses;
 - arbitrary tenant, user, account, product, order or journal identifiers.
 
-Critical alerts fail the staging operability gate only after the enriched evidence report is written atomically. Outbox backlog alerts remain review-only until a production publisher and approved service-level objective are commissioned.
+Critical alerts fail the staging operability gate only after the enriched evidence report is written atomically. Synthetic outbox publisher failures are critical; post-publisher backlog alerts remain review-only until a production transport and approved service-level objective are commissioned.
 
 ## Policy matrix
 
@@ -28,6 +28,7 @@ Critical alerts fail the staging operability gate only after the enriched eviden
 | `identity_control_failures` | none | `> 0` | security-operations | 15 min | [Identity, recovery and MFA controls](#identity-recovery-and-mfa-controls) |
 | `controlled_command_failures` | none | `> 0` | inventory-operations | 15 min | [Controlled reservation command](#controlled-reservation-command) |
 | `artifact_secret_leaks` | none | `> 0` | security-operations | 5 min | [Artifact or secret exposure](#artifact-or-secret-exposure) |
+| `outbox_publisher_failures` | none | `> 0` | platform-sre | 15 min | [Outbox publisher](#outbox-publisher) |
 | `inventory_reconciliation_mismatches` | none | `> 0` | inventory-operations | 15 min | [Inventory projection reconciliation](#inventory-projection-reconciliation) |
 | `journal_imbalance_count` | none | `> 0` | finance-operations | 5 min | [Journal balance integrity](#journal-balance-integrity) |
 | `outbox_backlog_count` | `> 50` | not enabled in staging | platform-sre | 240 min | [Outbox backlog](#outbox-backlog) |
@@ -141,6 +142,38 @@ Recovery verification:
 
 Production-secret exposure is outside this workstream and requires the approved production incident process.
 
+## Outbox publisher
+
+**Detection:** `outbox_publisher_failures > 0`.
+
+The synthetic staging publisher:
+
+- claims only unpublished events belonging to tenants whose code starts with `synthetic-`;
+- uses an atomic due-time and maximum-attempt lease with `FOR UPDATE SKIP LOCKED`;
+- hashes the canonical event envelope in memory and persists only the SHA-256 digest in the fixed `staging-operability-evidence-v1` inbox receipt;
+- treats an existing matching receipt as an idempotent replay and a changed-envelope digest as a conflict;
+- acknowledges only the exact tenant, event and claimed attempt, so an expired or superseded worker cannot mark delivery complete;
+- schedules a bounded exponential retry with a fixed error category rather than persisting provider messages;
+- records only aggregate claimed, delivered, replayed, failed, remaining and exhausted counts in the staging report;
+- never sends email, webhook, partner API, customer message or production event.
+
+Immediate actions:
+
+- block promotion when delivery fails, a hash conflict occurs, an acknowledgement is stale or unpublished work remains after the bounded drain;
+- preserve the exact report, aggregate counts and fixed alert ID without copying payloads, metadata, event IDs or error text;
+- inspect receipt count/status and outbox lease state using bounded synthetic-tenant queries;
+- do not delete events, rewrite immutable envelopes or force `published_at` merely to clear the gate.
+
+Recovery verification:
+
+- every due synthetic event has a completed hash-bound inbox receipt;
+- crash-after-receipt replay increments only receipt-attempt evidence and safely completes acknowledgement;
+- post-drain unpublished, exhausted and publisher-failure counts return to zero;
+- report fields confirm `payloadsPersistedInArtifacts: false` and `externalDelivery: false`;
+- repository verification and the persistent staging workflow pass on the exact head.
+
+Production note: this is a staging evidence consumer, not a production message transport. Production broker/provider selection, service identity, consumer contracts, SLOs, dead-letter ownership and paging remain launch blockers.
+
 ## Inventory projection reconciliation
 
 **Detection:** `inventory_reconciliation_mismatches > 0`.
@@ -198,8 +231,8 @@ Immediate actions:
 
 Recovery verification:
 
-- when a publisher is intentionally active, demonstrate idempotent publication, retry and downstream receipt evidence;
-- approve production warning/critical thresholds, paging ownership and maintenance-window handling before launch;
+- the active synthetic publisher demonstrates idempotent publication, bounded retry and durable downstream receipt evidence;
+- approve production transport-specific warning/critical thresholds, paging ownership and maintenance-window handling before launch;
 - retain immutable event payload and ordering guarantees.
 
 ## Production activation requirements

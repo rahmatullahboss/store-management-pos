@@ -15,6 +15,7 @@ const healthySignals = Object.freeze({
   identity_control_failures: 0,
   controlled_command_failures: 0,
   artifact_secret_leaks: 0,
+  outbox_publisher_failures: 0,
   inventory_reconciliation_mismatches: 0,
   journal_imbalance_count: 0,
   outbox_backlog_count: 12,
@@ -60,6 +61,13 @@ function releaseReport(overrides = {}) {
       releasePassed: true,
       availabilityReconciled: true,
       syntheticReservationCleaned: true,
+    },
+    outboxPublisher: {
+      failed: 0,
+      remaining: 0,
+      exhausted: 0,
+      payloadsPersistedInArtifacts: false,
+      externalDelivery: false,
     },
     ...overrides,
   };
@@ -123,6 +131,18 @@ test("warning and critical thresholds produce bounded deterministic alerts", () 
     "threshold",
   ]);
   assert.doesNotMatch(JSON.stringify(result.alerts), /email|token|cookie|postgresql|tenantId/iu);
+});
+
+test("publisher failure is a zero-tolerance staging block", () => {
+  const result = evaluateStagingOperability({
+    ...healthySignals,
+    outbox_publisher_failures: 1,
+  });
+  assert.equal(result.status, "blocked");
+  assert.equal(result.launchGate, "blocked");
+  assert.equal(result.warningCount, 0);
+  assert.equal(result.criticalCount, 1);
+  assert.equal(result.alerts[0].alertId, "staging.outbox_publisher_failures.critical");
 });
 
 test("warning-only evidence requires review without falsely blocking staging", () => {
@@ -252,6 +272,13 @@ test("release report derivation counts failed browser, identity, command and lea
       verificationReplayRejected: true,
     },
     controlledCommand: { createPassed: false, releasePassed: true, availabilityReconciled: false, syntheticReservationCleaned: true },
+    outboxPublisher: {
+      failed: 1,
+      remaining: 1,
+      exhausted: 0,
+      payloadsPersistedInArtifacts: false,
+      externalDelivery: false,
+    },
   });
   const signals = deriveStagingOperabilitySignals(report, {
     outbox_backlog_count: 0,
@@ -267,6 +294,7 @@ test("release report derivation counts failed browser, identity, command and lea
     identity_control_failures: 4,
     controlled_command_failures: 3,
     artifact_secret_leaks: 2,
+    outbox_publisher_failures: 2,
     inventory_reconciliation_mismatches: 0,
     journal_imbalance_count: 0,
     outbox_backlog_count: 0,

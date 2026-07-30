@@ -1,7 +1,7 @@
 # Usable Admin/POS operability implementation checkpoint
 
-Status: aggregate operability live evidence complete; outbox publisher review remains open
-Verified implementation head: `46f21db536ccbdc4f3937373543d43bbd9e815b6`
+Status: synthetic outbox publisher implementation complete; schema-v7 live evidence pending
+Previous verified implementation head: `46f21db536ccbdc4f3937373543d43bbd9e815b6`
 Persistent URL: `https://store-pos-staging.rahmatullahzisan.workers.dev`
 Date: 2026-07-31
 
@@ -13,7 +13,7 @@ The persistent Admin/POS staging environment now supports:
 - one narrow reversible authoritative business workflow: inventory reservation create/release;
 - encrypted TOTP MFA and privileged step-up;
 - hashed, single-use password-recovery and email-verification token lifecycles;
-- fixed aggregate operability signals, deterministic alert policies, atomic schema-v6 evidence and linked response runbooks.
+- fixed aggregate operability signals, deterministic alert policies, a lease-based synthetic outbox publisher, atomic schema-v7 evidence and linked response runbooks.
 
 This remains synthetic staging, not a production launch. Production credentials, production data and production database branches are prohibited. Payment, refund, journal, period-close, banking, fiscal, destructive, stock-posting and transfer commands remain disabled.
 
@@ -149,47 +149,55 @@ The deterministic `synthetic-beta` dataset contains:
 
 Opening stock is represented by five immutable inventory ledger entries. The seed does not manufacture balance totals; quantity and value reconcile to the ledger. Complete replay is skipped, partial state fails closed, and exact money remains integer minor units.
 
-## Aggregate operability implementation
+## Synthetic outbox publisher and aggregate operability implementation
 
-The operational staging runner now derives eleven fixed low-cardinality signals from the existing release report and synthetic-tenant database aggregates:
+The operational staging runner now drains synthetic outbox events before deriving twelve fixed low-cardinality signals from the release report and synthetic-tenant database aggregates:
 
 - HTTP probe, browser scenario, Axe and horizontal-overflow failures;
 - identity, recovery and MFA control failures;
 - controlled reservation command failures;
 - artifact secret-leak controls;
+- synthetic outbox publisher failures;
 - inventory ledger/projection reconciliation mismatches;
 - journal header/line imbalance count;
-- outbox backlog count and oldest unpublished age.
+- post-publisher outbox backlog count and oldest unpublished age.
 
-Critical integrity, identity, accessibility and leakage signals are zero-tolerance. The runner writes a schema-v6 report atomically before enforcing a critical launch block, and the workflow summary exposes only fixed alert IDs, severity, owner and runbook path. Outbox backlog remains a review-only warning until a continuous publisher and approved production SLO are commissioned.
+The staging publisher:
+
+- claims only due synthetic-tenant events using an atomic `FOR UPDATE SKIP LOCKED` lease;
+- computes a canonical SHA-256 envelope digest in memory;
+- stores only that digest in the durable `staging-operability-evidence-v1` inbox receipt;
+- treats a matching receipt as an idempotent crash replay and a changed digest as a conflict;
+- acknowledges only the exact claimed attempt;
+- uses bounded exponential retry with fixed error categories;
+- writes only aggregate claimed, delivered, replayed, failed, remaining and exhausted counts to artifacts;
+- has `payloadsPersistedInArtifacts: false` and `externalDelivery: false` by contract.
+
+Publisher, integrity, identity, accessibility and leakage failures are zero-tolerance. The runner writes a schema-v7 report atomically before enforcing a critical launch block, and the workflow summary exposes only aggregate publisher counts plus fixed alert IDs, severity, owner and runbook path. Post-publisher backlog remains review-only until a production transport and approved production SLO are commissioned.
 
 Implementation evidence:
 
+- `tooling/scripts/staging-outbox-publisher.mjs`;
 - `tooling/scripts/staging-operability.mjs`;
+- `tests/unit/staging-outbox-publisher.test.mjs`;
 - `tests/unit/staging-operability.test.mjs`;
 - `tests/unit/staging-operational-release.test.mjs`;
 - `docs/architecture/staging/operability-alerts-runbook.md`;
+- `docs/superpowers/plans/2026-07-31-staging-outbox-publisher.md`;
 - `docs/superpowers/plans/2026-07-31-staging-operability-hardening.md`.
 
-Live schema-v6 evidence was produced and independently inspected for implementation head `46f21db536ccbdc4f3937373543d43bbd9e815b6`:
+A new exact-head persistent staging workflow must now produce and independently verify schema-v7 publisher evidence. Until that succeeds, the prior schema-v6 evidence remains the last verified live result:
 
-- Persistent Admin POS Staging run: `30574918673`;
-- job: `90980664683`;
-- artifact: `8772324055`;
-- digest: `sha256:ec184485ac425ba84945ec0f312a1d174b22610e3d3bffdb7289579916063e91`;
-- report schema / policy schema: `6 / 1`;
-- HTTP probes: `24/24`;
-- browser scenarios: `6/6`;
-- Axe violations / horizontal-overflow failures: `0 / 0`;
-- identity, controlled-command, artifact-leak, inventory-reconciliation and journal-balance failures: all `0`;
-- outbox backlog: `40`;
-- oldest unpublished outbox age: `9,751` seconds;
-- operability warnings / critical alerts: `1 / 0`;
-- status / launch gate: `degraded / review`.
+- implementation head: `46f21db536ccbdc4f3937373543d43bbd9e815b6`;
+- Persistent Admin POS Staging run/job: `30574918673 / 90980664683`;
+- artifact/digest: `8772324055 / sha256:ec184485ac425ba84945ec0f312a1d174b22610e3d3bffdb7289579916063e91`;
+- report/policy schema: `6 / 1`;
+- HTTP probes and browser scenarios: `24/24` and `6/6`;
+- critical alerts: `0`;
+- prior outbox backlog/oldest age: `40 / 9,751 seconds`;
+- prior status/gate: `degraded / review` because no publisher existed at that checkpoint.
 
-The single review warning is `staging.outbox_oldest_unpublished_seconds.warning`. This is expected until a continuous publisher and approved SLO exist; immutable outbox evidence was not deleted or marked published to clear the warning. Artifact inspection found no database URL, bearer/JWT, raw 43-character action token, cookie header, password field or TOTP secret field.
-
-Production alert delivery, paging and approved SLOs are not configured by this checkpoint.
+Production message transport, alert delivery, paging and approved SLOs are not configured by this checkpoint.
 
 ## Previous exact staging evidence
 
