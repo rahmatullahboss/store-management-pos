@@ -16,10 +16,18 @@ const redactNeedle =
   '.replaceAll(connectionString, "[REDACTED_DATABASE_URL]")';
 const mainNeedle = 'main: "apps/api/src/staging.ts"';
 const contextProbeNeedle = `  probes.push(await probe(baseUrl, "/auth/session", '"authenticated":true', 200, authenticated));`;
+const scenarioNeedle = `    for (const scenario of [
+      {
+        id: "admin-inventory-desktop",
+        pathname: "/admin/inventory",
+        kind: "admin",
+        viewport: { width: 1440, height: 900, deviceScaleFactor: 1 },
+      },`;
 for (const [label, needle] of [
   ["redaction", redactNeedle],
   ["Worker entry", mainNeedle],
   ["context probe", contextProbeNeedle],
+  ["browser scenarios", scenarioNeedle],
 ]) {
   if (!originalDeploy.includes(needle)) {
     throw new Error(`Custom staging ${label} patch target is missing`);
@@ -213,16 +221,41 @@ if (await readContextMigrationExists(uri)) {
   console.log("custom auth read-context preflight deferred until FND-0008 is applied");
 }
 
+const expandedScenario = `    for (const scenario of [
+      {
+        id: "admin-dashboard-desktop",
+        pathname: "/admin",
+        kind: "admin",
+        viewport: { width: 1440, height: 900, deviceScaleFactor: 1 },
+      },
+      {
+        id: "admin-catalog-mobile",
+        pathname: "/admin/catalog",
+        kind: "admin",
+        viewport: { width: 390, height: 844, deviceScaleFactor: 1 },
+      },
+      {
+        id: "admin-inventory-desktop",
+        pathname: "/admin/inventory",
+        kind: "admin",
+        viewport: { width: 1440, height: 900, deviceScaleFactor: 1 },
+      },`;
+
+const expandedProbes = `${contextProbeNeedle}
+  probes.push(await probe(baseUrl, "/auth/context", '"database-resolved-read-only"', 200, authenticated));
+  probes.push(await probe(baseUrl, "/admin", "Run the store from evidence", 200, authenticated));
+  probes.push(await probe(baseUrl, "/admin/catalog", "Database-backed catalog", 200, authenticated));
+  probes.push(await probe(baseUrl, "/admin/customers", "Ayesha Rahman", 200, authenticated));
+  probes.push(await probe(baseUrl, "/admin/sales", "SO-STG-0001", 200, authenticated));`;
+
 const patchedDeploy = originalDeploy
   .replace(
     redactNeedle,
     '.replaceAll(connectionString || "postgresql://__never__", "[REDACTED_DATABASE_URL]")',
   )
   .replace(mainNeedle, 'main: "apps/api/src/staging-entry.ts"')
-  .replace(
-    contextProbeNeedle,
-    `${contextProbeNeedle}\n  probes.push(await probe(baseUrl, "/auth/context", '"database-resolved-read-only"', 200, authenticated));`,
-  );
+  .replace(contextProbeNeedle, expandedProbes)
+  .replace(scenarioNeedle, expandedScenario);
 
 await writeFile(deployPath, patchedDeploy, "utf8");
 try {
