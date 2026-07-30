@@ -1,9 +1,9 @@
 name: Storefront JSON-LD CSP Integration
 
 on:
-  pull_request:
+  push:
     branches:
-      - program/integration-v1
+      - module/storefront-commerce-v1
     paths:
       - .github/workflows/storefront-jsonld-csp-wire.yml
 
