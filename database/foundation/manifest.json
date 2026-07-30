@@ -41,6 +41,11 @@
       "id": "FND-0008",
       "file": "FND-0008-custom-auth-read-context.sql",
       "sha256": "ac5bf72fde89ec9e5268ec5b1128e9152b03d09a5eabd6a8ea050d5bf1ea3812"
+    },
+    {
+      "id": "FND-0009",
+      "file": "FND-0009-custom-auth-totp-step-up.sql",
+      "sha256": "7e98f4eff57507ce32f019d715569003736d4e46c4b5be46541bbc5cfbd56fdd"
     }
   ]
 }
