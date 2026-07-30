@@ -120,6 +120,7 @@ const secretUpload = [
 ].join("\n");
 
 const mfaJourney = `${accountNeedle}
+  await probe(baseUrl, "/staging/mfa-crypto-check", '"status":"passed"', 200, authenticated);
   mfaReservationEvidence = await (await import("./staging-mfa-reservation-evidence.mjs")).runMfaReservationJourney({
     baseUrl,
     sessionCookie: account.cookie,
