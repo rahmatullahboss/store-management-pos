@@ -34,7 +34,9 @@ BEGIN
      OR v_bundle.canonical_hostname <> 'shop.example.test' THEN
     RAISE EXCEPTION 'public cache generation scope is invalid';
   END IF;
-  IF jsonb_object_length(v_bundle.generation_documents) <> 9 THEN
+  SELECT count(*) INTO v_count
+  FROM jsonb_object_keys(v_bundle.generation_documents);
+  IF v_count <> 9 THEN
     RAISE EXCEPTION 'cache generation family count is invalid: %', v_bundle.generation_documents;
   END IF;
   FOREACH v_family IN ARRAY ARRAY[
