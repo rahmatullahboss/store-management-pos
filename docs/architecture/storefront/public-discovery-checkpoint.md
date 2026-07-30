@@ -1,15 +1,22 @@
-# H3-DISCOVERY-03 — Public Discovery Implementation Checkpoint
+# H3-DISCOVERY-03 — Public Discovery Checkpoint
 
-**Status:** implementation checkpoint complete; filter application remains active  
+**Status:** complete  
 **Workpack:** MOD-H — Storefront Commerce and Custom Domains  
 **Branch:** `module/storefront-commerce-v1`  
 **Integration target:** `program/integration-v1`  
 **Checkpoint date:** 2026-07-30  
-**Verified source head:** `5e5242ebe1fc2702363f8bfdd2eba2cf3d79d317`
+**Verified source head:** `bad50da86831d1392e77d0263f978220356a36d6`
 
-## Scope completed at this checkpoint
+## Purpose
 
-This checkpoint implements published public discovery surfaces without creating a second catalog, price, tax or inventory authority.
+Expose published category, collection and bounded search discovery surfaces without creating a second catalog, price, tax, stock or reservation authority.
+
+- MOD-H owns online taxonomy publication, public slugs, curated collections and buyer presentation.
+- MOD-A remains authoritative for category/product identity, localisation, variants and exact price-list data.
+- MOD-B remains authoritative for sellable availability and active reservations.
+- Search filters are applied in the authoritative published PostgreSQL composition, never as browser-side business authority.
+
+## Completed scope
 
 ### Category discovery
 
@@ -19,99 +26,123 @@ This checkpoint implements published public discovery surfaces without creating 
 - host-scoped `GET|HEAD /v1/storefront/categories/{slug}` API;
 - typed client and Worker resolver;
 - buyer category page with breadcrumbs, child-category navigation, exact-price cards and bounded pagination;
-- inactive authoritative categories, unpublished products, unpriced products, unknown hosts and scope mismatches fail closed.
+- inactive categories, unpublished/unpriced products, unknown hosts and scope mismatches fail closed.
 
 ### Collection discovery
 
 - versioned `storefront-public-collection.v1` contract;
-- published MOD-H collection and ordered member projection;
+- published MOD-H collection and deterministic member ordering;
 - member intersection with the verified H3 public product composition;
 - stale, hidden or unpriced members omitted without identifier leakage;
 - host-scoped `GET|HEAD /v1/storefront/collections/{slug}` API;
 - typed client and Worker resolver;
 - buyer collection page with exact-price cards, empty state and bounded pagination.
 
-### Public search and facets
+### Public search and applied facets
 
 - versioned `storefront-public-search.v1` contract;
-- bounded query length and result count;
-- `STF-0012` literal substring and PostgreSQL full-text composition over the already-published product set;
-- wildcard-safe `%` and `_` handling through literal `strpos` matching rather than unescaped `LIKE` patterns;
+- bounded query, category, availability, cursor and result limits;
+- `STF-0012` published-only literal/full-text search composition;
+- `STF-0013` category and availability filters applied inside the authoritative published product set;
+- wildcard-safe `%` and `_` handling through literal matching rather than unescaped `LIKE` control;
 - deterministic product-ID pagination;
-- category and availability facet counts;
-- category facets capped at 20 values in SQL;
+- category and availability facets with SQL-bounded category values;
 - host-scoped `GET|HEAD /v1/storefront/search` API;
-- typed client, Worker route and accessible search/no-result page;
-- final tax, promotion, stock, reservation and ranking authority remains outside the browser.
+- typed client, Worker route, retained filter state, clear-filter action and accessible no-result page;
+- final promotion, tax, stock, reservation and ranking authority remains outside browser code.
 
 ### Shared runtime and presentation
 
-- discovery routes reuse the existing storefront shell, CSP, canonical host handling, cache isolation and exact-money renderer;
-- dedicated public category/collection not-found responses;
+- discovery routes reuse the storefront shell, CSP, canonical-host handling, cache isolation and exact-money renderer;
+- dedicated category and collection public not-found responses;
 - bootstrap-to-discovery tenant/storefront/channel/hostname/locale/currency/price-revision/publication-generation reconciliation;
 - `HEAD` support and `405` method boundaries;
 - English desktop category, English mobile collection and Arabic RTL search/no-result evidence;
 - 200% text, navigation wrapping, keyboard skip link, semantic landmarks and root-overflow checks.
 
-## Database changes
+## Scalius reuse — SF-UP-004
 
-- `STF-0011-public-category-collection-resolution.sql`;
-- `STF-0012-public-search-resolution.sql`;
-- exact SHA-256 checksums registered in `database/modules/storefront/manifest.json`;
-- storefront migration chain now contains 12 deterministic migrations;
-- security-definer functions revoke `PUBLIC` execution and grant only reviewed read execution to `store_app_runtime`;
-- no catalog, pricing or inventory write is introduced by the discovery migrations.
+Pinned upstream source remains `scaliuslabs/scalius-commerce-lite` commit `4cb83aecb6d27483951618dcf8398592e662f241`.
+
+Reviewed and selectively adapted:
+
+- `apps/storefront/src/pages/categories/[slug].astro`;
+- `apps/storefront/src/pages/collections/[id].astro`;
+- `apps/storefront/src/pages/search/index.astro`.
+
+Reused concepts:
+
+- category breadcrumb, description, result count, child navigation and empty state;
+- collection heading, curated-member order and empty state;
+- retained query/filter state, clear-filter action, facets, pagination and no-result composition;
+- page-level SEO/noindex composition patterns.
+
+Rejected or replaced:
+
+- D1, upstream API/core services and upstream business authority;
+- floating-point price/discount fields;
+- upstream availability assumptions;
+- React islands, Tailwind classes, icons, analytics, image-CDN authority, demo data and product branding.
+
+Full file-level provenance is recorded in `docs/architecture/storefront/upstream-file-manifest.yaml`.
+
+## Database and CI truth corrections
+
+- storefront migration chain contains 13 deterministic migrations;
+- security-definer functions revoke `PUBLIC` and grant only reviewed read execution to `store_app_runtime`;
+- publishing and discovery fixtures use disjoint category slugs;
+- the Storefront PostgreSQL workflow now uses `set -o pipefail`, so a failing rehearsal cannot be hidden by `tee`;
+- no catalog, pricing or inventory write was introduced.
 
 ## Exact verification evidence
 
-Storefront CI run `30522544622` verified source head `5e5242ebe1fc2702363f8bfdd2eba2cf3d79d317`:
+Storefront CI run `30534413388` verified source head `bad50da86831d1392e77d0263f978220356a36d6`:
 
-- verify job `90805981407`: success;
-- PostgreSQL 17 rehearsal job `90806145844`: success;
-- buyer/admin/content/catalog/discovery browser job `90806145831`: success;
-- Cloudflare preview/runtime/cleanup job `90806145901`: success;
-- non-destructive Neon recovery job `90806146126`: success;
-- repository tests: 441/441;
+- verify job `90844121062`: success;
+- PostgreSQL 17 rehearsal job `90844265607`: success;
+- buyer/admin/content/catalog/discovery browser job `90844265594`: success;
+- Cloudflare preview/runtime/cleanup job `90844265639`: success;
+- non-destructive Neon recovery job `90844265994`: success;
+- repository tests: 450/450;
 - base buyer scenarios: 3/3;
 - admin scenarios: 4/4;
 - public-content scenarios: 3/3;
 - public-catalog scenarios: 3/3;
-- public-discovery scenarios: 3/3;
-- public-discovery Axe violations: 0;
-- storefront migrations: 12;
-- PostgreSQL rehearsal includes active/inactive category, hierarchy, collection member filtering, unknown host, literal wildcard search and runtime ACL evidence;
-- Cloudflare preview deployment, runtime metrics and Worker cleanup passed;
-- Neon recovery remained non-destructive and passed.
+- public-discovery scenarios: 3/3 with zero Axe violations;
+- applied search-filter evidence: passed with zero Axe violations;
+- PostgreSQL raw log: zero `ERROR:` lines;
+- storefront migrations: 13;
+- storefront tables and forced RLS: 16/16;
+- audit/outbox events: 42/42;
+- command receipts: 23;
+- cache generation rows: 1;
+- Cloudflare runtime requests/errors: 1/0;
+- preview Worker cleanup confirmed.
 
-The same source head also passed:
+## Cloudflare quota recovery
 
-- Foundation CI `30522544760`;
-- Foundation Design CI `30522544945`;
-- Storefront Lockfile `30522544572`;
-- Foundation generic disposable Neon preview was skipped as intended for the MOD-H branch while the non-production project remains at its 10/10 branch quota.
+The Cloudflare account had reached its 100-Worker limit. The recovery path:
 
-The legacy Storefront H1 validation workflow is not an authority for H3 source readiness; its temporary validation harness result is separate from the current Storefront, Foundation, Design and Lockfile gates.
+- activates only for Cloudflare error `10037`;
+- accepts only strict repository-owned names matching `store-pos-fnd-{run-id}`;
+- excludes the current run;
+- requires a minimum six-hour stale age;
+- deletes oldest candidates first with a hard maximum of 20;
+- retries deployment once;
+- records retention evidence and never touches unrelated Workers.
 
-## Security and correctness corrections included
+The exact run pruned 20 eligible repository-owned stale preview Workers, deployed successfully, recorded runtime metrics and removed its current preview Worker.
 
-1. Public search no longer treats `%` and `_` as SQL wildcard controls.
-2. Category facets are SQL-bounded to 20 values.
-3. `compareAtPrice: null` is accepted without a false currency mismatch.
-4. Discovery migrations are checksum-registered and unit-tested.
-5. Arabic RTL at 200% text no longer overflows the header/navigation.
-6. Search input retains an explicit accessible name without visually-hidden-label clipping noise.
-7. Unknown or mismatched public contexts fail closed without tenant/storefront/channel identifier leakage.
+## External blocker
 
-## Remaining before H3-DISCOVERY-03 can close
+The dedicated Neon branch `dev/module-storefront-commerce` remains blocked because the non-production project is at its 10/10 branch quota. No permanent Neon branch was deleted, reset or repurposed. PostgreSQL 17 full replay and non-destructive Neon recovery remain mandatory substitutes.
 
-The current API exposes category and availability facet counts, but does not yet apply selected category or availability filters to the authoritative search query. Therefore this checkpoint does **not** mark the whole discovery slice complete.
+## Next H3 slice
 
-Required continuation:
+`H3-SEO-MEDIA-04` will add:
 
-1. add optional bounded `category` and `availability` filters to the search contract, SQL function, repository, API and typed client;
-2. verify filters are applied inside the published authoritative product set, not in browser code;
-3. retain deterministic cursor behavior and facet counts;
-4. add unit, PostgreSQL and buyer evidence for applied/cleared filters;
-5. reconcile this checkpoint, `status.yaml` and PR #48 with the final exact source head.
-
-After filter application passes, H3 may continue with media/cache generation and SEO discovery.
+1. published-only robots and sitemap discovery;
+2. canonical URL and product structured-data projection;
+3. safe product-media delivery contracts;
+4. exact cache-generation families and invalidation evidence;
+5. low-bandwidth and broader-locale verification.
