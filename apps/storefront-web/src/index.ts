@@ -3,6 +3,12 @@ export {
   StorefrontCacheScopeError,
 } from "./cache-scope.js";
 export {
+  createStorefrontContentResolver,
+  createStorefrontContentTransportResolver,
+  type StorefrontContentResolveOptions,
+  type StorefrontContentResolver,
+} from "./content-resolver.js";
+export {
   parseStorefrontRuntimeEnvironment,
   StorefrontEnvironmentError,
   type StorefrontRuntimeEnvironment,
@@ -21,6 +27,7 @@ export {
 } from "./render.js";
 export {
   resolveStorefrontRequest,
+  storefrontContentNotFoundResponse,
   storefrontHealthResponse,
   storefrontRequestHostname,
   storefrontServiceUnavailableResponse,
@@ -29,6 +36,7 @@ export {
 } from "./runtime.js";
 export {
   createStorefrontWorker,
+  type StorefrontContentResolverFactory,
   type StorefrontResolverFactory,
   type StorefrontWorker,
   type StorefrontWorkerBindings,
