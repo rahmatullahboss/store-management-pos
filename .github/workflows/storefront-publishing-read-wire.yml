@@ -1,0 +1,100 @@
+name: Storefront Publishing Read Wire
+
+on:
+  push:
+    branches:
+      - module/storefront-commerce-v1
+    paths:
+      - .github/workflows/storefront-publishing-read-wire.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: storefront-publishing-read-wire
+  cancel-in-progress: false
+
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: module/storefront-commerce-v1
+          persist-credentials: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - name: Complete publishing read wiring and verify
+        shell: bash
+        run: |
+          set -euo pipefail
+          python <<'PY'
+          from pathlib import Path
+
+          service = Path("modules/storefront/src/publishing-read.ts")
+          text = service.read_text()
+          old_permission = 'requirePermission(context, "storefront.read");'
+          new_permission = 'requirePermission(context, "storefront.storefront.read");'
+          if text.count(old_permission) == 7:
+              text = text.replace(old_permission, new_permission)
+          elif text.count(new_permission) != 7:
+              raise SystemExit("Publishing read permission sites are inconsistent")
+          service.write_text(text)
+
+          handler = Path("apps/api/src/modules/storefront/read-handler.ts")
+          text = handler.read_text()
+          import_anchor = 'import { PlatformError } from "../../../../../packages/foundation/src/errors.js";\n'
+          import_statement = 'import { handleStorefrontPublishingReadRequest } from "./publishing-read-handler.js";\n'
+          if import_statement not in text:
+              if text.count(import_anchor) != 1:
+                  raise SystemExit("Read handler import anchor mismatch")
+              text = text.replace(import_anchor, import_anchor + import_statement, 1)
+          route_anchor = '  if (request.method !== "GET") return null;\n\n  if (url.pathname === "/v1/storefront/storefronts") {'
+          route_marker = '  const publishingResponse = await handleStorefrontPublishingReadRequest(\n'
+          if route_marker not in text:
+              route_block = (
+                  '  if (request.method !== "GET") return null;\n\n'
+                  '  const publishingResponse = await handleStorefrontPublishingReadRequest(\n'
+                  '    request,\n'
+                  '    url,\n'
+                  '    context,\n'
+                  '    database,\n'
+                  '  );\n'
+                  '  if (publishingResponse) return publishingResponse;\n\n'
+                  '  if (url.pathname === "/v1/storefront/storefronts") {'
+              )
+              if text.count(route_anchor) != 1:
+                  raise SystemExit("Read handler route anchor mismatch")
+              text = text.replace(route_anchor, route_block, 1)
+          handler.write_text(text)
+
+          tests = Path("tests/unit/storefront-publishing-read.test.mjs")
+          text = tests.read_text()
+          old_fixture = 'function context(permissions = ["storefront.read"]) {'
+          new_fixture = 'function context(permissions = ["storefront.storefront.read"]) {'
+          if old_fixture in text:
+              if text.count(old_fixture) != 1:
+                  raise SystemExit("Publishing read permission fixture duplicated")
+              text = text.replace(old_fixture, new_fixture, 1)
+          elif new_fixture not in text:
+              raise SystemExit("Publishing read permission fixture missing")
+          tests.write_text(text)
+          PY
+          npm ci --ignore-scripts
+          npm run format:check
+          npm run typecheck
+          npm run test:unit
+          git config user.name "Storefront Read Bot"
+          git config user.email "storefront-read-bot@users.noreply.github.com"
+          git add \
+            modules/storefront/src/publishing-read.ts \
+            apps/api/src/modules/storefront/read-handler.ts \
+            tests/unit/storefront-publishing-read.test.mjs
+          if git diff --cached --quiet; then
+            echo "Publishing reads are already wired and verified."
+            exit 0
+          fi
+          git commit -m "feat(storefront): complete H2 publishing management reads"
+          git push origin HEAD:module/storefront-commerce-v1
