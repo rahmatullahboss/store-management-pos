@@ -15,9 +15,15 @@ on:
       - "database/**"
       - "tests/unit/persistent-admin-pos-staging.test.mjs"
       - "tests/unit/staging-auth-origin.test.mjs"
+      - "tests/unit/staging-read-context.test.mjs"
+      - "tests/unit/staging-mfa.test.mjs"
+      - "tests/unit/staging-command-token.test.mjs"
       - "tooling/scripts/apply-migrations.mjs"
       - "tooling/scripts/deploy-custom-auth-staging.mjs"
       - "tooling/scripts/run-custom-auth-staging.mjs"
+      - "tooling/scripts/staging-mfa-reservation-evidence.mjs"
+      - "tooling/scripts/run-operational-staging.mjs"
+      - "tooling/scripts/staging-operational-runner.mjs"
       - "docs/architecture/staging/**"
       - "package.json"
       - "package-lock.json"
@@ -35,9 +41,15 @@ on:
       - "database/**"
       - "tests/unit/persistent-admin-pos-staging.test.mjs"
       - "tests/unit/staging-auth-origin.test.mjs"
+      - "tests/unit/staging-read-context.test.mjs"
+      - "tests/unit/staging-mfa.test.mjs"
+      - "tests/unit/staging-command-token.test.mjs"
       - "tooling/scripts/apply-migrations.mjs"
       - "tooling/scripts/deploy-custom-auth-staging.mjs"
       - "tooling/scripts/run-custom-auth-staging.mjs"
+      - "tooling/scripts/staging-mfa-reservation-evidence.mjs"
+      - "tooling/scripts/run-operational-staging.mjs"
+      - "tooling/scripts/staging-operational-runner.mjs"
       - "docs/architecture/staging/**"
       - "package.json"
       - "package-lock.json"
@@ -95,9 +107,14 @@ jobs:
             `- Browser data: ${report.syntheticOnly === true ? 'synthetic only' : 'not confirmed'}`,
             `- Authentication: ${report.authentication?.provider ?? 'not confirmed'}`,
             `- Password hashing: ${report.authentication?.passwordHash ?? 'not confirmed'}`,
+            `- TOTP MFA: ${report.mfa?.provider === 'totp' && report.mfa?.encryptedAtRest === true ? 'passed' : 'not confirmed'}`,
+            `- Single-use step-up replay rejection: ${report.mfa?.replayRejected === true ? 'passed' : 'not confirmed'}`,
+            `- Reservation create/release: ${report.controlledCommand?.createPassed === true && report.controlledCommand?.releasePassed === true ? 'passed' : 'not confirmed'}`,
+            `- Reservation availability reconciliation: ${report.controlledCommand?.availabilityReconciled === true ? 'passed' : 'not confirmed'}`,
+            `- Synthetic reservation cleanup: ${report.controlledCommand?.syntheticReservationCleaned === true ? 'passed' : 'not confirmed'}`,
             `- Synthetic auth account cleanup: ${report.authentication?.syntheticAccountCleaned === true ? 'passed' : 'not confirmed'}`,
             `- Legacy Neon Auth removed: ${report.authentication?.legacyNeonAuthRemoved === true ? 'yes' : 'not confirmed'}`,
-            `- Authoritative browser writes: ${report.authoritativeBrowserWritesEnabled === true ? 'enabled' : 'disabled'}`,
+            `- General authoritative browser writes: ${report.authoritativeBrowserWritesEnabled === true ? 'enabled' : 'disabled'}`,
             `- Live browser scenarios: ${browser.filter((item) => item.passed === true).length}/${browser.length}`,
             `- Axe violations: ${browser.reduce((total, item) => total + (item.violations?.length ?? 0), 0)}`,
             '',
