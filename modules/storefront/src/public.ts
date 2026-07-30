@@ -98,7 +98,7 @@ export class SqlStorefrontPublicRepository implements StorefrontPublicRepository
       context: context(row),
       themeRevision: row.themeRevision,
       layoutRevision: row.layoutRevision,
-      capabilities: row.capabilities,
+      capabilities: [...row.capabilities, "content.read"],
     });
     if (bootstrap.context.requestHostname !== normalized) {
       throw new Error("Public storefront host resolution returned a mismatched hostname.");
