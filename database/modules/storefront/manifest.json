@@ -16,6 +16,11 @@
       "id": "STF-0003",
       "file": "STF-0003-public-host-resolution.sql",
       "sha256": "00c5758425767fb076b6d670df12f5aa4403b2c65684c43b61d77a3135ddbd4a"
+    },
+    {
+      "id": "STF-0004",
+      "file": "STF-0004-qualified-status-references.sql",
+      "sha256": "eee1e75fc7b658bf7f0c446cd87d190212d886ea49de9fab703bc49ef0bca197"
     }
   ]
 }
