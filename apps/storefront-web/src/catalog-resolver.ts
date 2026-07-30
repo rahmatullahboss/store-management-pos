@@ -5,6 +5,11 @@ import {
   type StorefrontClient,
   type StorefrontTransport,
 } from "../../../packages/storefront-client/src/index.js";
+import {
+  requestStorefrontPublicSearch,
+  type StorefrontPublicSearchClientConfiguration,
+  type StorefrontPublicSearchClientOptions,
+} from "../../../packages/storefront-client/src/public-search.js";
 import type {
   StorefrontPublicCatalogPageV1,
   StorefrontPublicProductDetailV1,
@@ -14,6 +19,13 @@ import type {
   StorefrontPublicCollectionPageV1,
   StorefrontPublicSearchPageV1,
 } from "../../../packages/storefront-contracts/src/public-discovery.js";
+
+export interface StorefrontSearchRequestOptions
+  extends StorefrontCatalogRequestOptions,
+    Pick<
+      StorefrontPublicSearchClientOptions,
+      "category" | "availability"
+    > {}
 
 export interface StorefrontCatalogResolver {
   resolveCatalog(
@@ -38,7 +50,7 @@ export interface StorefrontCatalogResolver {
   resolveSearch(
     requestHostname: string,
     query: string,
-    options?: StorefrontCatalogRequestOptions,
+    options?: StorefrontSearchRequestOptions,
   ): Promise<StorefrontPublicSearchPageV1 | null>;
 }
 
@@ -55,6 +67,7 @@ async function publicRead<T>(operation: () => Promise<T>): Promise<T | null> {
 
 export function createStorefrontCatalogResolver(
   client: StorefrontClient,
+  searchConfiguration?: StorefrontPublicSearchClientConfiguration,
 ): StorefrontCatalogResolver {
   return Object.freeze({
     async resolveCatalog(
@@ -97,8 +110,18 @@ export function createStorefrontCatalogResolver(
     async resolveSearch(
       requestHostname: string,
       query: string,
-      options: StorefrontCatalogRequestOptions = {},
+      options: StorefrontSearchRequestOptions = {},
     ): Promise<StorefrontPublicSearchPageV1 | null> {
+      if (searchConfiguration) {
+        return await publicRead(() =>
+          requestStorefrontPublicSearch(
+            searchConfiguration,
+            requestHostname,
+            query,
+            options,
+          )
+        );
+      }
       return await publicRead(() => client.search(requestHostname, query, options));
     },
   });
@@ -119,5 +142,8 @@ export function createStorefrontCatalogTransportResolver(options: {
         baseUrl: options.baseUrl,
         transport: options.transport,
       };
-  return createStorefrontCatalogResolver(createStorefrontClient(clientOptions));
+  return createStorefrontCatalogResolver(
+    createStorefrontClient(clientOptions),
+    clientOptions,
+  );
 }
