@@ -220,13 +220,13 @@ test("worker fails closed on content scope mismatch and returns bounded CMS not-
   assert.equal((await missing.json()).error.code, "CONTENT_NOT_FOUND");
 });
 
-test("STF-0006 through STF-0012 preserve safe public execution boundaries", async () => {
+test("STF-0006 through STF-0013 preserve safe public execution boundaries", async () => {
   const manifest = JSON.parse(
     await readFile(new URL("../../database/modules/storefront/manifest.json", import.meta.url), "utf8"),
   );
   assert.ok(manifest.migrations.some(({ id }) => id === "STF-0006"));
   assert.ok(manifest.migrations.some(({ id }) => id === "STF-0007"));
-  assert.equal(manifest.migrations.at(-1).id, "STF-0012");
+  assert.equal(manifest.migrations.at(-1).id, "STF-0013");
   const contentSql = await readFile(
     new URL("../../database/modules/storefront/migrations/STF-0006-public-content-resolution.sql", import.meta.url),
     "utf8",
