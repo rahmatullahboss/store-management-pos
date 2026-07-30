@@ -16,6 +16,7 @@ import {
 import type { StorefrontWorkerBindings } from "./worker.js";
 
 const PRODUCT_PATH = /^\/products\/([^/]+)$/u;
+const ROBOTS_MARKER = '<meta name="robots" content="noindex,follow">';
 
 function isStorefrontTransport(value: unknown): value is StorefrontTransport {
   return (
@@ -122,11 +123,11 @@ export async function enrichStorefrontProductStructuredData(
     const scriptHash = await sha256Base64(structuredDataJson);
     const headers = new Headers(response.headers);
     const currentPolicy = headers.get("Content-Security-Policy") ?? "";
-    const marker = "script-src 'none'";
-    if (currentPolicy.split(marker).length !== 2) return response;
+    const cspMarker = "script-src 'none'";
+    if (currentPolicy.split(cspMarker).length !== 2) return response;
     headers.set(
       "Content-Security-Policy",
-      currentPolicy.replace(marker, `script-src 'sha256-${scriptHash}'`),
+      currentPolicy.replace(cspMarker, `script-src 'sha256-${scriptHash}'`),
     );
     headers.set(
       "ETag",
@@ -141,11 +142,20 @@ export async function enrichStorefrontProductStructuredData(
     const html = await response.text();
     const headMarker = "</head>";
     const markerIndex = html.indexOf(headMarker);
-    if (markerIndex < 0 || markerIndex !== html.lastIndexOf(headMarker)) {
+    if (
+      markerIndex < 0 ||
+      markerIndex !== html.lastIndexOf(headMarker) ||
+      html.split(ROBOTS_MARKER).length !== 2
+    ) {
       return responseFromText(response, html, new Headers(response.headers));
     }
     const structuredData = renderStorefrontProductStructuredData(detail);
-    const body = `${html.slice(0, markerIndex)}  ${structuredData}\n${html.slice(markerIndex)}`;
+    const indexedHtml = html.replace(
+      ROBOTS_MARKER,
+      '<meta name="robots" content="index,follow">',
+    );
+    const indexedMarker = indexedHtml.indexOf(headMarker);
+    const body = `${indexedHtml.slice(0, indexedMarker)}  ${structuredData}\n${indexedHtml.slice(indexedMarker)}`;
     return responseFromText(response, body, headers);
   } catch (error: unknown) {
     if (
