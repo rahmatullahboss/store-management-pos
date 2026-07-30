@@ -66,6 +66,11 @@
       "id": "FND-0013",
       "file": "FND-0013-custom-auth-action-tokens.sql",
       "sha256": "a9c9cd27e0eb7d38996d7422bcee2cc402951f46260347edf30d10fc14c0b4d6"
+    },
+    {
+      "id": "FND-0014",
+      "file": "FND-0014-custom-auth-action-token-alias-hardening.sql",
+      "sha256": "920dc299ed6e1098266a9905de9c6efce5ab0f9cf94be144d68e3902f5706569"
     }
   ]
 }
