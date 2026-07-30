@@ -145,7 +145,7 @@ BEGIN
    AND r.code = 'staging-read-only'
   WHERE read_role.membership_id = v_membership.id
     AND read_role.tenant_id = v_membership.tenant_id
-  ORDER BY read_role.created_at
+  ORDER BY read_role.granted_at
   LIMIT 1
   ON CONFLICT DO NOTHING;
 END $$;
