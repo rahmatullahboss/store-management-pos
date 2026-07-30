@@ -1,0 +1,92 @@
+batch:
+  id: SF-UP-005
+  status: active
+  source:
+    repository: https://github.com/scaliuslabs/scalius-commerce-lite
+    branch: mono-repo
+    commit: 4cb83aecb6d27483951618dcf8398592e662f241
+  purpose: Selectively adapt public SEO discovery, canonical-path and cache-generation patterns while preserving local PostgreSQL authority and exact commerce contracts.
+  upstream_files:
+    - path: apps/storefront/src/pages/robots.txt.ts
+      blob_sha: 06fa8b291cabb4784db378822f71e229463067a0
+      mode: adapt
+      reused_concepts:
+        - canonical_sitemap_directive
+        - explicit_indexing_policy
+        - text_plain_response_shape
+    - path: apps/storefront/src/pages/sitemap.xml.ts
+      blob_sha: 05fd6f0b247f79fa03f0d32eff4a0462e721b4e7
+      mode: adapt
+      reused_concepts:
+        - deterministic_public_entry_composition
+        - XML_response_shape
+        - bounded_last_modified_projection
+    - path: apps/storefront/src/lib/sitemap-utils.ts
+      blob_sha: 569fab640cbe8fa28977ec4a07784f8ab9c235f2
+      mode: adapt
+      reused_concepts:
+        - XML_escaping
+        - sitemap_date_normalisation
+        - safe_URL_composition
+    - path: packages/shared/src/seo-canonical.ts
+      blob_sha: 715c66db4e6933e45f48801f80d2bf4402352bb1
+      mode: adapt
+      reused_concepts:
+        - canonical_path_sanitation
+        - reserved_path_denial
+        - traversal_and_protocol_relative_rejection
+    - path: apps/storefront/src/lib/public-discovery-cache.ts
+      blob_sha: 66cc6052692fbbeb30e9ca170201c151869cdfb2
+      mode: adapt
+      reused_concepts:
+        - discovery_only_cache_policy
+        - cookie_stripping_for_public_cache
+        - fail_closed_private_route_bypass
+    - path: apps/storefront/src/lib/cache-generations.ts
+      blob_sha: 4e3fdf881b91a9824a9d502aed84df2e699456f5
+      mode: adapt
+      reused_concepts:
+        - cache_family_generation_keys
+        - generation_lookup_timeout
+        - explicit_generation_bump_boundaries
+  local_files:
+    - packages/storefront-contracts/src/public-seo.ts
+    - apps/storefront-web/src/seo.ts
+    - modules/storefront/src/public-seo.ts
+    - apps/api/src/modules/storefront/public-handler.ts
+    - database/modules/storefront/migrations/STF-0014-public-seo-resolution.sql
+    - tests/unit/storefront-public-seo.test.mjs
+    - tests/unit/storefront-public-seo-api.test.mjs
+    - tests/integration/storefront-public-seo-rehearsal.sql
+    - docs/architecture/storefront/public-seo-media-plan.md
+  modifications:
+    - replaced upstream hostname and store discovery with active local canonical-host resolution
+    - replaced upstream D1 and KV authority with PostgreSQL security-definer read projections and generation rows
+    - restricted sitemap entries to locally published products categories collections and content pages
+    - required products to pass the verified exact-price and availability public composition
+    - added bounded contract validation duplicate rejection and encoded-traversal denial
+    - added exact integer-minor to decimal-string product structured-data formatting
+    - escaped XML and JSON script-termination characters
+    - retained CSP-first design; structured-data shell integration requires a deterministic CSP hash or nonce
+    - removed upstream branding analytics demo data fixed IDs and environment constants
+  rejected:
+    - D1_and_Drizzle_persistence
+    - upstream_API_and_core_business_services
+    - global_or_cross_tenant_cache_keys
+    - browser_authoritative_price_tax_stock_or_checkout_logic
+    - floating_point_money
+    - upstream_media_CDN_authority
+  authority_boundary:
+    - MOD_A_owns_product_category_media_price_promotion_and_tax_inputs
+    - MOD_B_owns_stock_availability_and_reservations
+    - MOD_H_owns_public_slugs_crawler_policy_presentation_and_cache_generations
+    - PostgreSQL_Neon_remains_canonical
+    - Cloudflare_cache_KV_and_R2_are_delivery_infrastructure_only
+  required_evidence:
+    - root_format_type_boundary_migration_build_and_unit_gates
+    - PostgreSQL_17_published_only_SEO_rehearsal
+    - robots_sitemap_canonical_and_structured_data_security_tests
+    - Worker_GET_HEAD_content_type_and_scope_reconciliation
+    - Cloudflare_preview_runtime_cleanup
+    - non_destructive_Neon_recovery
+  local_owner: MOD-H-storefront-commerce
