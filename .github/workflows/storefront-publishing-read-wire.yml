@@ -10,6 +10,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: storefront-publishing-read-wire
+  cancel-in-progress: false
+
 jobs:
   patch:
     runs-on: ubuntu-24.04
@@ -58,12 +62,27 @@ jobs:
           if text.count(route_anchor) != 1:
               raise SystemExit("Read handler route anchor mismatch")
           handler.write_text(text.replace(route_anchor, route_block, 1))
+
+          tests = Path("tests/unit/storefront-publishing-read.test.mjs")
+          text = tests.read_text()
+          old_fixture = 'function context(permissions = ["storefront.read"]) {'
+          if text.count(old_fixture) != 1:
+              raise SystemExit("Publishing read permission fixture mismatch")
+          tests.write_text(text.replace(
+              old_fixture,
+              'function context(permissions = ["storefront.storefront.read"]) {',
+              1,
+          ))
           PY
           npm ci --ignore-scripts
           npm run format:check
           npm run typecheck
+          npm run test:unit
           git config user.name "Storefront Read Bot"
           git config user.email "storefront-read-bot@users.noreply.github.com"
-          git add modules/storefront/src/publishing-read.ts apps/api/src/modules/storefront/read-handler.ts
+          git add \
+            modules/storefront/src/publishing-read.ts \
+            apps/api/src/modules/storefront/read-handler.ts \
+            tests/unit/storefront-publishing-read.test.mjs
           git commit -m "feat(storefront): wire H2 publishing management reads"
           git push origin HEAD:module/storefront-commerce-v1
