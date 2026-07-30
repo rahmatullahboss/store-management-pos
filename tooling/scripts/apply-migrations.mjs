@@ -83,7 +83,9 @@ try {
     for (const migration of manifest.migrations) {
       const sql = await readFile(path.join(root, source.migrations, migration.file), "utf8");
       const digest = createHash("sha256").update(sql).digest("hex");
-      if (digest !== migration.sha256) throw new Error(`${migration.id} checksum does not match the manifest`);
+      if (digest !== migration.sha256) {
+        throw new Error(`${migration.id} checksum does not match the manifest: expected ${migration.sha256}, actual ${digest}`);
+      }
       const { marker, accepted } = acceptedMarkers(migration);
       const existing = await client.query("SELECT checksum FROM platform.schema_migrations WHERE migration_id = $1", [migration.id]).catch(() => ({ rows: [] }));
       if (existing.rows.length > 0) {
