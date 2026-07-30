@@ -1,0 +1,24 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import test from "node:test";
+
+test("persistent staging uses a dedicated Neon project instead of generic disposable preview capacity", async () => {
+  const packageJson = JSON.parse(
+    await readFile(new URL("../../package.json", import.meta.url), "utf8"),
+  );
+  assert.equal(
+    packageJson.scripts["ci:neon-preview"],
+    "node tooling/scripts/neon-preview-policy.mjs",
+  );
+
+  const policy = await readFile(
+    new URL("../../tooling/scripts/neon-preview-policy.mjs", import.meta.url),
+    "utf8",
+  );
+  assert.match(policy, /ops\/persistent-admin-pos-staging-v1/u);
+  assert.match(policy, /dedicated-persistent-staging-neon/u);
+  assert.match(policy, /morning-flower-46531465/u);
+  assert.match(policy, /br-empty-sound-afkx5vkj/u);
+  assert.match(policy, /destructiveCleanupPerformed: false/u);
+  assert.match(policy, /await import\("\.\/neon-preview-ci\.mjs"\)/u);
+});
