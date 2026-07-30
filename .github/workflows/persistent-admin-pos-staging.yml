@@ -14,9 +14,9 @@ on:
       - "modules/**"
       - "database/**"
       - "tests/unit/persistent-admin-pos-staging.test.mjs"
+      - "tests/unit/staging-auth-origin.test.mjs"
       - "tooling/scripts/apply-migrations.mjs"
       - "tooling/scripts/deploy-persistent-staging.mjs"
-      - "tooling/scripts/diagnose-staging-auth.mjs"
       - "docs/architecture/staging/**"
       - "package.json"
       - "package-lock.json"
@@ -33,9 +33,9 @@ on:
       - "modules/**"
       - "database/**"
       - "tests/unit/persistent-admin-pos-staging.test.mjs"
+      - "tests/unit/staging-auth-origin.test.mjs"
       - "tooling/scripts/apply-migrations.mjs"
       - "tooling/scripts/deploy-persistent-staging.mjs"
-      - "tooling/scripts/diagnose-staging-auth.mjs"
       - "docs/architecture/staging/**"
       - "package.json"
       - "package-lock.json"
@@ -70,9 +70,6 @@ jobs:
         run: npm run verify
       - name: Deploy persistent staging
         run: npm run ci:staging-deploy
-      - name: Diagnose staging auth failure
-        if: failure()
-        run: node tooling/scripts/diagnose-staging-auth.mjs
       - name: Publish staging URL summary
         if: always()
         run: |
