@@ -1,0 +1,77 @@
+name: Storefront Catalog Wire
+
+on:
+  push:
+    branches:
+      - module/storefront-commerce-v1
+    paths:
+      - .github/workflows/storefront-catalog-wire.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: storefront-catalog-wire
+  cancel-in-progress: false
+
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: module/storefront-commerce-v1
+          persist-credentials: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - name: Apply catalog compatibility corrections
+        shell: bash
+        run: |
+          set -euo pipefail
+          python <<'PY'
+          from pathlib import Path
+
+          render = Path("apps/storefront-web/src/render.ts")
+          text = render.read_text()
+          old = '''  const titleSource = options.product?.product.summary.name ??
+            (options.catalog ? "Products" : undefined) ??
+            page?.title ??
+            seoText(seo, "title", hostname);
+          const descriptionSource = options.product?.product.description ??
+            (options.catalog ? `Published product catalog for ${hostname}.` : undefined) ??
+            seoText(seo, "description", `Published storefront content for ${hostname}.`);'''
+          new = '''  const titleSource = options.product?.product.summary.name ??
+            (options.catalog ? "Products" : undefined) ??
+            (page ? seoText(seo, "title", page.title) : seoText(seo, "title", hostname));
+          const descriptionSource = options.product?.product.description ??
+            (options.catalog ? `Published product catalog for ${hostname}.` : undefined) ??
+            seoText(seo, "description", `Published storefront content for ${hostname}.`);'''
+          if text.count(old) != 1:
+            raise SystemExit(f"Expected one renderer SEO block, found {text.count(old)}")
+          render.write_text(text.replace(old, new, 1))
+
+          tests = Path("tests/unit/storefront-public-content.test.mjs")
+          text = tests.read_text()
+          replacements = {
+            'test("STF-0006 through STF-0008 preserve safe public execution boundaries", async () => {':
+              'test("STF-0006 through STF-0009 preserve safe public execution boundaries", async () => {',
+            '  assert.equal(manifest.migrations.at(-1).id, "STF-0008");':
+              '  assert.equal(manifest.migrations.at(-1).id, "STF-0009");',
+          }
+          for old, new in replacements.items():
+            if text.count(old) != 1:
+              raise SystemExit(f"Expected one test marker {old!r}, found {text.count(old)}")
+            text = text.replace(old, new, 1)
+          tests.write_text(text)
+          PY
+          npm ci --ignore-scripts
+          npm run format:check
+          npm run typecheck
+          npm run test:unit
+          git config user.name "Storefront Catalog Bot"
+          git config user.email "storefront-catalog-bot@users.noreply.github.com"
+          git add apps/storefront-web/src/render.ts tests/unit/storefront-public-content.test.mjs
+          git commit -m "fix(storefront): preserve CMS SEO and migration evidence"
+          git push origin HEAD:module/storefront-commerce-v1
