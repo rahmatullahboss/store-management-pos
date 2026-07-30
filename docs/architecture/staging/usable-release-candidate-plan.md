@@ -1,9 +1,10 @@
 # Usable Admin/POS release-candidate plan
 
-Status: active
+Status: complete
 Date: 2026-07-30
 Branch: `ops/persistent-admin-pos-staging-v1`
 Target: dedicated synthetic staging only
+Checkpoint: `usable-release-candidate-checkpoint.md`
 
 ## Why this checkpoint exists
 
@@ -54,6 +55,8 @@ Repository safety rules prohibit using production credentials, production data o
 - no privileged/write permission appears in the custom-auth context;
 - browser evidence has zero Axe violations and zero root horizontal overflow;
 - exact-head Foundation CI, Foundation Design CI, persistent staging and preview workflows pass.
+
+All checkpoint-specific acceptance gates passed on implementation head `866e99b69b1ccd8f0789f8328fdbc9437fb3bfec`.
 
 ## Deferred production gates
 
