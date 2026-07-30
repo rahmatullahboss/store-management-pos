@@ -153,6 +153,15 @@ async function resolveContext(
   return row ? rowToContext(row) : null;
 }
 
+export async function resolveStagingReadContext(
+  request: Request,
+  env: StagingReadContextEnvironment,
+): Promise<StagingReadContext | null> {
+  const token = sessionToken(request);
+  if (!token) return null;
+  return await resolveContext(await sha256(token), env);
+}
+
 export async function handleStagingReadContext(
   request: Request,
   env: StagingReadContextEnvironment,
@@ -169,15 +178,14 @@ export async function handleStagingReadContext(
         },
       });
     }
-    const token = sessionToken(request);
-    if (!token) {
+    const context = await resolveStagingReadContext(request, env);
+    if (!sessionToken(request)) {
       throw new PlatformError(
         "AUTHENTICATION_REQUIRED",
         "Custom staging session is required",
         401,
       );
     }
-    const context = await resolveContext(await sha256(token), env);
     if (!context) {
       throw new PlatformError(
         "PERMISSION_DENIED",
