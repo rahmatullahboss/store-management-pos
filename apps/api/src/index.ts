@@ -16,6 +16,7 @@ import { handlePosReceiptRequest } from "./modules/pos/receipt-handler.js";
 import { handleProcurementRequest } from "./modules/procurement/handler.js";
 import { handleStorefrontRequest } from "./modules/storefront/handler.js";
 import { handleStorefrontPublishingRequest } from "./modules/storefront/publishing-handler.js";
+import { handlePublicStorefrontCacheRequest } from "./modules/storefront/public-cache-handler.js";
 import { handlePublicStorefrontMediaRequest } from "./modules/storefront/public-media-handler.js";
 import { handlePublicStorefrontRequest } from "./modules/storefront/public-handler.js";
 import { handleStorefrontReadRequest } from "./modules/storefront/read-handler.js";
@@ -47,6 +48,8 @@ export default {
       if (discoveryResponse) return discoveryResponse;
       if (request.method === "GET" && url.pathname === "/health") return Response.json({ status: "healthy", service: "api", databaseMode: "direct-neon", region: env.REGION });
       const database = new NeonDatabase({ connectionString: env.DATABASE_URL });
+      const publicCacheResponse = await handlePublicStorefrontCacheRequest(request, url, database);
+      if (publicCacheResponse) return publicCacheResponse;
       const publicMediaResponse = await handlePublicStorefrontMediaRequest(request, url, database);
       if (publicMediaResponse) return publicMediaResponse;
       const publicStorefrontResponse = await handlePublicStorefrontRequest(request, url, database);
