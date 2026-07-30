@@ -191,7 +191,7 @@ async function envelope<Input extends StorefrontCommandMeta>(
   context: RequestContext,
   input: Input,
   scope: string,
-  entityId = crypto.randomUUID(),
+  entityId: string = crypto.randomUUID(),
   document?: Readonly<Record<string, unknown>>,
 ): Promise<CommandEnvelope<Input>> {
   const normalized = { ...input, idempotencyKey: bounded(input.idempotencyKey, "Idempotency key", 200) };
