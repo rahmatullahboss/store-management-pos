@@ -56,6 +56,7 @@ jobs:
       NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CHROME_PATH: /usr/bin/google-chrome
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
@@ -79,6 +80,7 @@ jobs:
             process.exit(0);
           }
           const report = JSON.parse(readFileSync(reportPath, 'utf8'));
+          const browser = Array.isArray(report.browser) ? report.browser : [];
           const lines = [
             '## Persistent staging',
             '',
@@ -89,6 +91,8 @@ jobs:
             `- Persistent: ${report.persistent === true ? 'yes' : 'not confirmed'}`,
             `- Browser data: ${report.syntheticOnly === true ? 'synthetic only' : 'not confirmed'}`,
             `- Authoritative browser writes: ${report.authoritativeBrowserWritesEnabled === true ? 'enabled' : 'disabled'}`,
+            `- Live browser scenarios: ${browser.filter((item) => item.passed === true).length}/${browser.length}`,
+            `- Axe violations: ${browser.reduce((total, item) => total + (item.violations?.length ?? 0), 0)}`,
             '',
           ];
           appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join('\n')}\n`);
@@ -98,6 +102,6 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: persistent-admin-pos-staging-${{ github.run_id }}
-          path: artifacts/staging/persistent-staging-report.json
+          path: artifacts/staging/
           if-no-files-found: warn
           retention-days: 30
