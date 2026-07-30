@@ -235,7 +235,10 @@ export function createStorefrontWorker(
         }
 
         let content: StorefrontPublicContentBundleV1 | undefined;
-        if (shouldResolveContent) {
+        const contentEnabled =
+          options.contentResolverFactory !== undefined ||
+          bootstrap.capabilities.includes("content.read");
+        if (shouldResolveContent && contentEnabled) {
           const slug = publicContentSlug(url);
           const contentResolver = contentResolverFactory(bindings, environment);
           const resolved = await contentResolver.resolve(hostname, {
