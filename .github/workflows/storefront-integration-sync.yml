@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  diagnose:
+  synchronize:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout complete storefront history
@@ -25,52 +25,224 @@ jobs:
           ref: module/storefront-commerce-v1
           fetch-depth: 0
           persist-credentials: true
-      - name: Fetch current integration baseline
-        run: git fetch --no-tags origin program/integration-v1
-      - name: Attempt merge and persist a non-destructive report
+      - name: Merge reviewed integration baseline
         shell: bash
         run: |
           set -euo pipefail
+          readonly integration_head="fd63dfde4d5940112a9c77c2743b281e49ff6b55"
+          readonly report="docs/architecture/storefront/integration-conflicts.txt"
           git config user.name "Storefront Integration Bot"
           git config user.email "storefront-integration-bot@users.noreply.github.com"
+          git fetch --no-tags origin program/integration-v1
+          test "$(git rev-parse origin/program/integration-v1)" = "$integration_head"
           feature_head=$(git rev-parse HEAD)
-          integration_head=$(git rev-parse origin/program/integration-v1)
+
+          write_failure_report() {
+            local reason="$1"
+            git merge --abort >/dev/null 2>&1 || true
+            mkdir -p "$(dirname "$report")"
+            {
+              echo "status=validation_failed"
+              echo "reason=$reason"
+              echo "feature_head=$feature_head"
+              echo "integration_head=$integration_head"
+              echo "generated_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+              if [ -f /tmp/storefront-sync-validation.log ]; then
+                echo "validation_log_begin"
+                tail -n 200 /tmp/storefront-sync-validation.log
+                echo "validation_log_end"
+              fi
+            } > "$report"
+            git add "$report"
+            git commit -m "chore(storefront): record integration sync failure" || true
+            git push origin HEAD:module/storefront-commerce-v1
+            exit 1
+          }
+
           set +e
-          git merge --no-commit --no-ff origin/program/integration-v1
+          git merge --no-commit --no-ff "$integration_head"
           merge_status=$?
           set -e
-          mkdir -p docs/architecture/storefront
-          report=docs/architecture/storefront/integration-conflicts.txt
           if [ "$merge_status" -eq 0 ]; then
-            {
-              echo "status=clean"
-              echo "feature_head=$feature_head"
-              echo "integration_head=$integration_head"
-              echo "generated_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-            } > "$report"
-            git merge --abort || true
+            echo "Integration baseline merged without conflicts."
           else
-            conflicts=$(git diff --name-only --diff-filter=U | sort)
-            index=$(git ls-files -u)
-            {
-              echo "status=conflicted"
-              echo "feature_head=$feature_head"
-              echo "integration_head=$integration_head"
-              echo "generated_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-              echo "conflict_files_begin"
-              printf '%s\n' "$conflicts"
-              echo "conflict_files_end"
-              echo "unmerged_index_begin"
-              printf '%s\n' "$index"
-              echo "unmerged_index_end"
-            } > /tmp/storefront-integration-conflicts.txt
-            git merge --abort || true
-            cp /tmp/storefront-integration-conflicts.txt "$report"
+            actual_conflicts=$(git diff --name-only --diff-filter=U | sort)
+            expected_conflicts=$(printf '%s\n' \
+              'apps/api/src/index.ts' \
+              'docs/agent-workpacks/program-board.yaml' \
+              'tooling/scripts/apply-migrations.mjs')
+            if [ "$actual_conflicts" != "$expected_conflicts" ]; then
+              printf 'Unexpected conflicts:\n%s\n' "$actual_conflicts" > /tmp/storefront-sync-validation.log
+              write_failure_report "unexpected_conflict_set"
+            fi
+
+            git checkout --theirs -- \
+              apps/api/src/index.ts \
+              docs/agent-workpacks/program-board.yaml \
+              tooling/scripts/apply-migrations.mjs
+
+            python <<'PY'
+          from pathlib import Path
+
+          api = Path("apps/api/src/index.ts")
+          text = api.read_text()
+          import_anchor = 'import { handleProcurementRequest } from "./modules/procurement/handler.js";\n'
+          imports = (
+              import_anchor
+              + 'import { handleStorefrontRequest } from "./modules/storefront/handler.js";\n'
+              + 'import { handlePublicStorefrontRequest } from "./modules/storefront/public-handler.js";\n'
+              + 'import { handleStorefrontReadRequest } from "./modules/storefront/read-handler.js";\n'
+          )
+          if import_anchor not in text:
+              raise SystemExit("API import anchor missing")
+          text = text.replace(import_anchor, imports, 1)
+          public_anchor = (
+              '      const database = new NeonDatabase({ connectionString: env.DATABASE_URL });\n'
+              '      const publicPartnerResponse = await handlePublicPartnerApi({ request, url, database, bindings: env, requestId, region: env.REGION });\n'
+          )
+          public_block = (
+              '      const database = new NeonDatabase({ connectionString: env.DATABASE_URL });\n'
+              '      const publicStorefrontResponse = await handlePublicStorefrontRequest(request, url, database);\n'
+              '      if (publicStorefrontResponse) return publicStorefrontResponse;\n'
+              '      const publicPartnerResponse = await handlePublicPartnerApi({ request, url, database, bindings: env, requestId, region: env.REGION });\n'
+          )
+          if public_anchor not in text:
+              raise SystemExit("API public route anchor missing")
+          text = text.replace(public_anchor, public_block, 1)
+          auth_anchor = (
+              '      const complianceResponse = await handleComplianceRequest(request, url, context, database, env.FISCAL_PROVIDERS);\n'
+              '      if (complianceResponse) return complianceResponse;\n'
+          )
+          auth_block = (
+              auth_anchor
+              + '      const storefrontReadResponse = await handleStorefrontReadRequest(request, url, context, database);\n'
+              + '      if (storefrontReadResponse) return storefrontReadResponse;\n'
+              + '      const storefrontResponse = await handleStorefrontRequest(request, url, context, database);\n'
+              + '      if (storefrontResponse) return storefrontResponse;\n'
+          )
+          if auth_anchor not in text:
+              raise SystemExit("API authenticated route anchor missing")
+          text = text.replace(auth_anchor, auth_block, 1)
+          api.write_text(text)
+
+          board = Path("docs/agent-workpacks/program-board.yaml")
+          text = board.read_text()
+          replacements = {
+              "  status: wave_3_integrated_release_ready": "  status: wave_3_integrated_storefront_extension_active",
+              "  current_agent_scope: MOD-G": "  current_agent_scope: MOD-H",
+              "    owner_workpack: MOD-G": "    owner_workpack: MOD-H",
+              "    reason: mod_g_integration_release_candidate_verified": "    reason: mod_g_integrated_and_storefront_extension_active",
+              "    continuation: merge_release_pr_49_to_main_with_expected_head_protection": "    continuation: continue_mod_h_from_docs_architecture_storefront_status_yaml",
+              "    maximum_parallel_workpacks: 7": "    maximum_parallel_workpacks: 8",
+              "    integration_order: [MOD-A, MOD-B, MOD-C, MOD-E, MOD-D, MOD-F, MOD-G]": "    integration_order: [MOD-A, MOD-B, MOD-C, MOD-E, MOD-D, MOD-F, MOD-G, MOD-H]",
+          }
+          for before, after in replacements.items():
+              if before not in text:
+                  raise SystemExit(f"Programme board anchor missing: {before}")
+              text = text.replace(before, after, 1)
+          wave_three = (
+              "      - wave: 3\n"
+              "        workpacks: [MOD-G]\n"
+              "        prerequisites: [cross_module_reporting_and_integration_contracts_stable]\n"
+          )
+          wave_four = (
+              wave_three
+              + "      - wave: 4\n"
+              + "        workpacks: [MOD-H]\n"
+              + "        prerequisites: [mod_g_integrated, storefront_source_audit_complete, owner_authorised_adaptation_recorded]\n"
+          )
+          if wave_three not in text:
+              raise SystemExit("Programme board wave anchor missing")
+          text = text.replace(wave_three, wave_four, 1)
+          mod_h = (
+              "  - { id: MOD-H, title: Storefront Commerce and Custom Domains, status: active, wave: 4, "
+              "agent_assignment: whole_workpack_only, exclusive: false, git_branch: module/storefront-commerce-v1, "
+              "review_pr: 48, sync_pr: 53, worktree: .worktrees/storefront-commerce, neon_branch: dev/module-storefront-commerce, "
+              "neon_branch_status: blocked_by_project_branch_quota_10_of_10, base_branch: program/integration-v1, "
+              "integration_sync_base: fd63dfde4d5940112a9c77c2743b281e49ff6b55, depends_on: [FOUNDATION], "
+              "contract_dependencies: [MOD-A, MOD-B, MOD-C, MOD-E, MOD-F, MOD-G], "
+              "dependency_strategy: integrated_mod_a_to_mod_g_authoritative_contracts, "
+              "document: docs/agent-workpacks/MOD-H-STOREFRONT-COMMERCE.md, tracker: docs/architecture/storefront/status.yaml, "
+              "continuation: docs/architecture/storefront/START-HERE.md, integration_order: 8, "
+              "upstream_repository: https://github.com/scaliuslabs/scalius-commerce-lite, "
+              "upstream_commit: 4cb83aecb6d27483951618dcf8398592e662f241, "
+              "evidence: [storefront_source_audit_complete, h1_worker_astro_foundation, stf_0001_to_stf_0003, "
+              "postgresql_17_rehearsal, public_host_bootstrap, authenticated_management_commands_and_reads], "
+              "remaining_gate_blockers: [neon_branch_verification, H2_remaining_publication_and_content_commands, H3_to_H7] }\n"
+          )
+          if "\nrules:\n" not in text:
+              raise SystemExit("Programme board rules anchor missing")
+          text = text.replace("\nrules:\n", "\n" + mod_h + "\nrules:\n", 1)
+          board.write_text(text)
+
+          migrations = Path("tooling/scripts/apply-migrations.mjs")
+          text = migrations.read_text()
+          module_anchor = '  { name: "MOD-G-INTEGRATION", manifest: "database/modules/integrations/manifest.json", migrations: "database/modules/integrations/migrations" },\n'
+          module_entry = module_anchor + '  { name: "MOD-H-STOREFRONT", manifest: "database/modules/storefront/manifest.json", migrations: "database/modules/storefront/migrations" },\n'
+          if module_anchor not in text:
+              raise SystemExit("Migration module anchor missing")
+          text = text.replace(module_anchor, module_entry, 1)
+          dependency_anchor = '  ["MOD-G-INTEGRATION", ["FOUNDATION", "MOD-G-REPORTING"]],\n'
+          dependency_entry = dependency_anchor + '''  ["MOD-H-STOREFRONT", [
+            "FOUNDATION",
+            "MOD-A-CATALOG",
+            "MOD-A-PRICING",
+            "MOD-A-TAX",
+            "MOD-B-INVENTORY",
+            "MOD-C-CUSTOMER",
+            "MOD-C-SALES",
+            "MOD-C-FULFILLMENT",
+            "MOD-E-PAYMENT",
+            "MOD-E-ACCOUNTING",
+            "MOD-F-LOCALIZATION",
+            "MOD-G-INTEGRATION",
+          ]],
+          '''
+          if dependency_anchor not in text:
+              raise SystemExit("Migration dependency anchor missing")
+          text = text.replace(dependency_anchor, dependency_entry, 1)
+          migrations.write_text(text)
+          PY
+
+            git add \
+              apps/api/src/index.ts \
+              docs/agent-workpacks/program-board.yaml \
+              tooling/scripts/apply-migrations.mjs
+            if [ -n "$(git diff --name-only --diff-filter=U)" ]; then
+              printf 'Unresolved conflicts remain:\n%s\n' "$(git diff --name-only --diff-filter=U)" > /tmp/storefront-sync-validation.log
+              write_failure_report "unresolved_conflicts"
+            fi
           fi
+
+          {
+            echo "status=resolved_pending_validation"
+            echo "feature_head=$feature_head"
+            echo "integration_head=$integration_head"
+            echo "generated_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "resolved_files=apps/api/src/index.ts,docs/agent-workpacks/program-board.yaml,tooling/scripts/apply-migrations.mjs"
+          } > "$report"
           git add "$report"
-          if git diff --cached --quiet; then
-            echo "Conflict report is unchanged."
-            exit 0
+
+          set +e
+          {
+            npm ci --ignore-scripts
+            npm run verify
+            npm run storefront:build
+          } > /tmp/storefront-sync-validation.log 2>&1
+          validation_status=$?
+          set -e
+          if [ "$validation_status" -ne 0 ]; then
+            write_failure_report "validation_failed"
           fi
-          git commit -m "chore(storefront): record integration conflicts"
+
+          {
+            echo "status=resolved_and_validated"
+            echo "feature_head=$feature_head"
+            echo "integration_head=$integration_head"
+            echo "generated_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "validation=npm_ci,npm_verify,storefront_build"
+            echo "resolved_files=apps/api/src/index.ts,docs/agent-workpacks/program-board.yaml,tooling/scripts/apply-migrations.mjs"
+          } > "$report"
+          git add "$report"
+          git commit -m "Merge integration baseline into MOD-H storefront branch"
           git push origin HEAD:module/storefront-commerce-v1
