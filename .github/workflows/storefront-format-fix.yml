@@ -10,6 +10,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: storefront-format-fix
+  cancel-in-progress: false
+
 jobs:
   patch:
     runs-on: ubuntu-24.04
@@ -30,9 +34,8 @@ jobs:
           from pathlib import Path
           path = Path("apps/api/src/index.ts")
           data = path.read_bytes()
-          if data.endswith(b"\n"):
-              raise SystemExit("API index already has a final newline")
-          path.write_bytes(data + b"\n")
+          if not data.endswith(b"\n"):
+              path.write_bytes(data + b"\n")
           PY
           npm ci --ignore-scripts
           npm run format:check
@@ -40,5 +43,9 @@ jobs:
           git config user.name "Storefront Format Bot"
           git config user.email "storefront-format-bot@users.noreply.github.com"
           git add apps/api/src/index.ts
+          if git diff --cached --quiet; then
+            echo "API index already has canonical formatting."
+            exit 0
+          fi
           git commit -m "style(storefront): restore API newline"
           git push origin HEAD:module/storefront-commerce-v1
