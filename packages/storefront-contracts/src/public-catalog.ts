@@ -220,7 +220,8 @@ function parseVariant(
   });
   if (
     priceCard.price.currency !== context.currency ||
-    priceCard.compareAtPrice?.currency !== context.currency
+    (priceCard.compareAtPrice !== null &&
+      priceCard.compareAtPrice.currency !== context.currency)
   ) {
     throw new StorefrontContractError(
       "Variant price currency must match storefront context.",
@@ -246,7 +247,8 @@ function parseProduct(
   const summary = parseStorefrontProductCardV1(source.summary);
   if (
     summary.price.currency !== context.currency ||
-    summary.compareAtPrice?.currency !== context.currency
+    (summary.compareAtPrice !== null &&
+      summary.compareAtPrice.currency !== context.currency)
   ) {
     throw new StorefrontContractError(
       "Product price currency must match storefront context.",
