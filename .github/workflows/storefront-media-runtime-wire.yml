@@ -1,0 +1,434 @@
+name: Storefront Media Runtime Wire
+
+on:
+  push:
+    branches:
+      - module/storefront-commerce-v1
+    paths:
+      - .github/workflows/storefront-media-runtime-wire.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: storefront-media-runtime-wire
+  cancel-in-progress: false
+
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: module/storefront-commerce-v1
+          persist-credentials: true
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - name: Wire scoped media runtime and tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python <<'PY'
+          from pathlib import Path
+
+          worker = Path("apps/storefront-web/src/worker.ts")
+          text = worker.read_text()
+          replacements = [
+            (
+              '''} from "../../../packages/storefront-contracts/src/public-discovery.js";
+          import {''',
+              '''} from "../../../packages/storefront-contracts/src/public-discovery.js";
+          import type { StorefrontPublicMediaManifestV1 } from "../../../packages/storefront-contracts/src/public-media.js";
+          import {''',
+            ),
+            (
+              '''import {
+            createStorefrontHostResolver,
+            createStorefrontTransportResolver,
+            type StorefrontHostResolver,
+          } from "./host-resolver.js";
+          import { storefrontShellResponse } from "./render.js";''',
+              '''import {
+            createStorefrontHostResolver,
+            createStorefrontTransportResolver,
+            type StorefrontHostResolver,
+          } from "./host-resolver.js";
+          import {
+            createStorefrontMediaResolver,
+            createStorefrontMediaTransportResolver,
+            type StorefrontMediaResolver,
+          } from "./media-resolver.js";
+          import { storefrontShellResponse } from "./render.js";''',
+            ),
+            (
+              '''export type StorefrontCatalogResolverFactory = (
+            bindings: StorefrontWorkerBindings,
+            environment: StorefrontRuntimeEnvironment,
+          ) => StorefrontCatalogResolver;
+
+          export interface StorefrontWorkerOptions {''',
+              '''export type StorefrontCatalogResolverFactory = (
+            bindings: StorefrontWorkerBindings,
+            environment: StorefrontRuntimeEnvironment,
+          ) => StorefrontCatalogResolver;
+
+          export type StorefrontMediaResolverFactory = (
+            bindings: StorefrontWorkerBindings,
+            environment: StorefrontRuntimeEnvironment,
+          ) => StorefrontMediaResolver;
+
+          export interface StorefrontWorkerOptions {''',
+            ),
+            (
+              '''  readonly contentResolverFactory?: StorefrontContentResolverFactory;
+            readonly catalogResolverFactory?: StorefrontCatalogResolverFactory;
+            readonly theme?: unknown;''',
+              '''  readonly contentResolverFactory?: StorefrontContentResolverFactory;
+            readonly catalogResolverFactory?: StorefrontCatalogResolverFactory;
+            readonly mediaResolverFactory?: StorefrontMediaResolverFactory;
+            readonly theme?: unknown;''',
+            ),
+            (
+              '''function withoutBody(response: Response): Response {''',
+              '''function defaultMediaResolverFactory(
+            bindings: StorefrontWorkerBindings,
+            environment: StorefrontRuntimeEnvironment,
+          ): StorefrontMediaResolver {
+            if (isStorefrontTransport(bindings.STOREFRONT_API)) {
+              return createStorefrontMediaTransportResolver({
+                baseUrl: environment.apiBaseUrl,
+                transport: bindings.STOREFRONT_API,
+              });
+            }
+            return createStorefrontMediaResolver({ baseUrl: environment.apiBaseUrl });
+          }
+
+          function withoutBody(response: Response): Response {''',
+            ),
+            (
+              '''  const catalogResolverFactory =
+              options.catalogResolverFactory ?? defaultCatalogResolverFactory;
+
+            return Object.freeze({''',
+              '''  const catalogResolverFactory =
+              options.catalogResolverFactory ?? defaultCatalogResolverFactory;
+            const shouldResolveMedia =
+              options.mediaResolverFactory !== undefined || options.resolverFactory === undefined;
+            const mediaResolverFactory =
+              options.mediaResolverFactory ?? defaultMediaResolverFactory;
+
+            return Object.freeze({''',
+            ),
+            (
+              '''        let search: StorefrontPublicSearchPageV1 | undefined;
+                  const catalogRoute = publicCatalogRoute(url);''',
+              '''        let search: StorefrontPublicSearchPageV1 | undefined;
+                  let media: StorefrontPublicMediaManifestV1 | undefined;
+                  const catalogRoute = publicCatalogRoute(url);''',
+            ),
+            (
+              '''            assertPublicScope(bootstrap, resolved.context, "product");
+                      product = resolved;
+                    } else if (catalogRoute.kind === "category") {''',
+              '''            assertPublicScope(bootstrap, resolved.context, "product");
+                      product = resolved;
+                      if (shouldResolveMedia) {
+                        const resolvedMedia = await mediaResolverFactory(
+                          bindings,
+                          environment,
+                        ).resolveProductMedia(hostname, catalogRoute.slug, {
+                          signal: request.signal,
+                        });
+                        if (resolvedMedia) {
+                          assertPublicScope(bootstrap, resolvedMedia.context, "media");
+                          if (
+                            resolvedMedia.productId !== resolved.product.summary.productId ||
+                            resolvedMedia.slug !== resolved.product.summary.slug
+                          ) {
+                            throw new StorefrontContractError(
+                              "Storefront public media product scope mismatch.",
+                            );
+                          }
+                          media = resolvedMedia;
+                        }
+                      }
+                    } else if (catalogRoute.kind === "category") {''',
+            ),
+            (
+              '''          ...(product ? { product } : {}),
+                    ...(category ? { category } : {}),''',
+              '''          ...(product ? { product } : {}),
+                    ...(media ? { media } : {}),
+                    ...(category ? { category } : {}),''',
+            ),
+          ]
+          for old, new in replacements:
+            count = text.count(old)
+            if count != 1:
+              raise SystemExit(f"Expected one worker marker, found {count}: {old[:100]!r}")
+            text = text.replace(old, new, 1)
+          worker.write_text(text)
+
+          render = Path("apps/storefront-web/src/render.ts")
+          text = render.read_text()
+          replacements = [
+            (
+              '''} from "../../../packages/storefront-contracts/src/public-discovery.js";
+          import {''',
+              '''} from "../../../packages/storefront-contracts/src/public-discovery.js";
+          import type { StorefrontPublicMediaManifestV1 } from "../../../packages/storefront-contracts/src/public-media.js";
+          import {''',
+            ),
+            (
+              '''import { formatStorefrontMoneyV1 } from "./money.js";''',
+              '''import { formatStorefrontMoneyV1 } from "./money.js";
+          import {
+            buildStorefrontProductImageSrcSet,
+            buildStorefrontProductImageUrl,
+          } from "./product-media.js";''',
+            ),
+            (
+              '''  readonly product?: StorefrontPublicProductDetailV1;
+            readonly category?: StorefrontPublicCategoryPageV1;''',
+              '''  readonly product?: StorefrontPublicProductDetailV1;
+            readonly media?: StorefrontPublicMediaManifestV1;
+            readonly category?: StorefrontPublicCategoryPageV1;''',
+            ),
+            (
+              '''  return `${discovery?.cacheScope ?? ""}:${productScope}`;''',
+              '''  return `${discovery?.cacheScope ?? ""}:${productScope}:${options.media?.revision ?? "media-none"}`;''',
+            ),
+            (
+              '''function renderProductDetail(
+            detail: StorefrontPublicProductDetailV1,
+            locale: string,
+          ): string {
+            const product = detail.product;
+            return `<article class="product-detail" aria-labelledby="product-title"><nav class="breadcrumbs" aria-label="Breadcrumb"><a href="/products">Products</a><span aria-hidden="true">/</span><span aria-current="page">${escapeHtml(product.summary.name)}</span></nav><div class="product-detail-grid"><div class="product-media product-media-large" aria-hidden="true"><span>${escapeHtml(product.summary.name.slice(0, 1).toUpperCase())}</span></div><div class="product-detail-copy">''',
+              '''function renderProductMedia(
+            product: StorefrontPublicProductV1,
+            media: StorefrontPublicMediaManifestV1 | undefined,
+          ): string {
+            const primary = media?.items[0];
+            if (!primary) {
+              return `<div class="product-media product-media-large" aria-hidden="true"><span>${escapeHtml(product.summary.name.slice(0, 1).toUpperCase())}</span></div>`;
+            }
+            const src = buildStorefrontProductImageUrl(primary.src, {
+              width: 960,
+              quality: media.delivery.quality,
+              format: "auto",
+              fit: media.delivery.fit,
+            });
+            const srcset = buildStorefrontProductImageSrcSet(
+              primary.src,
+              media.delivery.widths,
+              {
+                quality: media.delivery.quality,
+                format: "auto",
+                fit: media.delivery.fit,
+              },
+            );
+            return `<figure class="product-media product-media-large"><img src="${escapeHtml(src)}"${srcset ? ` srcset="${escapeHtml(srcset)}"` : ""} sizes="(max-width: 48rem) calc(100vw - 2rem), 50vw" alt="${escapeHtml(primary.alt)}" loading="eager" decoding="async" fetchpriority="high"></figure>`;
+          }
+
+          function renderProductDetail(
+            detail: StorefrontPublicProductDetailV1,
+            locale: string,
+            media: StorefrontPublicMediaManifestV1 | undefined,
+          ): string {
+            const product = detail.product;
+            return `<article class="product-detail" aria-labelledby="product-title"><nav class="breadcrumbs" aria-label="Breadcrumb"><a href="/products">Products</a><span aria-hidden="true">/</span><span aria-current="page">${escapeHtml(product.summary.name)}</span></nav><div class="product-detail-grid">${renderProductMedia(product, media)}<div class="product-detail-copy">''',
+            ),
+            (
+              '''      ? renderProductDetail(options.product, context.locale)''',
+              '''      ? renderProductDetail(options.product, context.locale, options.media)''',
+            ),
+            (
+              '''.product-media-large{min-height:clamp(20rem,55vw,36rem);border:1px solid var(--storefront-border);border-radius:calc(var(--storefront-radius) * 1.4)}''',
+              '''.product-media-large{min-height:clamp(20rem,55vw,36rem);aspect-ratio:1/1;border:1px solid var(--storefront-border);border-radius:calc(var(--storefront-radius) * 1.4);overflow:hidden}.product-media-large img{display:block;width:100%;height:100%;object-fit:contain;background:var(--storefront-surface)}''',
+            ),
+          ]
+          for old, new in replacements:
+            count = text.count(old)
+            if count != 1:
+              raise SystemExit(f"Expected one render marker, found {count}: {old[:100]!r}")
+            text = text.replace(old, new, 1)
+          render.write_text(text)
+
+          test_file = Path("tests/unit/storefront-worker-media.test.mjs")
+          test_file.write_text(r'''import assert from "node:assert/strict";
+          import test from "node:test";
+
+          import { createStorefrontWorker } from "../../build/apps/storefront-web/src/index.js";
+          import { parseStorefrontPublicProductDetailV1 } from "../../build/packages/storefront-contracts/src/public-catalog.js";
+          import { parseStorefrontBootstrapV1 } from "../../build/packages/storefront-contracts/src/index.js";
+          import { parseStorefrontPublicMediaManifestV1 } from "../../build/packages/storefront-contracts/src/public-media.js";
+
+          const context = {
+            tenantId: "tenant-1",
+            storefrontId: "storefront-1",
+            salesChannelId: "channel-1",
+            requestHostname: "shop.example.com",
+            canonicalHostname: "shop.example.com",
+            locale: "en-GB",
+            currency: "GBP",
+            priceListRevision: "price-list:1:v3",
+            publicationGeneration: "publication:12",
+          };
+          const product = {
+            summary: {
+              contractVersion: "storefront-product-card.v1",
+              productId: "018f0000-0000-4000-8000-000000000001",
+              variantId: "018f0000-0000-4000-8000-000000000002",
+              slug: "linen-shirt",
+              name: "Linen Shirt",
+              publicationState: "published",
+              availability: "available",
+              pricePrefix: "none",
+              price: { currency: "GBP", minor: "2599", scale: 2 },
+              compareAtPrice: null,
+              media: null,
+              badge: null,
+            },
+            code: "LINEN-SHIRT",
+            description: "A breathable linen shirt.",
+            kind: "stock",
+            pricingNotice: "tax_calculated_at_checkout",
+            variants: [{
+              variantId: "018f0000-0000-4000-8000-000000000002",
+              sku: "LINEN-M",
+              title: "Medium",
+              unitCode: "EA",
+              availability: "available",
+              price: { currency: "GBP", minor: "2599", scale: 2 },
+              compareAtPrice: null,
+              quantity: {
+                amount: "7",
+                unit: "EA",
+                scale: 0,
+                asOf: "2026-07-30T00:00:00.000Z",
+                version: "4",
+              },
+            }],
+          };
+          const detail = parseStorefrontPublicProductDetailV1({
+            contractVersion: "storefront-public-product.v1",
+            context,
+            product,
+          });
+          const bootstrap = parseStorefrontBootstrapV1({
+            contractVersion: "storefront-bootstrap.v1",
+            context,
+            themeRevision: "theme:1",
+            layoutRevision: "layout:1",
+            capabilities: ["catalog.read"],
+          });
+          const media = parseStorefrontPublicMediaManifestV1({
+            contractVersion: "storefront-public-media.v1",
+            context,
+            productId: product.summary.productId,
+            slug: product.summary.slug,
+            revision: "0123456789abcdef0123456789abcdef",
+            items: [{
+              mediaId: "018f0000-0000-4000-8000-000000000101",
+              variantId: null,
+              src: "/media/linen-front.webp",
+              alt: "Linen shirt front",
+              sortOrder: 0,
+              createdAt: "2026-07-30T10:00:00.000Z",
+            }],
+          });
+          const environment = {
+            STOREFRONT_STAGE: "production",
+            STOREFRONT_API_BASE_URL: "https://api.example.com",
+            STOREFRONT_PLATFORM_BASE_DOMAIN: "shops.example.com",
+            STOREFRONT_BUILD_ID: "build-media-1",
+          };
+
+          function workerFor(resolvedMedia) {
+            return createStorefrontWorker({
+              resolverFactory: () => ({ async resolve() { return bootstrap; } }),
+              catalogResolverFactory: () => ({
+                async resolveProduct() { return detail; },
+              }),
+              mediaResolverFactory: () => ({
+                async resolveProductMedia() { return resolvedMedia; },
+              }),
+            });
+          }
+
+          test("buyer product detail renders scoped responsive public media", async () => {
+            const response = await workerFor(media).fetch(
+              new Request("https://shop.example.com/products/linen-shirt"),
+              environment,
+            );
+            const html = await response.text();
+            assert.equal(response.status, 200);
+            assert.match(html, /<img /u);
+            assert.match(html, /alt="Linen shirt front"/u);
+            assert.match(html, /cdn-cgi\/image\/onerror=redirect,width=960/u);
+            assert.match(html, /srcset="[^"]*width=320/u);
+            assert.match(html, /fetchpriority="high"/u);
+            assert.doesNotMatch(html, /tenant-1/u);
+          });
+
+          test("media revision changes the public ETag and missing media retains fallback", async () => {
+            const first = await workerFor(media).fetch(
+              new Request("https://shop.example.com/products/linen-shirt"),
+              environment,
+            );
+            const changed = parseStorefrontPublicMediaManifestV1({
+              ...media,
+              revision: "abcdef0123456789abcdef0123456789",
+            });
+            const second = await workerFor(changed).fetch(
+              new Request("https://shop.example.com/products/linen-shirt"),
+              environment,
+            );
+            assert.notEqual(first.headers.get("etag"), second.headers.get("etag"));
+
+            const fallback = await workerFor(null).fetch(
+              new Request("https://shop.example.com/products/linen-shirt"),
+              environment,
+            );
+            const fallbackHtml = await fallback.text();
+            assert.equal(fallback.status, 200);
+            assert.doesNotMatch(fallbackHtml, /<img /u);
+            assert.match(fallbackHtml, /aria-hidden="true"/u);
+          });
+
+          test("buyer media scope and product identity mismatches fail closed", async () => {
+            const wrongScope = parseStorefrontPublicMediaManifestV1({
+              ...media,
+              context: { ...context, tenantId: "tenant-2" },
+            });
+            const scopeResponse = await workerFor(wrongScope).fetch(
+              new Request("https://shop.example.com/products/linen-shirt"),
+              environment,
+            );
+            assert.equal(scopeResponse.status, 404);
+            assert.doesNotMatch(await scopeResponse.text(), /tenant-2/u);
+
+            const wrongProduct = parseStorefrontPublicMediaManifestV1({
+              ...media,
+              productId: "018f0000-0000-4000-8000-000000000099",
+            });
+            const productResponse = await workerFor(wrongProduct).fetch(
+              new Request("https://shop.example.com/products/linen-shirt"),
+              environment,
+            );
+            assert.equal(productResponse.status, 404);
+          });
+          '''.replace(/^          /gm, ""))
+          PY
+          npm ci --ignore-scripts
+          npm run format:check
+          npm run typecheck
+          npm run test:unit
+          git config user.name "Storefront Media Runtime Bot"
+          git config user.email "storefront-media-runtime-bot@users.noreply.github.com"
+          git add apps/storefront-web/src/worker.ts apps/storefront-web/src/render.ts tests/unit/storefront-worker-media.test.mjs
+          git commit -m "feat(storefront): render scoped responsive product media"
+          git push origin HEAD:module/storefront-commerce-v1
