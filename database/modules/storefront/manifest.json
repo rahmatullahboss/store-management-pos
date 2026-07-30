@@ -71,6 +71,11 @@
       "id": "STF-0014",
       "file": "STF-0014-public-seo-resolution.sql",
       "sha256": "b3ad4b2d770ea9c0f98867225040637bf80c197ea6c0f998d447534785f4ae76"
+    },
+    {
+      "id": "STF-0015",
+      "file": "STF-0015-public-media-resolution.sql",
+      "sha256": "532bb1249532e63db440a1a9111ec40fc354cffa8abbb73aabeeaccda6c751e6"
     }
   ]
 }
