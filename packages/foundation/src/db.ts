@@ -11,7 +11,7 @@ export interface TransactionClient {
 }
 
 interface NeonHttpQuery {
-  <Row extends Record<string, unknown> = Record<string, unknown>>(text: string, values?: readonly unknown[]): Promise<Row[]>;
+  query<Row extends Record<string, unknown> = Record<string, unknown>>(text: string, values?: readonly unknown[]): Promise<Row[]>;
   transaction<Row extends Record<string, unknown> = Record<string, unknown>>(queries: readonly Promise<Row[]>[]): Promise<Row[][]>;
 }
 
@@ -64,14 +64,14 @@ export class NeonDatabase {
   async httpQuery<Row extends Record<string, unknown>>(text: string, values: readonly unknown[] = []): Promise<readonly Row[]> {
     const { neon } = await this.loader();
     const query = neon(this.options.connectionString) as NeonHttpQuery;
-    return await query<Row>(text, values);
+    return await query.query<Row>(text, values);
   }
 
   async httpTransaction<Row extends Record<string, unknown>>(queries: readonly { text: string; values?: readonly unknown[] }[]): Promise<readonly (readonly Row[])[]> {
     if (queries.length === 0) return [];
     const { neon } = await this.loader();
     const query = neon(this.options.connectionString) as NeonHttpQuery;
-    const prepared = queries.map((statement) => query<Row>(statement.text, statement.values ?? []));
+    const prepared = queries.map((statement) => query.query<Row>(statement.text, statement.values ?? []));
     return await query.transaction(prepared);
   }
 
