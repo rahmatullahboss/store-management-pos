@@ -24,12 +24,16 @@ const scenarioNeedle = `    for (const scenario of [
         kind: "admin",
         viewport: { width: 1440, height: 900, deviceScaleFactor: 1 },
       },`;
+const loginPageNeedle = "    const loginPage = await browser.newPage();";
+const sessionPageNeedle = "    const sessionPage = await browser.newPage();";
 for (const [label, needle] of [
   ["redaction", redactNeedle],
   ["Worker entry", mainNeedle],
   ["secret upload", baseUrlNeedle],
   ["context probe", contextProbeNeedle],
   ["browser scenarios", scenarioNeedle],
+  ["login CSP bypass", loginPageNeedle],
+  ["session CSP bypass", sessionPageNeedle],
 ]) {
   if (!originalDeploy.includes(needle)) {
     throw new Error(`Custom staging ${label} patch target is missing`);
@@ -280,7 +284,15 @@ const patchedDeploy = originalDeploy
   .replace(mainNeedle, 'main: "apps/api/src/staging-entry.ts"')
   .replace(baseUrlNeedle, secretUpload)
   .replace(contextProbeNeedle, expandedProbes)
-  .replace(scenarioNeedle, expandedScenario);
+  .replace(scenarioNeedle, expandedScenario)
+  .replace(
+    loginPageNeedle,
+    `${loginPageNeedle}\n    await loginPage.setBypassCSP(true);`,
+  )
+  .replace(
+    sessionPageNeedle,
+    `${sessionPageNeedle}\n    await sessionPage.setBypassCSP(true);`,
+  );
 
 process.env.STAGING_INTERNAL_TOKEN_SECRET = randomBytes(48).toString("base64url");
 await writeFile(deployPath, patchedDeploy, "utf8");
