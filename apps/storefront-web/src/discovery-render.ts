@@ -3,6 +3,7 @@ import type {
   StorefrontPublicVariantV1,
 } from "../../../packages/storefront-contracts/src/public-catalog.js";
 import type {
+  StorefrontPublicAvailabilityFacetValueV1,
   StorefrontPublicCategoryPageV1,
   StorefrontPublicCollectionPageV1,
   StorefrontPublicSearchPageV1,
@@ -21,6 +22,11 @@ export interface StorefrontDiscoveryRenderModel {
   readonly html: string;
   readonly cacheScope: string;
 }
+
+type SearchWithSelection = StorefrontPublicSearchPageV1 & {
+  readonly selectedCategory?: string | null;
+  readonly selectedAvailability?: StorefrontPublicAvailabilityFacetValueV1 | null;
+};
 
 const AVAILABILITY_LABELS: Record<StorefrontPublicVariantV1["availability"], string> = {
   available: "Available",
@@ -72,16 +78,40 @@ function renderProducts(
   return `<div class="product-grid">${items.map((product) => renderProductCard(product, locale)).join("")}</div>`;
 }
 
+function searchUrl(
+  query: string,
+  options: {
+    readonly category?: string | null;
+    readonly availability?: StorefrontPublicAvailabilityFacetValueV1 | null;
+    readonly cursor?: string | null;
+  } = {},
+): string {
+  const target = new URL("/search", "https://storefront.invalid");
+  target.searchParams.set("q", query);
+  if (options.category) target.searchParams.set("category", options.category);
+  if (options.availability) {
+    target.searchParams.set("availability", options.availability);
+  }
+  if (options.cursor) target.searchParams.set("cursor", options.cursor);
+  return `${target.pathname}${target.search}`;
+}
+
 function pagination(
   basePath: string,
   cursor: string | null,
   query?: string,
+  category?: string | null,
+  availability?: StorefrontPublicAvailabilityFacetValueV1 | null,
 ): string {
   if (!cursor) return "";
-  const target = new URL(basePath, "https://storefront.invalid");
-  if (query) target.searchParams.set("q", query);
-  target.searchParams.set("cursor", cursor);
-  return `<nav class="pagination" aria-label="Results pagination"><a class="button-link" href="${escapeHtml(`${target.pathname}${target.search}`)}">Next products</a></nav>`;
+  const href = query
+    ? searchUrl(query, { category, availability, cursor })
+    : (() => {
+        const target = new URL(basePath, "https://storefront.invalid");
+        target.searchParams.set("cursor", cursor);
+        return `${target.pathname}${target.search}`;
+      })();
+  return `<nav class="pagination" aria-label="Results pagination"><a class="button-link" href="${escapeHtml(href)}">Next products</a></nav>`;
 }
 
 function categoryModel(
@@ -124,22 +154,43 @@ function collectionModel(
 }
 
 function searchModel(page: StorefrontPublicSearchPageV1): StorefrontDiscoveryRenderModel {
+  const selected = page as SearchWithSelection;
+  const selectedCategory = selected.selectedCategory ?? null;
+  const selectedAvailability = selected.selectedAvailability ?? null;
   const description = `${page.items.length} published result${page.items.length === 1 ? "" : "s"} shown for ${page.query}.`;
   const categoryFacets = page.facets.categories.length === 0
     ? ""
-    : `<section aria-labelledby="category-facets-title"><h2 id="category-facets-title">Categories</h2><ul>${page.facets.categories.map((facet) => `<li><a href="/categories/${encodeURIComponent(facet.slug)}">${escapeHtml(facet.title)} <span>(${facet.count})</span></a></li>`).join("")}</ul></section>`;
+    : `<section aria-labelledby="category-facets-title"><h2 id="category-facets-title">Categories</h2><ul>${page.facets.categories.map((facet) => {
+        const active = selectedCategory === facet.slug;
+        const href = searchUrl(page.query, {
+          category: active ? null : facet.slug,
+          availability: selectedAvailability,
+        });
+        return `<li><a href="${escapeHtml(href)}"${active ? ' aria-current="true"' : ""}>${escapeHtml(facet.title)} <span>(${facet.count})</span></a></li>`;
+      }).join("")}</ul></section>`;
   const availabilityFacets = page.facets.availability.length === 0
     ? ""
-    : `<section aria-labelledby="availability-facets-title"><h2 id="availability-facets-title">Availability</h2><ul>${page.facets.availability.map((facet) => `<li>${escapeHtml(AVAILABILITY_LABELS[facet.value])} <span>(${facet.count})</span></li>`).join("")}</ul></section>`;
-  const facets = categoryFacets || availabilityFacets
-    ? `<aside class="discovery-facets" aria-label="Search result facets">${categoryFacets}${availabilityFacets}</aside>`
+    : `<section aria-labelledby="availability-facets-title"><h2 id="availability-facets-title">Availability</h2><ul>${page.facets.availability.map((facet) => {
+        const active = selectedAvailability === facet.value;
+        const href = searchUrl(page.query, {
+          category: selectedCategory,
+          availability: active ? null : facet.value,
+        });
+        return `<li><a href="${escapeHtml(href)}"${active ? ' aria-current="true"' : ""}>${escapeHtml(AVAILABILITY_LABELS[facet.value])} <span>(${facet.count})</span></a></li>`;
+      }).join("")}</ul></section>`;
+  const clear = selectedCategory || selectedAvailability
+    ? `<p><a class="button-link" href="${escapeHtml(searchUrl(page.query))}">Clear filters</a></p>`
     : "";
-  const html = `${DISCOVERY_RESPONSIVE_STYLE}<section class="catalog-page" aria-labelledby="search-title"><header class="page-heading"><p class="eyebrow">Storefront search</p><h1 id="search-title">Results for “${escapeHtml(page.query)}”</h1><p>${escapeHtml(description)}</p><form class="search" action="/search" method="get" role="search"><input id="discovery-search" name="q" type="search" autocomplete="off" aria-label="Search products" value="${escapeHtml(page.query)}"><button type="submit">Search</button></form></header><div class="discovery-layout">${facets}<div>${renderProducts(page.items, page.context.locale, "No published products matched", "Try a different product name, code, SKU or keyword.")}${pagination("/search", page.nextCursor, page.query)}</div></div></section>`;
+  const facets = categoryFacets || availabilityFacets
+    ? `<aside class="discovery-facets" aria-label="Search result facets">${clear}${categoryFacets}${availabilityFacets}</aside>`
+    : "";
+  const hiddenFilters = `${selectedCategory ? `<input type="hidden" name="category" value="${escapeHtml(selectedCategory)}">` : ""}${selectedAvailability ? `<input type="hidden" name="availability" value="${escapeHtml(selectedAvailability)}">` : ""}`;
+  const html = `${DISCOVERY_RESPONSIVE_STYLE}<section class="catalog-page" aria-labelledby="search-title"><header class="page-heading"><p class="eyebrow">Storefront search</p><h1 id="search-title">Results for “${escapeHtml(page.query)}”</h1><p>${escapeHtml(description)}</p><form class="search" action="/search" method="get" role="search"><input id="discovery-search" name="q" type="search" autocomplete="off" aria-label="Search products" value="${escapeHtml(page.query)}">${hiddenFilters}<button type="submit">Search</button></form></header><div class="discovery-layout">${facets}<div>${renderProducts(page.items, page.context.locale, "No published products matched", "Try a different product name, code, SKU or keyword.")}${pagination("/search", page.nextCursor, page.query, selectedCategory, selectedAvailability)}</div></div></section>`;
   return Object.freeze({
     title: `Search: ${page.query}`,
     description,
     html,
-    cacheScope: `search:${page.query.toLowerCase()}:${page.nextCursor ?? "end"}`,
+    cacheScope: `search:${page.query.toLowerCase()}:${selectedCategory ?? "all"}:${selectedAvailability ?? "all"}:${page.nextCursor ?? "end"}`,
   });
 }
 
