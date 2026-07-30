@@ -1,9 +1,9 @@
-schema_version: 4
+schema_version: 5
 workstream: persistent-admin-pos-staging
-status: custom_identity_and_read_context_complete
+status: usable_operational_release_candidate_complete
 branch: ops/persistent-admin-pos-staging-v1
 base_sha: 3a414363a40f48bd6e526418d9e82679501b170e
-verified_implementation_head: b578e6c403ae2d5a816eab79ff69c09dd9bca757
+verified_implementation_head: 866e99b69b1ccd8f0789f8328fdbc9437fb3bfec
 resources:
   cloudflare_worker: store-pos-staging
   base_url: https://store-pos-staging.rahmatullahzisan.workers.dev
@@ -13,10 +13,11 @@ resources:
   neon_branch_id: br-empty-sound-afkx5vkj
   database: neondb
   identity_provider: ozzyl_custom_postgres_auth
+  environment_classification: production_shaped_synthetic_staging
 checkpoints:
   documentation_first:
     status: complete
-    plan: docs/architecture/staging/persistent-admin-pos-staging-plan.md
+    plan: docs/architecture/staging/usable-release-candidate-plan.md
   dedicated_neon_project:
     status: complete
   persistent_worker:
@@ -29,18 +30,6 @@ checkpoints:
     synthetic_tenants: 2
     custom_auth_tables: 4
     legacy_neon_auth_tables: 0
-  http_smoke:
-    status: complete
-    routes_passed: 11
-    routes_total: 11
-  browser_smoke:
-    status: complete
-    scenarios_passed: 3
-    scenarios_total: 3
-    axe_violations: 0
-    horizontal_overflow_failures: 0
-  api_health:
-    status: complete
   staging_ui_auth:
     status: complete
     provider: ozzyl_custom_postgres_auth
@@ -75,25 +64,70 @@ checkpoints:
     scoped_register: true
     inactive_or_missing_context: fail_closed
     live_probe: passed
+  operational_dataset:
+    status: complete
+    mode: deterministic_synthetic_module_records
+    active_products: 5
+    active_variants: 5
+    suppliers: 3
+    open_purchase_orders: 3
+    active_customers: 4
+    active_sales_orders: 3
+    sellable_units: 238
+    reserved_units: 4
+    available_units: 234
+    inventory_value_minor_bdt: 11448000
+    active_sales_value_minor_bdt: 510000
+    immutable_stock_ledger_entries: 5
+    direct_balance_seed_inserts: 0
+    inventory_ledger_reconciliation: passed
+    concurrency_lock: configured
+    partial_seed_policy: fail_closed
+  operational_browser_reads:
+    status: complete
+    routes:
+      - /admin
+      - /admin/catalog
+      - /admin/inventory
+      - /admin/procurement
+      - /admin/customers
+      - /admin/sales
+      - /pos
+    exact_money_source: integer_minor_units
+    normalized_currency_label: BDT
+    authoritative_writes: false
+  http_smoke:
+    status: complete
+    routes_passed: 15
+    routes_total: 15
+  browser_smoke:
+    status: complete
+    scenarios_passed: 5
+    scenarios_total: 5
+    axe_violations: 0
+    horizontal_overflow_failures: 0
+    database_url_leaks: 0
+    keyboard_skip_navigation: passed
+  api_health:
+    status: complete
   business_api_token_exchange:
     status: pending
-  authoritative_business_reads:
+  authoritative_business_api_reads:
     status: pending
   authoritative_browser_writes:
     status: pending
   custom_domain:
     status: pending
 evidence:
-  workflow_run_id: 30535437966
-  workflow_job_id: 90847641243
-  artifact_id: 8756477049
-  artifact_digest: sha256:0b7c2b3c6d7d20ffdbc5e2ffa5ac45729e9a887028e68c4386cef31611ffe424
-  deployed_merge_sha: d54491f50791f88fbadb55050f3771ee023b28f2
-  first_milestone_checkpoint: docs/architecture/staging/persistent-admin-pos-staging-checkpoint.md
+  workflow_run_id: 30540227545
+  workflow_job_id: 90863023950
+  artifact_id: 8758383720
+  artifact_digest: sha256:5c9404b4b6d10e326cc073a83e9ddf53f21346f1e6c0ec2148c812342beab583
   identity_checkpoint: docs/architecture/staging/staging-identity-checkpoint.md
+  usable_release_checkpoint: docs/architecture/staging/usable-release-candidate-checkpoint.md
 limitations:
-  - browser surfaces and business data remain synthetic
-  - custom auth and database-resolved context currently protect read-only presentation and context discovery
-  - browser sessions do not yet become strict business API bearer tokens
-  - authoritative business reads and writes remain disabled until token exchange and API gates pass
-  - no custom staging domain is assigned yet
+  - this is a production-shaped synthetic staging release candidate, not a production launch
+  - repository policy prohibits production credentials, production data and production database branches in this workstream
+  - browser operational reads currently use server-side database context rather than strict business API bearer-token exchange
+  - authoritative business writes remain disabled until idempotency, permissions, audit, outbox, reversal and recovery gates pass
+  - production domain, backup policy, transactional email, password recovery, MFA, monitoring and controlled launch approval remain pending
