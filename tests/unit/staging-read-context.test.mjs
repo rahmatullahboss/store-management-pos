@@ -109,7 +109,7 @@ test("read context is GET and HEAD only", async () => {
   assert.equal(post.headers.get("allow"), "GET, HEAD");
 });
 
-test("persistent status advertises the operational release candidate boundary", async () => {
+test("persistent status advertises internal protected-read transport", async () => {
   const response = await request("/staging/status");
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), {
@@ -121,6 +121,8 @@ test("persistent status advertises the operational release candidate boundary", 
     dataMode: "deterministic-synthetic-module-records",
     authentication: "custom-auth-required",
     authorization: "database-resolved-read-only",
+    protectedReadTransport: "short-lived-internal-token",
+    internalTokenLifetimeSeconds: 300,
     authoritativeWrites: false,
   });
 });
