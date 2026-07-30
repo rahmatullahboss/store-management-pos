@@ -56,6 +56,11 @@
       "id": "FND-0011",
       "file": "FND-0011-custom-auth-mfa-password-search-path.sql",
       "sha256": "ae51d38ab6c5ba5bf2e6383f904f454cd339a4bdec02fbd47688035f140db40e"
+    },
+    {
+      "id": "FND-0012",
+      "file": "FND-0012-custom-auth-mfa-ciphertext-validation.sql",
+      "sha256": "bea92bb65c4057fd900b7ba03c95b4ba37afc8ea2f5410cb3ce2c49d2d1e3231"
     }
   ]
 }
