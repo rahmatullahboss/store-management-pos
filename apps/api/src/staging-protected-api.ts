@@ -1,6 +1,9 @@
+import { NeonDatabase } from "../../../packages/foundation/src/db.js";
 import { errorResponse, PlatformError } from "../../../packages/foundation/src/errors.js";
 import { uuidV7 } from "../../../packages/foundation/src/ids.js";
-import apiWorker from "./index.js";
+import { handleInventoryRequest } from "./modules/inventory/handler.js";
+import { handleProcurementRequest } from "./modules/procurement/handler.js";
+import { buildRequestContext } from "./request-context.js";
 import {
   issueStagingInternalToken,
   StagingInternalTokenVerifier,
@@ -139,11 +142,31 @@ export async function handleStagingProtectedApi(
       method: "GET",
       headers,
     });
-    const response = await apiWorker.fetch(internalRequest, {
-      ...env,
-      APP_ENV: "staging",
-      STAGING_TOKEN_VERIFIER: verifier,
-    });
+    const database = new NeonDatabase({ connectionString: env.DATABASE_URL });
+    const requestContext = await buildRequestContext(
+      internalRequest,
+      verifier,
+      env.REGION,
+    );
+    const inventoryResponse = await handleInventoryRequest(
+      internalRequest,
+      internalUrl,
+      requestContext,
+      database,
+    );
+    const response = inventoryResponse ?? await handleProcurementRequest(
+      internalRequest,
+      internalUrl,
+      requestContext,
+      database,
+    );
+    if (!response) {
+      throw new PlatformError(
+        "NOT_FOUND",
+        "Protected staging read route was not handled",
+        404,
+      );
+    }
     const responseHeaders = new Headers(response.headers);
     responseHeaders.set("Cache-Control", "no-store, max-age=0");
     responseHeaders.set("X-Content-Type-Options", "nosniff");
