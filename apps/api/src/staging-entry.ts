@@ -1,5 +1,9 @@
 import stagingWorker, { type StagingEnvironment } from "./staging.js";
 import {
+  handleStagingAccountRecoveryRequest,
+  type StagingAccountRecoveryEnvironment,
+} from "./staging-account-recovery.js";
+import {
   decryptTotpSecret,
   encryptTotpSecret,
   handleStagingMfaRequest,
@@ -25,6 +29,7 @@ import {
 
 export interface PersistentStagingEnvironment
   extends StagingEnvironment,
+    StagingAccountRecoveryEnvironment,
     StagingReadContextEnvironment,
     StagingMfaEnvironment,
     OperationalStagingEnvironment,
@@ -117,6 +122,8 @@ export default {
     ) {
       return await mfaCryptoSelfCheck(request, env);
     }
+    const recovery = await handleStagingAccountRecoveryRequest(request, url, env);
+    if (recovery) return recovery;
     const mfa = await handleStagingMfaRequest(request, url, env);
     if (mfa) return mfa;
     if (url.pathname === "/staging/status") {
@@ -136,10 +143,14 @@ export default {
                   : "not-required",
               authorization: "database-resolved-read-plus-mfa-step-up",
               mfa: "encrypted-totp-current-password-step-up",
+              accountRecovery: "hashed-single-use-token-lifecycle",
+              productionEmailDelivery: false,
               protectedReadTransport: "short-lived-internal-token",
               internalReadTokenLifetimeSeconds: 300,
               internalCommandTokenLifetimeSeconds: 60,
               stepUpGrantLifetimeSeconds: 300,
+              passwordRecoveryLifetimeSeconds: 900,
+              emailVerificationLifetimeSeconds: 86400,
               controlledWrites: [
                 "inventory.reservation.create",
                 "inventory.reservation.release",
