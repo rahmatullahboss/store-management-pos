@@ -28,7 +28,7 @@
     "ci:neon-mod-d": "node tooling/scripts/mod-d-neon-rehearsal-ci.mjs",
     "ci:neon-mod-g": "node tooling/scripts/mod-g-neon-rehearsal-ci.mjs",
     "ci:cloudflare-preview": "node tooling/scripts/run-cloudflare-preview-deferred-ci.mjs",
-    "ci:staging-deploy": "node tooling/scripts/run-custom-auth-staging.mjs",
+    "ci:staging-deploy": "node tooling/scripts/run-operational-staging.mjs",
     "metrics:cloudflare-runtime": "node tooling/scripts/cloudflare-runtime-metrics-ci.mjs",
     "cleanup:cloudflare-preview": "node tooling/scripts/cleanup-cloudflare-preview-ci.mjs",
     "benchmark:neon": "node tooling/scripts/benchmark-neon.mjs",
