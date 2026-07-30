@@ -94,6 +94,20 @@ export function storefrontProductNotFoundResponse(): Response {
   );
 }
 
+export function storefrontCategoryNotFoundResponse(): Response {
+  return publicNotFoundResponse(
+    "CATEGORY_NOT_FOUND",
+    "Published category was not found.",
+  );
+}
+
+export function storefrontCollectionNotFoundResponse(): Response {
+  return publicNotFoundResponse(
+    "COLLECTION_NOT_FOUND",
+    "Published collection was not found.",
+  );
+}
+
 export function storefrontServiceUnavailableResponse(): Response {
   return Response.json(
     {
