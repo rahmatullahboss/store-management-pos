@@ -10,6 +10,7 @@ import type {
 } from "../../../packages/storefront-contracts/src/public-catalog.js";
 import type { StorefrontPublicContentBundleV1 } from "../../../packages/storefront-contracts/src/public-content.js";
 import type {
+  StorefrontPublicAvailabilityFacetValueV1,
   StorefrontPublicCategoryPageV1,
   StorefrontPublicCollectionPageV1,
   StorefrontPublicSearchPageV1,
@@ -18,6 +19,7 @@ import {
   createStorefrontCatalogResolver,
   createStorefrontCatalogTransportResolver,
   type StorefrontCatalogResolver,
+  type StorefrontSearchRequestOptions,
 } from "./catalog-resolver.js";
 import {
   createStorefrontContentResolver,
@@ -100,7 +102,6 @@ function defaultResolverFactory(
       transport: bindings.STOREFRONT_API,
     });
   }
-
   return createStorefrontHostResolver(
     createStorefrontClient({ baseUrl: environment.apiBaseUrl }),
   );
@@ -131,8 +132,10 @@ function defaultCatalogResolverFactory(
       transport: bindings.STOREFRONT_API,
     });
   }
+  const clientOptions = { baseUrl: environment.apiBaseUrl };
   return createStorefrontCatalogResolver(
-    createStorefrontClient({ baseUrl: environment.apiBaseUrl }),
+    createStorefrontClient(clientOptions),
+    clientOptions,
   );
 }
 
@@ -187,47 +190,6 @@ function asHeadResponse(request: Request, response: Response): Response {
   return request.method === "HEAD" ? withoutBody(response) : response;
 }
 
-function publicContentSlug(url: URL): string | undefined {
-  const match = url.pathname.match(/^\/pages\/([^/]+)$/u);
-  if (!match?.[1]) return undefined;
-  return decodePublicSlug(match[1], "content");
-}
-
-type CatalogRoute =
-  | { readonly kind: "listing" }
-  | { readonly kind: "detail"; readonly slug: string }
-  | { readonly kind: "category"; readonly slug: string }
-  | { readonly kind: "collection"; readonly slug: string }
-  | { readonly kind: "search"; readonly query: string };
-
-function publicCatalogRoute(url: URL): CatalogRoute | null {
-  if (url.pathname === "/products" || url.pathname === "/products/") {
-    return { kind: "listing" };
-  }
-  if (url.pathname === "/search" || url.pathname === "/search/") {
-    return { kind: "search", query: publicSearchQuery(url) };
-  }
-  const productMatch = url.pathname.match(/^\/products\/([^/]+)$/u);
-  if (productMatch?.[1]) {
-    return { kind: "detail", slug: decodePublicSlug(productMatch[1], "product") };
-  }
-  const categoryMatch = url.pathname.match(/^\/categories\/([^/]+)$/u);
-  if (categoryMatch?.[1]) {
-    return {
-      kind: "category",
-      slug: decodePublicSlug(categoryMatch[1], "category"),
-    };
-  }
-  const collectionMatch = url.pathname.match(/^\/collections\/([^/]+)$/u);
-  if (collectionMatch?.[1]) {
-    return {
-      kind: "collection",
-      slug: decodePublicSlug(collectionMatch[1], "collection"),
-    };
-  }
-  return null;
-}
-
 function decodePublicSlug(value: string, label: string): string {
   let decoded: string;
   try {
@@ -245,6 +207,18 @@ function decodePublicSlug(value: string, label: string): string {
   return decoded;
 }
 
+function publicContentSlug(url: URL): string | undefined {
+  const match = url.pathname.match(/^\/pages\/([^/]+)$/u);
+  return match?.[1] ? decodePublicSlug(match[1], "content") : undefined;
+}
+
+type CatalogRoute =
+  | { readonly kind: "listing" }
+  | { readonly kind: "detail"; readonly slug: string }
+  | { readonly kind: "category"; readonly slug: string }
+  | { readonly kind: "collection"; readonly slug: string }
+  | { readonly kind: "search"; readonly query: string };
+
 function publicSearchQuery(url: URL): string {
   const query = url.searchParams.get("q")?.trim() ?? "";
   if (
@@ -257,10 +231,49 @@ function publicSearchQuery(url: URL): string {
   return query;
 }
 
+function publicCatalogRoute(url: URL): CatalogRoute | null {
+  if (url.pathname === "/products" || url.pathname === "/products/") {
+    return { kind: "listing" };
+  }
+  if (url.pathname === "/search" || url.pathname === "/search/") {
+    return { kind: "search", query: publicSearchQuery(url) };
+  }
+  const productMatch = url.pathname.match(/^\/products\/([^/]+)$/u);
+  if (productMatch?.[1]) {
+    return { kind: "detail", slug: decodePublicSlug(productMatch[1], "product") };
+  }
+  const categoryMatch = url.pathname.match(/^\/categories\/([^/]+)$/u);
+  if (categoryMatch?.[1]) {
+    return { kind: "category", slug: decodePublicSlug(categoryMatch[1], "category") };
+  }
+  const collectionMatch = url.pathname.match(/^\/collections\/([^/]+)$/u);
+  if (collectionMatch?.[1]) {
+    return { kind: "collection", slug: decodePublicSlug(collectionMatch[1], "collection") };
+  }
+  return null;
+}
+
+function searchAvailability(
+  value: string | null,
+): StorefrontPublicAvailabilityFacetValueV1 | undefined {
+  if (!value) return undefined;
+  const normalized = value.trim().toLowerCase();
+  if (
+    normalized !== "available" &&
+    normalized !== "limited" &&
+    normalized !== "unavailable" &&
+    normalized !== "preorder" &&
+    normalized !== "unknown"
+  ) {
+    throw new StorefrontContractError("Storefront search availability is invalid.");
+  }
+  return normalized;
+}
+
 function catalogRequestOptions(
   url: URL,
   signal: AbortSignal,
-): { readonly signal: AbortSignal; readonly limit?: number; readonly cursor?: string } {
+): StorefrontSearchRequestOptions {
   const rawLimit = url.searchParams.get("limit");
   let limit: number | undefined;
   if (rawLimit !== null) {
@@ -279,10 +292,17 @@ function catalogRequestOptions(
   ) {
     throw new StorefrontContractError("Storefront catalog cursor is invalid.");
   }
+  const rawCategory = url.searchParams.get("category")?.trim().toLowerCase();
+  const category = rawCategory
+    ? decodePublicSlug(rawCategory, "search category")
+    : undefined;
+  const availability = searchAvailability(url.searchParams.get("availability"));
   return {
     signal,
     ...(limit === undefined ? {} : { limit }),
     ...(rawCursor ? { cursor: rawCursor } : {}),
+    ...(category ? { category } : {}),
+    ...(availability ? { availability } : {}),
   };
 }
 
@@ -342,7 +362,6 @@ export function createStorefrontWorker(
     ): Promise<Response> {
       const url = new URL(request.url);
       const headOnly = request.method === "HEAD";
-
       if (url.pathname === "/__health") {
         return asHeadResponse(request, storefrontHealthResponse());
       }
@@ -354,23 +373,15 @@ export function createStorefrontWorker(
         const environment = parseStorefrontRuntimeEnvironment(bindings);
         const hostname = storefrontRequestHostname(request);
         const resolver = resolverFactory(bindings, environment);
-        const bootstrap = await resolver.resolve(hostname, {
-          signal: request.signal,
-        });
-
-        if (!bootstrap) {
-          return asHeadResponse(request, storefrontUnavailableResponse());
-        }
+        const bootstrap = await resolver.resolve(hostname, { signal: request.signal });
+        if (!bootstrap) return asHeadResponse(request, storefrontUnavailableResponse());
         if (bootstrap.context.requestHostname !== hostname) {
           throw new StorefrontContractError(
             "Storefront host resolution returned a mismatched hostname.",
           );
         }
         if (bootstrap.context.canonicalHostname !== hostname) {
-          return canonicalRedirectResponse(
-            request,
-            bootstrap.context.canonicalHostname,
-          );
+          return canonicalRedirectResponse(request, bootstrap.context.canonicalHostname);
         }
 
         let content: StorefrontPublicContentBundleV1 | undefined;
@@ -379,11 +390,13 @@ export function createStorefrontWorker(
           bootstrap.capabilities.includes("content.read");
         if (shouldResolveContent && contentEnabled) {
           const slug = publicContentSlug(url);
-          const contentResolver = contentResolverFactory(bindings, environment);
-          const resolved = await contentResolver.resolve(hostname, {
-            signal: request.signal,
-            ...(slug === undefined ? {} : { slug }),
-          });
+          const resolved = await contentResolverFactory(bindings, environment).resolve(
+            hostname,
+            {
+              signal: request.signal,
+              ...(slug === undefined ? {} : { slug }),
+            },
+          );
           if (!resolved) {
             return asHeadResponse(
               request,
@@ -413,13 +426,8 @@ export function createStorefrontWorker(
           const catalogResolver = catalogResolverFactory(bindings, environment);
           const pageOptions = catalogRequestOptions(url, request.signal);
           if (catalogRoute.kind === "listing") {
-            const resolved = await catalogResolver.resolveCatalog(
-              hostname,
-              pageOptions,
-            );
-            if (!resolved) {
-              return asHeadResponse(request, storefrontUnavailableResponse());
-            }
+            const resolved = await catalogResolver.resolveCatalog(hostname, pageOptions);
+            if (!resolved) return asHeadResponse(request, storefrontUnavailableResponse());
             assertPublicScope(bootstrap, resolved.context, "catalog");
             catalog = resolved;
           } else if (catalogRoute.kind === "detail") {
@@ -461,15 +469,13 @@ export function createStorefrontWorker(
               catalogRoute.query,
               pageOptions,
             );
-            if (!resolved) {
-              return asHeadResponse(request, storefrontUnavailableResponse());
-            }
+            if (!resolved) return asHeadResponse(request, storefrontUnavailableResponse());
             assertPublicScope(bootstrap, resolved.context, "search");
             search = resolved;
           }
         }
 
-        const renderOptions = {
+        return await storefrontShellResponse(request, bootstrap, {
           buildId: environment.buildId,
           headOnly,
           ...(content ? { content } : {}),
@@ -479,8 +485,7 @@ export function createStorefrontWorker(
           ...(collection ? { collection } : {}),
           ...(search ? { search } : {}),
           ...(options.theme === undefined ? {} : { theme: options.theme }),
-        };
-        return await storefrontShellResponse(request, bootstrap, renderOptions);
+        });
       } catch (error: unknown) {
         if (error instanceof StorefrontContractError) {
           return asHeadResponse(request, storefrontUnavailableResponse());
@@ -489,10 +494,7 @@ export function createStorefrontWorker(
           error instanceof StorefrontEnvironmentError ||
           error instanceof StorefrontClientError
         ) {
-          return asHeadResponse(
-            request,
-            storefrontServiceUnavailableResponse(),
-          );
+          return asHeadResponse(request, storefrontServiceUnavailableResponse());
         }
         return asHeadResponse(request, storefrontServiceUnavailableResponse());
       }
@@ -501,5 +503,4 @@ export function createStorefrontWorker(
 }
 
 const storefrontWorker = createStorefrontWorker();
-
 export default storefrontWorker;
