@@ -24,6 +24,10 @@ const sources = [
     directory: "database/migrations/pricing",
   },
   {
+    manifest: "database/modules/inventory/manifest.json",
+    directory: "database/modules/inventory/migrations",
+  },
+  {
     manifest: "database/modules/storefront/manifest.json",
     directory: "database/modules/storefront/migrations",
   },
@@ -66,6 +70,7 @@ for (const fixture of [
   "tests/integration/storefront-public-host-rehearsal.sql",
   "tests/integration/storefront-publishing-postgres-rehearsal.sql",
   "tests/integration/storefront-public-content-rehearsal.sql",
+  "tests/integration/storefront-public-catalog-rehearsal.sql",
 ]) {
   await psql(["--file", path.join(root, fixture)]);
 }
@@ -94,7 +99,7 @@ const { stdout } = await execFileAsync(
   { cwd: root, maxBuffer: 1024 * 1024 },
 );
 const summary = JSON.parse(stdout.trim());
-if (summary.migrations !== 8) throw new Error("Storefront migration count is invalid");
+if (summary.migrations !== 9) throw new Error("Storefront migration count is invalid");
 if (summary.tables < 16) throw new Error("Storefront table count is incomplete");
 if (summary.forcedRlsTables !== summary.tables) {
   throw new Error("Not every storefront table has forced RLS");
