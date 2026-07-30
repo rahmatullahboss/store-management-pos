@@ -176,11 +176,7 @@ BEGIN
 END $$;
 
 INSERT INTO platform.schema_migrations(migration_id, module, checksum)
-VALUES (
-  'STF-0004',
-  'MOD-H-STOREFRONT',
-  'manifest:STF-0004-qualified-status-references.sql'
-)
+VALUES ('STF-0004','MOD-H-STOREFRONT','manifest:STF-0004-qualified-status-references.sql')
 ON CONFLICT (migration_id) DO NOTHING;
 
 COMMIT;
