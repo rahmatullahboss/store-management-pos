@@ -195,7 +195,7 @@ export class StorefrontPublishingReadService {
     salesChannelId: string,
     filter: VariantPublicationReadFilter,
   ): Promise<readonly VariantPublicationSummary[]> {
-    requirePermission(context, "storefront.read");
+    requirePermission(context, "storefront.storefront.read");
     return await this.repository.listVariantPublications(
       context,
       uuid(salesChannelId, "Sales channel"),
@@ -208,7 +208,7 @@ export class StorefrontPublishingReadService {
     salesChannelId: string,
     filter: PublicationReadFilter,
   ): Promise<readonly CategoryPublicationSummary[]> {
-    requirePermission(context, "storefront.read");
+    requirePermission(context, "storefront.storefront.read");
     return await this.repository.listCategoryPublications(
       context,
       uuid(salesChannelId, "Sales channel"),
@@ -221,7 +221,7 @@ export class StorefrontPublishingReadService {
     salesChannelId: string,
     filter: PublicationReadFilter,
   ): Promise<readonly CollectionSummary[]> {
-    requirePermission(context, "storefront.read");
+    requirePermission(context, "storefront.storefront.read");
     return await this.repository.listCollections(
       context,
       uuid(salesChannelId, "Sales channel"),
@@ -234,7 +234,7 @@ export class StorefrontPublishingReadService {
     collectionId: string,
     requestedPage: PublishingReadPage,
   ): Promise<readonly CollectionMemberSummary[]> {
-    requirePermission(context, "storefront.read");
+    requirePermission(context, "storefront.storefront.read");
     return await this.repository.listCollectionMembers(
       context,
       uuid(collectionId, "Collection"),
@@ -247,7 +247,7 @@ export class StorefrontPublishingReadService {
     storefrontId: string,
     requestedPage: PublishingReadPage,
   ): Promise<readonly NavigationRevisionSummary[]> {
-    requirePermission(context, "storefront.read");
+    requirePermission(context, "storefront.storefront.read");
     return await this.repository.listNavigationRevisions(
       context,
       uuid(storefrontId, "Storefront"),
@@ -260,7 +260,7 @@ export class StorefrontPublishingReadService {
     storefrontId: string,
     requestedPage: PublishingReadPage,
   ): Promise<readonly ContentPageRevisionSummary[]> {
-    requirePermission(context, "storefront.read");
+    requirePermission(context, "storefront.storefront.read");
     return await this.repository.listContentPageRevisions(
       context,
       uuid(storefrontId, "Storefront"),
@@ -273,7 +273,7 @@ export class StorefrontPublishingReadService {
     storefrontId: string,
     requestedPage: PublishingReadPage,
   ): Promise<readonly HomepageRevisionSummary[]> {
-    requirePermission(context, "storefront.read");
+    requirePermission(context, "storefront.storefront.read");
     return await this.repository.listHomepageRevisions(
       context,
       uuid(storefrontId, "Storefront"),
