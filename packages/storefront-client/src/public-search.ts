@@ -30,10 +30,18 @@ export interface StorefrontPublicSearchSelectionV1
 
 function normalizeBaseUrl(value: string): URL {
   const url = new URL(value);
-  if (url.protocol !== "https:" && url.hostname !== "localhost") {
+  const isLocalHttp =
+    url.protocol === "http:" &&
+    (url.hostname === "localhost" || url.hostname === "127.0.0.1");
+  if (
+    (url.protocol !== "https:" && !isLocalHttp) ||
+    url.username.length > 0 ||
+    url.password.length > 0 ||
+    url.search.length > 0 ||
+    url.hash.length > 0
+  ) {
     throw new StorefrontClientError(
-      "STOREFRONT_CLIENT_CONFIGURATION",
-      "Storefront client requires an HTTPS API base URL.",
+      "Storefront public search requires a safe HTTPS API base URL.",
       500,
     );
   }
@@ -47,7 +55,6 @@ function normalizeHostname(value: string): string {
   const normalized = value.trim().toLowerCase().replace(/\.$/u, "");
   if (normalized.length === 0) {
     throw new StorefrontClientError(
-      "STOREFRONT_CLIENT_REQUEST",
       "Storefront hostname is required.",
       400,
     );
@@ -63,7 +70,6 @@ function normalizeQuery(value: string): string {
     /[\u0000-\u001f\u007f]/u.test(normalized)
   ) {
     throw new StorefrontClientError(
-      "STOREFRONT_CLIENT_REQUEST",
       "Storefront search query is invalid.",
       400,
     );
@@ -102,7 +108,10 @@ export async function requestStorefrontPublicSearch(
   const controller = new AbortController();
   const onAbort = (): void => controller.abort(options.signal?.reason);
   options.signal?.addEventListener("abort", onAbort, { once: true });
-  const timeout = setTimeout(() => controller.abort("storefront-search-timeout"), timeoutMs);
+  const timeout = setTimeout(
+    () => controller.abort("storefront-search-timeout"),
+    timeoutMs,
+  );
   try {
     const response = await (configuration.transport ?? fetchTransport()).fetch(
       target,
@@ -114,7 +123,6 @@ export async function requestStorefrontPublicSearch(
     );
     if (!response.ok) {
       throw new StorefrontClientError(
-        "STOREFRONT_CLIENT_HTTP",
         `Storefront search failed with HTTP ${response.status}.`,
         response.status,
       );
