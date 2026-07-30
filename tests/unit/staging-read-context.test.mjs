@@ -109,7 +109,7 @@ test("read context is GET and HEAD only", async () => {
   assert.equal(post.headers.get("allow"), "GET, HEAD");
 });
 
-test("persistent status advertises internal protected-read transport", async () => {
+test("persistent status advertises MFA-gated controlled reservations", async () => {
   const response = await request("/staging/status");
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), {
@@ -117,12 +117,19 @@ test("persistent status advertises internal protected-read transport", async () 
     service: "persistent-admin-pos-staging",
     version: "0123456789ab",
     database: "dedicated-neon-staging",
-    browserMode: "operational-release-candidate",
+    browserMode: "controlled-reservation-release-candidate",
     dataMode: "deterministic-synthetic-module-records",
     authentication: "custom-auth-required",
-    authorization: "database-resolved-read-only",
+    authorization: "database-resolved-read-plus-mfa-step-up",
+    mfa: "encrypted-totp-current-password-step-up",
     protectedReadTransport: "short-lived-internal-token",
-    internalTokenLifetimeSeconds: 300,
+    internalReadTokenLifetimeSeconds: 300,
+    internalCommandTokenLifetimeSeconds: 60,
+    stepUpGrantLifetimeSeconds: 300,
+    controlledWrites: [
+      "inventory.reservation.create",
+      "inventory.reservation.release",
+    ],
     authoritativeWrites: false,
   });
 });
