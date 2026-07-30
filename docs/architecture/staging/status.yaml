@@ -1,9 +1,9 @@
-schema_version: 6
+schema_version: 7
 workstream: persistent-admin-pos-staging
-status: protected_read_release_candidate_complete
+status: controlled_reservation_release_candidate_complete
 branch: ops/persistent-admin-pos-staging-v1
 base_sha: 3a414363a40f48bd6e526418d9e82679501b170e
-verified_implementation_head: 6949b5e39c21203102b1ab51601c334028340d96
+verified_implementation_head: e60ab510b65b9e266e8870e1da395faecb9a5e9a
 resources:
   cloudflare_worker: store-pos-staging
   base_url: https://store-pos-staging.rahmatullahzisan.workers.dev
@@ -27,7 +27,7 @@ checkpoints:
     cleanup_on_success: false
   migration_replay:
     status: complete
-    registered_migrations: 58
+    registered_migrations: 62
     synthetic_tenants: 2
     custom_auth_tables: 4
     legacy_neon_auth_tables: 0
@@ -50,6 +50,22 @@ checkpoints:
     credential_lockout: configured
     synthetic_account_cleanup: passed
     credentials_persisted: false
+  totp_mfa_step_up:
+    status: complete
+    provider: totp
+    secret_storage: password_derived_aes_gcm_ciphertext
+    plaintext_secret_persisted: false
+    password_recheck: required
+    cloudflare_kdf: chained_pbkdf2_sha256_3x100000
+    total_kdf_iterations: 300000
+    totp_period_seconds: 30
+    grant_lifetime_seconds: 300
+    grant_single_use: true
+    grant_session_bound: true
+    grant_permission_bound: true
+    replay_rejection: passed
+    active_factor_recheck: passed
+    authorization_drift_policy: fail_closed
   database_read_authorization:
     status: complete
     endpoint: /auth/context
@@ -83,6 +99,14 @@ checkpoints:
     permission_drift_failure: passed
     non_read_permission_rejection: passed
     production_oidc_verifier_modified: false
+  controlled_command_token:
+    status: complete
+    lifetime_seconds: 60
+    permission: inventory.reservation.manage
+    assurance: pwd_plus_totp
+    browser_exposed: false
+    fresh_database_context_per_verification: true
+    warehouse_scope_enforced: true
   authoritative_business_api_reads:
     status: complete
     methods:
@@ -99,6 +123,27 @@ checkpoints:
     cross_warehouse_scope_denial: passed
     unsupported_method_policy: 405
     unapproved_route_policy: 404
+  controlled_reservation_writes:
+    status: complete
+    routes:
+      - POST /api/v1/inventory/reservations
+      - POST /api/v1/inventory/reservations/{reservation_id}/release
+    browser_route: /admin/inventory/reservations
+    canonical_unit: EA
+    quantity_limit: 1_to_5
+    create: passed
+    consumed_grant_replay: rejected
+    release_with_second_step_up: passed
+    availability_reconciliation: passed
+    immutable_audit_events: 2
+    outbox_events: 2
+    used_step_up_grants: 2
+    synthetic_reservation_cleanup: passed
+    payments_enabled: false
+    journals_enabled: false
+    banking_enabled: false
+    stock_posting_enabled: false
+    transfer_enabled: false
   operational_dataset:
     status: complete
     mode: deterministic_synthetic_module_records
@@ -124,42 +169,49 @@ checkpoints:
       - /admin
       - /admin/catalog
       - /admin/inventory
+      - /admin/inventory/reservations
       - /admin/procurement
       - /admin/customers
       - /admin/sales
       - /pos
     exact_money_source: integer_minor_units
     normalized_currency_label: BDT
-    authoritative_writes: false
+    unrestricted_authoritative_writes: false
   http_smoke:
     status: complete
-    routes_passed: 20
-    routes_total: 20
+    routes_passed: 23
+    routes_total: 23
   browser_smoke:
     status: complete
     fail_closed_gate: enabled
-    scenarios_passed: 5
-    scenarios_total: 5
+    scenarios_passed: 6
+    scenarios_total: 6
     axe_violations: 0
     horizontal_overflow_failures: 0
     database_url_leaks: 0
     keyboard_skip_navigation: passed
+    keyboard_scrollable_reservation_region: passed
   api_health:
     status: complete
-  authoritative_browser_writes:
-    status: pending
   custom_domain:
     status: pending
 evidence:
-  implementation_head: 6949b5e39c21203102b1ab51601c334028340d96
-  workflow_run_id: 30549906829
-  workflow_job_id: 90895724482
-  artifact_id: 8762356904
-  artifact_digest: sha256:95328722850cd63c1e6dbc454fea54c0059c871271b25579da45cf8da9ffb032
+  implementation_head: e60ab510b65b9e266e8870e1da395faecb9a5e9a
+  workflow_run_id: 30566029622
+  workflow_job_id: 90950634049
+  artifact_id: 8768881733
+  artifact_digest: sha256:add76a0f8ac5306ab91887a8bb492d0b7772c7cfde43c5bbe45d8a8dd051f6e7
   artifact_independent_inspection: passed
-  foundation_ci_run_id: 30549906835
-  foundation_design_run_id: 30549906840
-  marketing_preview_run_id: 30549906804
+  foundation_ci_run_id: 30566029516
+  foundation_verify_job_id: 90950698847
+  foundation_cloudflare_job_id: 90950787723
+  foundation_neon_recovery_job_id: 90950788302
+  foundation_neon_preview_job_id: 90950881791
+  foundation_design_run_id: 30566029604
+  foundation_design_job_id: 90950633578
+  marketing_preview_run_id: 30566029586
+  marketing_verify_job_id: 90950633518
+  marketing_deploy_job_id: 90950810733
   identity_checkpoint: docs/architecture/staging/staging-identity-checkpoint.md
   usable_release_checkpoint: docs/architecture/staging/usable-release-candidate-checkpoint.md
   protected_read_plan: docs/architecture/staging/internal-token-read-api-plan.md
@@ -167,5 +219,5 @@ limitations:
   - this is a production-shaped synthetic staging release candidate, not a production launch
   - repository policy prohibits production credentials, production data and production database branches in this workstream
   - protected inventory and procurement reads are complete; remaining enabled modules still need protected read integration
-  - authoritative business writes remain disabled until idempotency, permissions, audit, outbox, reversal and recovery gates pass
-  - production domain, backup policy, transactional email, password recovery, MFA, asymmetric token lifecycle, monitoring and controlled launch approval remain pending
+  - only inventory reservation create and release are enabled as controlled writes; payment, refund, journal, period-close, banking, fiscal, destructive and other inventory commands remain disabled
+  - production domain, backup policy, transactional email, password recovery, production MFA recovery and factor governance, asymmetric token lifecycle, monitoring and controlled launch approval remain pending
