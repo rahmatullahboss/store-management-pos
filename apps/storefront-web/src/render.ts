@@ -9,11 +9,17 @@ import type {
   StorefrontNavigationItemV1,
   StorefrontPublicContentBundleV1,
 } from "../../../packages/storefront-contracts/src/public-content.js";
+import type {
+  StorefrontPublicCategoryPageV1,
+  StorefrontPublicCollectionPageV1,
+  StorefrontPublicSearchPageV1,
+} from "../../../packages/storefront-contracts/src/public-discovery.js";
 import {
   buildStorefrontThemeTokensV1,
   DEFAULT_STOREFRONT_THEME_V1,
 } from "../../../packages/storefront-theme/src/index.js";
 import { createStorefrontPublicCacheScope } from "./cache-scope.js";
+import { renderStorefrontDiscovery } from "./discovery-render.js";
 import { formatStorefrontMoneyV1 } from "./money.js";
 
 export interface StorefrontShellRenderOptions {
@@ -21,6 +27,9 @@ export interface StorefrontShellRenderOptions {
   readonly content?: StorefrontPublicContentBundleV1;
   readonly catalog?: StorefrontPublicCatalogPageV1;
   readonly product?: StorefrontPublicProductDetailV1;
+  readonly category?: StorefrontPublicCategoryPageV1;
+  readonly collection?: StorefrontPublicCollectionPageV1;
+  readonly search?: StorefrontPublicSearchPageV1;
   readonly theme?: unknown;
   readonly headOnly?: boolean;
 }
@@ -70,10 +79,15 @@ async function cacheEtag(scope: string): Promise<string> {
 }
 
 function catalogRevisionScope(options: StorefrontShellRenderOptions): string {
+  const discovery = renderStorefrontDiscovery(options);
   const products = options.product
     ? [options.product.product]
-    : options.catalog?.items ?? [];
-  return products
+    : options.catalog?.items ??
+      options.category?.items ??
+      options.collection?.items ??
+      options.search?.items ??
+      [];
+  const productScope = products
     .flatMap((product) => [
       product.summary.productId,
       product.summary.variantId ?? "",
@@ -89,6 +103,7 @@ function catalogRevisionScope(options: StorefrontShellRenderOptions): string {
       ]),
     ])
     .join(":");
+  return `${discovery?.cacheScope ?? ""}:${productScope}`;
 }
 
 function asRecord(value: unknown): Readonly<Record<string, unknown>> | null {
@@ -123,7 +138,7 @@ function renderPrimaryNavigation(
 ): string {
   const items = content?.navigation.header?.items ?? [];
   if (items.length === 0) {
-    return '<ul><li><a href="/">Home</a></li><li><a href="/products">Products</a></li><li><a href="/cart">Cart</a></li></ul>';
+    return '<ul><li><a href="/">Home</a></li><li><a href="/products">Products</a></li><li><a href="/search?q=shop">Search</a></li><li><a href="/cart">Cart</a></li></ul>';
   }
   return `<ul>${renderNavigationItems(items)}</ul>`;
 }
@@ -168,7 +183,7 @@ function renderHomepage(
 ): string {
   const rendered = content ? renderContentBlocks(content.homepage, "homepage-block") : "";
   if (rendered) return rendered;
-  return `<section class="hero" aria-labelledby="storefront-heading"><p class="eyebrow">Online storefront</p><h1 id="storefront-heading">Shop from ${escapeHtml(hostname)}</h1><p>Published products and collections will appear here as the merchant completes storefront setup.</p><form class="search" action="/products" method="get" role="search"><label for="storefront-search">Search products</label><input id="storefront-search" name="q" type="search" autocomplete="off" placeholder="Search products"><button type="submit">Search</button></form></section><section class="status-card" aria-labelledby="publication-status-heading"><h2 id="publication-status-heading">Storefront channel ready</h2><p>The public catalog remains empty until products are explicitly published to this sales channel.</p></section>`;
+  return `<section class="hero" aria-labelledby="storefront-heading"><p class="eyebrow">Online storefront</p><h1 id="storefront-heading">Shop from ${escapeHtml(hostname)}</h1><p>Published products and collections will appear here as the merchant completes storefront setup.</p><form class="search" action="/search" method="get" role="search"><label for="storefront-search">Search products</label><input id="storefront-search" name="q" type="search" minlength="2" maxlength="120" required autocomplete="off" placeholder="Search products"><button type="submit">Search</button></form></section><section class="status-card" aria-labelledby="publication-status-heading"><h2 id="publication-status-heading">Storefront channel ready</h2><p>The public catalog remains empty until products are explicitly published to this sales channel.</p></section>`;
 }
 
 function renderPage(content: StorefrontPublicContentBundleV1): string {
@@ -276,22 +291,26 @@ function renderDocument(
   const style = escapeHtml(themeStyle(options.theme ?? content?.theme));
   const page = content?.page;
   const seo = page?.seo ?? content?.homepageSeo ?? {};
-  const titleSource = options.product?.product.summary.name ??
+  const discovery = renderStorefrontDiscovery(options);
+  const titleSource = discovery?.title ??
+    options.product?.product.summary.name ??
     (options.catalog ? "Products" : undefined) ??
     (page ? seoText(seo, "title", page.title) : seoText(seo, "title", hostname));
-  const descriptionSource = options.product?.product.description ??
+  const descriptionSource = discovery?.description ??
+    options.product?.product.description ??
     (options.catalog ? `Published product catalog for ${hostname}.` : undefined) ??
     seoText(seo, "description", `Published storefront content for ${hostname}.`);
   const title = escapeHtml(titleSource.slice(0, 240));
   const description = escapeHtml(descriptionSource.slice(0, 500));
   const pathname = new URL(request.url).pathname;
-  const main = options.product && pathname.startsWith("/products/")
-    ? renderProductDetail(options.product, context.locale)
-    : options.catalog && (pathname === "/products" || pathname === "/products/")
-      ? renderCatalog(options.catalog, context.locale)
-      : page && pathname.startsWith("/pages/")
-        ? renderPage(content!)
-        : renderHomepage(hostname, content);
+  const main = discovery?.html ??
+    (options.product && pathname.startsWith("/products/")
+      ? renderProductDetail(options.product, context.locale)
+      : options.catalog && (pathname === "/products" || pathname === "/products/")
+        ? renderCatalog(options.catalog, context.locale)
+        : page && pathname.startsWith("/pages/")
+          ? renderPage(content!)
+          : renderHomepage(hostname, content));
 
   return `<!doctype html>
 <html lang="${locale}" dir="${direction}" style="${style}">
@@ -310,15 +329,15 @@ function renderDocument(
     a{color:inherit}.skip-link{position:absolute;inset-inline-start:1rem;top:-5rem;padding:.75rem 1rem;background:var(--storefront-foreground);color:var(--storefront-background);border-radius:var(--storefront-radius);z-index:10}.skip-link:focus{top:1rem;outline:3px solid var(--storefront-focus);outline-offset:3px}
     .container{width:min(calc(100% - 2rem),var(--storefront-container));margin-inline:auto}
     header{border-bottom:1px solid var(--storefront-border);background:color-mix(in srgb,var(--storefront-surface) 92%,transparent);backdrop-filter:blur(12px)}
-    .header-row{display:flex;align-items:center;justify-content:space-between;gap:1rem;min-height:4.5rem}.brand{font-weight:750;text-decoration:none;letter-spacing:-.02em}.nav ul,footer ul{display:flex;gap:1rem;align-items:center;list-style:none;margin:0;padding:0}.nav li{position:relative}.nav li ul{display:none}.nav a,footer a{padding:.5rem;border-radius:var(--storefront-radius)}.nav a:focus-visible,footer a:focus-visible,.search input:focus-visible,.search button:focus-visible,.product-link:focus-visible,.button-link:focus-visible,.breadcrumbs a:focus-visible{outline:3px solid var(--storefront-focus);outline-offset:3px}
+    .header-row{display:flex;align-items:center;justify-content:space-between;gap:1rem;min-height:4.5rem}.brand{font-weight:750;text-decoration:none;letter-spacing:-.02em}.nav ul,footer ul{display:flex;gap:1rem;align-items:center;list-style:none;margin:0;padding:0}.nav li{position:relative}.nav li ul{display:none}.nav a,footer a{padding:.5rem;border-radius:var(--storefront-radius)}.nav a:focus-visible,footer a:focus-visible,.search input:focus-visible,.search button:focus-visible,.product-link:focus-visible,.button-link:focus-visible,.breadcrumbs a:focus-visible,.discovery-children a:focus-visible{outline:3px solid var(--storefront-focus);outline-offset:3px}
     main{padding-block:clamp(3rem,8vw,7rem)}.hero{display:grid;gap:1.5rem;max-width:48rem}.eyebrow{margin:0;color:var(--storefront-primary);font-weight:700;text-transform:uppercase;letter-spacing:.12em;font-size:.78rem}.hero h1,.content-page h1,.page-heading h1,.product-detail h1{margin:0;font-size:clamp(2.4rem,8vw,5.5rem);line-height:.98;letter-spacing:-.055em}.hero p,.content-block p,.content-page>p,.page-heading>p,.product-description{margin:0;max-width:48rem;color:color-mix(in srgb,var(--storefront-foreground) 72%,transparent);font-size:clamp(1.05rem,2vw,1.25rem)}
     .content-page{display:grid;gap:2rem}.content-page>header{display:grid;gap:1rem;border:0;background:none;backdrop-filter:none}.content-block{display:grid;gap:.65rem;max-width:48rem}.content-block h2{margin:0;font-size:clamp(1.4rem,3vw,2rem)}
     .search{display:flex;gap:.65rem;max-width:38rem;margin-top:.75rem}.search label{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}.search input{min-width:0;flex:1;padding:.85rem 1rem;border:1px solid var(--storefront-border);border-radius:var(--storefront-radius);background:var(--storefront-surface);color:var(--storefront-foreground);font:inherit}.search button,.button-link{border:0;border-radius:var(--storefront-radius);padding:.85rem 1.15rem;background:var(--storefront-primary);color:var(--storefront-primary-foreground);font:inherit;font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex}
-    .status-card,.empty-state{margin-top:clamp(3rem,7vw,6rem);padding:clamp(1.25rem,3vw,2rem);border:1px solid var(--storefront-border);border-radius:calc(var(--storefront-radius) * 1.4);background:var(--storefront-surface);box-shadow:0 1.5rem 4rem color-mix(in srgb,var(--storefront-foreground) 8%,transparent)}.status-card h2,.empty-state h2{margin:0 0 .5rem;font-size:1.2rem}.status-card p,.empty-state p{margin:0;color:color-mix(in srgb,var(--storefront-foreground) 68%,transparent)}
+    .status-card,.empty-state,.discovery-children,.discovery-facets{margin-top:clamp(2rem,5vw,4rem);padding:clamp(1.25rem,3vw,2rem);border:1px solid var(--storefront-border);border-radius:calc(var(--storefront-radius) * 1.4);background:var(--storefront-surface);box-shadow:0 1.5rem 4rem color-mix(in srgb,var(--storefront-foreground) 8%,transparent)}.status-card h2,.empty-state h2,.discovery-children h2,.discovery-facets h2{margin:0 0 .5rem;font-size:1.2rem}.status-card p,.empty-state p{margin:0;color:color-mix(in srgb,var(--storefront-foreground) 68%,transparent)}.discovery-children ul,.discovery-facets ul{list-style:none;margin:0;padding:0;display:grid;gap:.45rem}.discovery-layout{display:grid;grid-template-columns:minmax(13rem,18rem) minmax(0,1fr);gap:1.5rem;align-items:start}.discovery-facets{margin-top:0}.discovery-facets section+section{margin-top:1.5rem}.discovery-facets li{display:flex;justify-content:space-between;gap:1rem}
     .catalog-page,.product-detail{display:grid;gap:clamp(2rem,5vw,4rem)}.page-heading{display:grid;gap:1rem;border:0;background:none;backdrop-filter:none}.product-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,15rem),1fr));gap:1rem}.product-card{min-width:0;border:1px solid var(--storefront-border);border-radius:calc(var(--storefront-radius) * 1.4);background:var(--storefront-surface);overflow:hidden;box-shadow:0 .75rem 2rem color-mix(in srgb,var(--storefront-foreground) 6%,transparent)}.product-link{display:grid;height:100%;text-decoration:none}.product-media{min-height:12rem;display:grid;place-items:center;background:linear-gradient(145deg,var(--storefront-surface-muted),var(--storefront-surface));font-size:clamp(3rem,10vw,6rem);font-weight:800;color:color-mix(in srgb,var(--storefront-primary) 50%,var(--storefront-foreground))}.product-copy{display:grid;align-content:start;gap:.65rem;padding:1.1rem}.product-copy h2{margin:0;font-size:1.15rem;line-height:1.25}.badge{justify-self:start;margin:0;padding:.2rem .55rem;border-radius:999px;background:var(--storefront-primary);color:var(--storefront-primary-foreground);font-size:.75rem;font-weight:750}.price{display:flex;gap:.55rem;align-items:baseline;flex-wrap:wrap;margin:0}.price strong{font-size:1.15rem}.price del{color:color-mix(in srgb,var(--storefront-foreground) 72%,transparent)}.availability{display:inline-flex;width:fit-content;padding:.2rem .55rem;border:1px solid var(--storefront-border);border-radius:999px;font-size:.8rem;font-weight:700}.availability-available{color:#116329;background:#eaf8ed}.availability-limited,.availability-preorder{color:#714c00;background:#fff7db}.availability-unavailable{color:#842029;background:#fdecee}.availability-unknown{color:#444;background:var(--storefront-surface-muted)}.tax-note,.sku,.variant-status{margin:0;color:color-mix(in srgb,var(--storefront-foreground) 64%,transparent);font-size:.82rem}.pagination{display:flex;justify-content:center}
     .breadcrumbs{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;font-size:.9rem}.product-detail-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(2rem,6vw,5rem);align-items:start}.product-media-large{min-height:clamp(20rem,55vw,36rem);border:1px solid var(--storefront-border);border-radius:calc(var(--storefront-radius) * 1.4)}.product-detail-copy{display:grid;gap:1rem;position:sticky;top:1rem}.variants{display:grid;gap:1rem}.variants>h2{margin:0;font-size:clamp(1.5rem,3vw,2.2rem)}.variants ul{display:grid;gap:.75rem;list-style:none;margin:0;padding:0}.variant-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.75rem 1.5rem;align-items:center;padding:1rem;border:1px solid var(--storefront-border);border-radius:var(--storefront-radius);background:var(--storefront-surface)}.variant-card h2{margin:0;font-size:1rem}.variant-status{grid-column:1/-1;display:flex;gap:.75rem;align-items:center;flex-wrap:wrap}
     footer{padding-block:2rem;border-top:1px solid var(--storefront-border);color:color-mix(in srgb,var(--storefront-foreground) 62%,transparent)}footer .container{display:flex;justify-content:space-between;gap:1rem;align-items:center;flex-wrap:wrap}
-    @media (max-width:48rem){.product-detail-grid{grid-template-columns:1fr}.product-detail-copy{position:static}.product-media-large{min-height:18rem}}
+    @media (max-width:48rem){.product-detail-grid,.discovery-layout{grid-template-columns:1fr}.product-detail-copy{position:static}.product-media-large{min-height:18rem}}
     @media (max-width:40rem){.header-row{align-items:flex-start;flex-direction:column;padding-block:1rem}.nav,.nav ul{width:100%}.nav ul{justify-content:space-between;overflow:auto}.search{flex-direction:column}.search button{width:100%}.variant-card{grid-template-columns:1fr}footer .container{display:grid}footer ul{flex-wrap:wrap}}
     @media (prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}}
   </style>
