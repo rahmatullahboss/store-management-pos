@@ -65,6 +65,17 @@ jobs:
               raise SystemExit(f"Expected one test marker {old!r}, found {text.count(old)}")
             text = text.replace(old, new, 1)
           tests.write_text(text)
+
+          catalog_tests = Path("tests/unit/storefront-public-catalog.test.mjs")
+          text = catalog_tests.read_text()
+          old = '''          price: { currency: "USD", minor: "2599", scale: 2 },
+        }],'''
+          new = '''          price: { currency: "USD", minor: "2599", scale: 2 },
+          compareAtPrice: { currency: "USD", minor: "3099", scale: 2 },
+        }],'''
+          if text.count(old) != 1:
+            raise SystemExit(f"Expected one catalog currency fixture, found {text.count(old)}")
+          catalog_tests.write_text(text.replace(old, new, 1))
           PY
           npm ci --ignore-scripts
           npm run format:check
@@ -72,8 +83,8 @@ jobs:
           npm run test:unit
           git config user.name "Storefront Catalog Bot"
           git config user.email "storefront-catalog-bot@users.noreply.github.com"
-          git add apps/storefront-web/src/render.ts tests/unit/storefront-public-content.test.mjs
-          git commit -m "fix(storefront): preserve CMS SEO and migration evidence"
+          git add apps/storefront-web/src/render.ts tests/unit/storefront-public-content.test.mjs tests/unit/storefront-public-catalog.test.mjs
+          git commit -m "fix(storefront): preserve catalog compatibility evidence"
           git push origin HEAD:module/storefront-commerce-v1
 
-# retrigger after catalog tests were committed
+# retrigger after catalog assertion alignment
