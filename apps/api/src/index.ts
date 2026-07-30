@@ -15,6 +15,7 @@ import { handlePosRequest } from "./modules/pos/handler.js";
 import { handlePosReceiptRequest } from "./modules/pos/receipt-handler.js";
 import { handleProcurementRequest } from "./modules/procurement/handler.js";
 import { handleStorefrontRequest } from "./modules/storefront/handler.js";
+import { handleStorefrontPublishingReadRequest } from "./modules/storefront/publishing-read-handler.js";
 import { handleStorefrontPublishingRequest } from "./modules/storefront/publishing-handler.js";
 import { handlePublicStorefrontRequest } from "./modules/storefront/public-handler.js";
 import { handleStorefrontReadRequest } from "./modules/storefront/read-handler.js";
@@ -72,6 +73,8 @@ export default {
       if (complianceResponse) return complianceResponse;
       const storefrontReadResponse = await handleStorefrontReadRequest(request, url, context, database);
       if (storefrontReadResponse) return storefrontReadResponse;
+      const storefrontPublishingReadResponse = await handleStorefrontPublishingReadRequest(request, url, context, database);
+      if (storefrontPublishingReadResponse) return storefrontPublishingReadResponse;
       const storefrontPublishingResponse = await handleStorefrontPublishingRequest(request, url, context, database);
       if (storefrontPublishingResponse) return storefrontPublishingResponse;
       const storefrontResponse = await handleStorefrontRequest(request, url, context, database);
