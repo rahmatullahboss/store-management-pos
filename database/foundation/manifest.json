@@ -36,6 +36,11 @@
       "id": "FND-0007",
       "file": "FND-0007-custom-auth-login-fix.sql",
       "sha256": "dfc41924ef0cc180195fd6bf7afe0753c7a6de9e20bbba806d0537efc1d3d72e"
+    },
+    {
+      "id": "FND-0008",
+      "file": "FND-0008-custom-auth-read-context.sql",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
     }
   ]
 }
