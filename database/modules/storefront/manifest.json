@@ -51,6 +51,16 @@
       "id": "STF-0010",
       "file": "STF-0010-public-catalog-endpoints.sql",
       "sha256": "2a63259759f536f816c3e498a429c5836c178d872100395cddfe824083b95572"
+    },
+    {
+      "id": "STF-0011",
+      "file": "STF-0011-public-category-collection-resolution.sql",
+      "sha256": "ad85824b052f358d26c1571f65d0e30a8178c27190b5e5a99762fe34978fa153"
+    },
+    {
+      "id": "STF-0012",
+      "file": "STF-0012-public-search-resolution.sql",
+      "sha256": "4e58c06628b1d14bb00d445f4ca937c0951b6193bd21e17d64f5cb5408b057b1"
     }
   ]
 }
