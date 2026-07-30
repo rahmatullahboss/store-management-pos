@@ -122,9 +122,13 @@ test("operability documentation fixes ownership while preserving production bloc
   assert.match(runbook, /production monitoring vendor/u);
   assert.match(plan, /eleven fixed low-cardinality aggregate signals/u);
   assert.match(plan, /production monitoring backend, alert delivery, paging and approved SLOs/u);
-  assert.match(status, /schema_version: 9/u);
+  assert.match(status, /schema_version: 10/u);
   assert.match(status, /report_schema_version: 6/u);
+  assert.match(status, /launch_gate: review/u);
+  assert.match(status, /critical_count: 0/u);
+  assert.match(status, /active_alert: staging\.outbox_oldest_unpublished_seconds\.warning/u);
   assert.match(status, /production_alert_delivery: false/u);
-  assert.match(checkpoint, /live schema-v6 staging evidence pending/u);
+  assert.match(checkpoint, /aggregate operability live evidence complete/u);
+  assert.match(checkpoint, /operability warnings \/ critical alerts: `1 \/ 0`/u);
   assert.match(checkpoint, /Production alert delivery, paging and approved SLOs are not configured/u);
 });

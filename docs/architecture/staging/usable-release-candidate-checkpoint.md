@@ -1,7 +1,7 @@
 # Usable Admin/POS operability implementation checkpoint
 
-Status: aggregate operability implementation complete; live schema-v6 staging evidence pending
-Previous verified staging head: `9aba12c3431fc5970ee862a567d31a026389fa85`
+Status: aggregate operability live evidence complete; outbox publisher review remains open
+Verified implementation head: `46f21db536ccbdc4f3937373543d43bbd9e815b6`
 Persistent URL: `https://store-pos-staging.rahmatullahzisan.workers.dev`
 Date: 2026-07-31
 
@@ -171,7 +171,25 @@ Implementation evidence:
 - `docs/architecture/staging/operability-alerts-runbook.md`;
 - `docs/superpowers/plans/2026-07-31-staging-operability-hardening.md`.
 
-A new persistent staging deployment must still produce and independently verify the live schema-v6 report. Production alert delivery, paging and approved SLOs are not configured by this checkpoint.
+Live schema-v6 evidence was produced and independently inspected for implementation head `46f21db536ccbdc4f3937373543d43bbd9e815b6`:
+
+- Persistent Admin POS Staging run: `30574918673`;
+- job: `90980664683`;
+- artifact: `8772324055`;
+- digest: `sha256:ec184485ac425ba84945ec0f312a1d174b22610e3d3bffdb7289579916063e91`;
+- report schema / policy schema: `6 / 1`;
+- HTTP probes: `24/24`;
+- browser scenarios: `6/6`;
+- Axe violations / horizontal-overflow failures: `0 / 0`;
+- identity, controlled-command, artifact-leak, inventory-reconciliation and journal-balance failures: all `0`;
+- outbox backlog: `40`;
+- oldest unpublished outbox age: `9,751` seconds;
+- operability warnings / critical alerts: `1 / 0`;
+- status / launch gate: `degraded / review`.
+
+The single review warning is `staging.outbox_oldest_unpublished_seconds.warning`. This is expected until a continuous publisher and approved SLO exist; immutable outbox evidence was not deleted or marked published to clear the warning. Artifact inspection found no database URL, bearer/JWT, raw 43-character action token, cookie header, password field or TOTP secret field.
+
+Production alert delivery, paging and approved SLOs are not configured by this checkpoint.
 
 ## Previous exact staging evidence
 

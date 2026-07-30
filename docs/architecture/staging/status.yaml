@@ -1,9 +1,9 @@
-schema_version: 9
+schema_version: 10
 workstream: persistent-admin-pos-staging
-status: aggregate_operability_policy_implemented_pending_live_evidence
+status: aggregate_operability_live_evidence_complete_review_gate
 branch: ops/persistent-admin-pos-staging-v1
 base_sha: 3a414363a40f48bd6e526418d9e82679501b170e
-verified_implementation_head: 9aba12c3431fc5970ee862a567d31a026389fa85
+verified_implementation_head: 46f21db536ccbdc4f3937373543d43bbd9e815b6
 resources:
   cloudflare_worker: store-pos-staging
   base_url: https://store-pos-staging.rahmatullahzisan.workers.dev
@@ -233,9 +233,26 @@ checkpoints:
   api_health:
     status: complete
   aggregate_operability:
-    status: implementation_complete_live_evidence_pending
+    status: live_evidence_complete_review_required
     report_schema_version: 6
+    policy_schema_version: 1
     signal_count: 11
+    operability_status: degraded
+    launch_gate: review
+    warning_count: 1
+    critical_count: 0
+    http_probe_failures: 0
+    browser_scenario_failures: 0
+    axe_violations: 0
+    horizontal_overflow_failures: 0
+    identity_control_failures: 0
+    controlled_command_failures: 0
+    artifact_secret_leaks: 0
+    inventory_reconciliation_mismatches: 0
+    journal_imbalance_count: 0
+    outbox_backlog_count: 40
+    outbox_oldest_unpublished_seconds: 9751
+    active_alert: staging.outbox_oldest_unpublished_seconds.warning
     fixed_low_cardinality_metrics: true
     atomic_report_write: true
     critical_gate: fail_after_evidence_persistence
@@ -254,22 +271,24 @@ checkpoints:
   custom_domain:
     status: pending
 evidence:
-  implementation_head: 9aba12c3431fc5970ee862a567d31a026389fa85
-  workflow_run_id: 30569120139
-  workflow_job_id: 90961133553
-  artifact_id: 8770087632
-  artifact_digest: sha256:52ce091629a8a171cad1f931997234d51ad4bc082cdeb7646d7128380efb1ca3
+  implementation_head: 46f21db536ccbdc4f3937373543d43bbd9e815b6
+  workflow_head_sha: 46f21db536ccbdc4f3937373543d43bbd9e815b6
+  report_git_sha: 1fabc110e97bf37d4be53c4d689c6521384c0396
+  workflow_run_id: 30574918673
+  workflow_job_id: 90980664683
+  artifact_id: 8772324055
+  artifact_digest: sha256:ec184485ac425ba84945ec0f312a1d174b22610e3d3bffdb7289579916063e91
   artifact_independent_inspection: passed
-  foundation_ci_run_id: 30569120275
-  foundation_verify_job_id: 90961097205
-  foundation_cloudflare_job_id: 90961189395
-  foundation_neon_recovery_job_id: 90961189579
-  foundation_neon_preview_job_id: 90961317032
-  foundation_design_run_id: 30569120181
-  foundation_design_job_id: 90961026182
-  marketing_preview_run_id: 30569120118
-  marketing_verify_job_id: 90961036412
-  marketing_deploy_job_id: 90961191730
+  foundation_ci_run_id: 30574918677
+  foundation_verify_job_id: 90980664986
+  foundation_cloudflare_job_id: 90980745038
+  foundation_neon_recovery_job_id: 90980745223
+  foundation_neon_preview_job_id: 90980863147
+  foundation_design_run_id: 30574918795
+  foundation_design_job_id: 90980665251
+  marketing_preview_run_id: 30574918737
+  marketing_verify_job_id: 90980665227
+  marketing_deploy_job_id: 90980808570
   identity_checkpoint: docs/architecture/staging/staging-identity-checkpoint.md
   usable_release_checkpoint: docs/architecture/staging/usable-release-candidate-checkpoint.md
   protected_read_plan: docs/architecture/staging/internal-token-read-api-plan.md
@@ -283,5 +302,5 @@ limitations:
   - protected inventory and procurement reads are complete; remaining enabled modules still need protected read integration
   - only inventory reservation create and release are enabled as controlled business writes; payment, refund, journal, period-close, banking, fiscal, destructive and other inventory commands remain disabled
   - password recovery and email-verification token lifecycles are implemented, but production sender domain, transactional email provider, templates, bounce handling, delivery monitoring and support policy are not configured
-  - aggregate staging operability queries, deterministic thresholds and runbooks are implemented, but the next persistent staging workflow must still produce live schema-v6 operability evidence
+  - live schema-v6 aggregate operability evidence is complete; the current review gate is caused only by unpublished outbox age while no continuous publisher is commissioned
   - production domain, backup policy, production MFA recovery and factor governance, asymmetric token lifecycle, production alert delivery and controlled launch approval remain pending
