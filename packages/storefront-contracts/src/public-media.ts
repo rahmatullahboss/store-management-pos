@@ -121,7 +121,7 @@ function parseItem(value: unknown): StorefrontPublicMediaItemV1 {
 
 const DELIVERY: StorefrontPublicMediaDeliveryV1 = Object.freeze({
   widths: Object.freeze([320, 480, 640, 960, 1280]),
-  formats: Object.freeze(["avif", "webp", "auto"]),
+  formats: Object.freeze(["avif", "webp", "auto"] as const),
   fit: "scale-down",
   quality: 82,
   lowBandwidthWidth: 320,
