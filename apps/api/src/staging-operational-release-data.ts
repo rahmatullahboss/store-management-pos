@@ -20,7 +20,8 @@ const BENGALI_DIGITS: Readonly<Record<string, string>> = {
 function asciiDigits(value: string): string {
   return [...value]
     .map((character) => BENGALI_DIGITS[character] ?? character)
-    .join("");
+    .join("")
+    .replaceAll("৳", "BDT ");
 }
 
 function exactMinorFromDisplay(value: string): bigint {
