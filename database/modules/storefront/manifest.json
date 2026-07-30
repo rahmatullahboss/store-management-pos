@@ -45,7 +45,12 @@
     {
       "id": "STF-0009",
       "file": "STF-0009-public-catalog-resolution.sql",
-      "sha256": "97089813b19dae4920e1e266d505daa76f67843829b0b07fa477e1973028a37c"
+      "sha256": "f8e8f36b57c6739bcd11ae9e834df8c4970fa23a2d56f60982bc5b0bcf224ed6"
+    },
+    {
+      "id": "STF-0010",
+      "file": "STF-0010-public-catalog-endpoints.sql",
+      "sha256": "2a63259759f536f816c3e498a429c5836c178d872100395cddfe824083b95572"
     }
   ]
 }
