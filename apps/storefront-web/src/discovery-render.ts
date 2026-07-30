@@ -81,9 +81,12 @@ function renderProducts(
 function searchUrl(
   query: string,
   options: {
-    readonly category?: string | null;
-    readonly availability?: StorefrontPublicAvailabilityFacetValueV1 | null;
-    readonly cursor?: string | null;
+    readonly category?: string | null | undefined;
+    readonly availability?:
+      | StorefrontPublicAvailabilityFacetValueV1
+      | null
+      | undefined;
+    readonly cursor?: string | null | undefined;
   } = {},
 ): string {
   const target = new URL("/search", "https://storefront.invalid");
