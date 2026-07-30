@@ -215,29 +215,38 @@ test("public discovery migrations are read-only, literal-search bounded and runt
   assert.doesNotMatch(searchSql, /(?:INSERT INTO|UPDATE|DELETE FROM) (?:catalog|pricing|inventory)\./u);
 });
 
-test("storefront manifest registers discovery migrations in deterministic order", async () => {
-  const manifestUrl = new URL(
-    "../../database/modules/storefront/manifest.json",
-    import.meta.url,
+test("storefront manifest registers exact discovery migration checksums", async () => {
+  const manifest = JSON.parse(
+    await readFile(
+      new URL("../../database/modules/storefront/manifest.json", import.meta.url),
+      "utf8",
+    ),
   );
-  const migrationFiles = [
+  const expectedFiles = [
     "STF-0011-public-category-collection-resolution.sql",
     "STF-0012-public-search-resolution.sql",
   ];
-  const diagnostics = Object.fromEntries(
-    await Promise.all(
-      migrationFiles.map(async (file) => {
-        const sql = await readFile(
-          new URL(`../../database/modules/storefront/migrations/${file}`, import.meta.url),
-          "utf8",
-        );
-        return [file, createHash("sha256").update(sql).digest("hex")];
-      }),
-    ),
+  const registered = manifest.migrations.slice(-2);
+  assert.deepEqual(
+    registered.map((migration) => migration.id),
+    ["STF-0011", "STF-0012"],
   );
-  console.log(`storefront discovery migration digests ${JSON.stringify(diagnostics)}`);
-
-  const manifest = JSON.parse(await readFile(manifestUrl, "utf8"));
-  const ids = manifest.migrations.map((migration) => migration.id);
-  assert.deepEqual(ids.slice(-2), ["STF-0011", "STF-0012"]);
+  assert.deepEqual(
+    registered.map((migration) => migration.file),
+    expectedFiles,
+  );
+  for (const migration of registered) {
+    const sql = await readFile(
+      new URL(
+        `../../database/modules/storefront/migrations/${migration.file}`,
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    assert.equal(
+      migration.sha256,
+      createHash("sha256").update(sql).digest("hex"),
+      `${migration.id} checksum must match its SQL source`,
+    );
+  }
 });
