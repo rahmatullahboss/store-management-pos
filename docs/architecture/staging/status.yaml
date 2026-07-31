@@ -1,9 +1,9 @@
-schema_version: 15
+schema_version: 16
 workstream: persistent-admin-pos-staging
-status: asymmetric_internal_token_implemented_pending_live_evidence
+status: asymmetric_internal_token_live_evidence_complete_production_kms_pending
 branch: ops/persistent-admin-pos-staging-v1
 base_sha: 3a414363a40f48bd6e526418d9e82679501b170e
-verified_implementation_head: 2f589e3de7a7352757172fbb19937885487f04a2
+verified_implementation_head: dc5b1f8328ad7d7f1c472c9ed446b24145a86229
 resources:
   cloudflare_worker: store-pos-staging
   base_url: https://store-pos-staging.rahmatullahzisan.workers.dev
@@ -134,7 +134,17 @@ checkpoints:
     private_key_published: false
     deployment_keyset: [REDACTED_SECRET]
     deployment_rotation: ephemeral_active_plus_previous
-    live_evidence_state: implementation_complete_pending_exact_head
+    live_evidence_state: exact_head_verified
+    live_workflow_run_id: 30609623111
+    live_workflow_job_id: 91089297482
+    live_report_git_sha: 55c5b0ed3b366d8376e3018c4a625ee51369e931
+    live_artifact_id: 8784940903
+    live_artifact_digest: sha256:c6ed951221b83550aa05aa0836ae269d4dba28374fb914815a6775440f6dbd3f
+    live_artifact_independent_inspection: passed
+    published_verification_key_count: 2
+    revoked_key_count: 0
+    private_jwk_fields_published: 0
+    artifact_credential_like_markers: 0
     browser_exposed: false
     cookie_persisted: false
     artifact_persisted: false
@@ -365,13 +375,13 @@ checkpoints:
   custom_domain:
     status: pending
 evidence:
-  implementation_head: 2f589e3de7a7352757172fbb19937885487f04a2
-  workflow_head_sha: 2f589e3de7a7352757172fbb19937885487f04a2
-  report_git_sha: c8f8e0d7fda3ffb1b5ed0331d9ab43eb60c09b79
-  workflow_run_id: 30579560264
-  workflow_job_id: 90996127068
-  artifact_id: 8774097295
-  artifact_digest: sha256:b2f3e18caf926a00494200ec51dc864d8837a9271c0afc8fb24a84b3e0a7be43
+  implementation_head: dc5b1f8328ad7d7f1c472c9ed446b24145a86229
+  workflow_head_sha: dc5b1f8328ad7d7f1c472c9ed446b24145a86229
+  report_git_sha: 55c5b0ed3b366d8376e3018c4a625ee51369e931
+  workflow_run_id: 30609623111
+  workflow_job_id: 91089297482
+  artifact_id: 8784940903
+  artifact_digest: sha256:c6ed951221b83550aa05aa0836ae269d4dba28374fb914815a6775440f6dbd3f
   artifact_independent_inspection: passed
   previous_live_operability:
     report_schema_version: 6
