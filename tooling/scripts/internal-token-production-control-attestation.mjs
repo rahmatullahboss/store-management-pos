@@ -6,11 +6,11 @@ import {
 
 const DIGEST = /^[A-Za-z0-9_-]{43}$/u;
 const MAX_ATTESTATION_AGE_SECONDS = 15 * 60;
-const MAX_ASSEMBLY_LIFETIME_SECONDS = 4 * 60 * 60;
+const MAX_VALIDITY_SECONDS = 4 * 60 * 60;
 
 const CONTROL_POLICY = Object.freeze({
   database_backup_recovery: Object.freeze({
-    providerClasses: new Set([
+    providerClasses: Object.freeze([
       "managed-postgres",
       "verified-external-backup",
     ]),
@@ -20,7 +20,7 @@ const CONTROL_POLICY = Object.freeze({
     ]),
   }),
   evidence_archive_legal_hold: Object.freeze({
-    providerClasses: new Set([
+    providerClasses: Object.freeze([
       "object-lock-archive",
       "vault-archive",
       "offline-custodian",
@@ -28,11 +28,11 @@ const CONTROL_POLICY = Object.freeze({
     issuerClasses: Object.freeze(["archive-provider-control-plane"]),
   }),
   incident_response_ownership: Object.freeze({
-    providerClasses: new Set(["documented-human-ownership"]),
+    providerClasses: Object.freeze(["documented-human-ownership"]),
     issuerClasses: Object.freeze(["governance-registry"]),
   }),
   kms_non_exportable_signing: Object.freeze({
-    providerClasses: new Set([
+    providerClasses: Object.freeze([
       "cloud-kms",
       "managed-hsm",
       "pkcs11-hsm",
@@ -43,7 +43,7 @@ const CONTROL_POLICY = Object.freeze({
     ]),
   }),
   production_monitoring_paging: Object.freeze({
-    providerClasses: new Set([
+    providerClasses: Object.freeze([
       "managed-observability",
       "self-hosted-observability",
     ]),
@@ -53,29 +53,29 @@ const CONTROL_POLICY = Object.freeze({
     ]),
   }),
   protected_jwks_publication: Object.freeze({
-    providerClasses: new Set([
+    providerClasses: Object.freeze([
       "edge-protected-jwks",
       "origin-protected-jwks",
     ]),
     issuerClasses: Object.freeze(["edge-runtime-verifier"]),
   }),
   provider_audit_sink: Object.freeze({
-    providerClasses: new Set([
+    providerClasses: Object.freeze([
       "immutable-provider-audit",
       "immutable-security-lake",
     ]),
     issuerClasses: Object.freeze(["audit-sink-verifier"]),
   }),
   recovery_email_delivery: Object.freeze({
-    providerClasses: new Set(["transactional-email-provider"]),
+    providerClasses: Object.freeze(["transactional-email-provider"]),
     issuerClasses: Object.freeze(["email-provider-verifier"]),
   }),
   retention_disposition_ownership: Object.freeze({
-    providerClasses: new Set(["documented-human-ownership"]),
+    providerClasses: Object.freeze(["documented-human-ownership"]),
     issuerClasses: Object.freeze(["governance-registry"]),
   }),
   signing_workload_identity: Object.freeze({
-    providerClasses: new Set([
+    providerClasses: Object.freeze([
       "federated-workload-identity",
       "hardware-bound-service-identity",
     ]),
@@ -178,7 +178,7 @@ function normalizeAttestationBody(input) {
   const policy = CONTROL_POLICY[value.controlId];
   if (
     typeof value.providerClass !== "string" ||
-    !policy.providerClasses.has(value.providerClass)
+    !policy.providerClasses.includes(value.providerClass)
   ) {
     fail("control attestation provider class is invalid");
   }
@@ -190,7 +190,7 @@ function normalizeAttestationBody(input) {
   }
   const observedAt = integer(value.observedAt, "control attestation observed-at", 1);
   const expiresAt = integer(value.expiresAt, "control attestation expiry", 1);
-  if (expiresAt <= observedAt || expiresAt - observedAt > MAX_ASSEMBLY_LIFETIME_SECONDS) {
+  if (expiresAt <= observedAt || expiresAt - observedAt > MAX_VALIDITY_SECONDS) {
     fail("control attestation validity window is invalid");
   }
   const body = Object.freeze({
@@ -276,7 +276,36 @@ function normalizeAttestation(input, assembly, index) {
   return Object.freeze({ ...body, attestationDigest });
 }
 
-function createControlEvidenceDigest(control) {
+function orderControlAttestations(attestations, controlId) {
+  const policy = CONTROL_POLICY[controlId];
+  const selected = attestations.filter(
+    (attestation) => attestation.controlId === controlId,
+  );
+  if (selected.length !== policy.issuerClasses.length) {
+    fail(`control ${controlId} has an invalid attestation count`);
+  }
+  const byIssuerClass = new Map();
+  for (const attestation of selected) {
+    if (byIssuerClass.has(attestation.issuerClass)) {
+      fail(`control ${controlId} issuer coverage is incomplete`);
+    }
+    byIssuerClass.set(attestation.issuerClass, attestation);
+  }
+  const ordered = policy.issuerClasses.map((issuerClass) =>
+    byIssuerClass.get(issuerClass),
+  );
+  if (ordered.some((attestation) => attestation === undefined)) {
+    fail(`control ${controlId} issuer coverage is incomplete`);
+  }
+  if (
+    new Set(ordered.map((attestation) => attestation.providerClass)).size !== 1
+  ) {
+    fail(`control ${controlId} provider binding is inconsistent`);
+  }
+  return ordered;
+}
+
+function controlEvidenceDigest(control) {
   return hash({
     attestationDigests: control.attestations.map(
       (attestation) => attestation.attestationDigest,
@@ -314,7 +343,7 @@ export function assembleInternalTokenProductionControlEvidence(input, nowInput) 
   const expiresAt = integer(value.expiresAt, "assembly expiry", 1);
   if (
     expiresAt <= generatedAt ||
-    expiresAt - generatedAt > MAX_ASSEMBLY_LIFETIME_SECONDS ||
+    expiresAt - generatedAt > MAX_VALIDITY_SECONDS ||
     generatedAt > now + 30 ||
     now > expiresAt
   ) {
@@ -331,14 +360,11 @@ export function assembleInternalTokenProductionControlEvidence(input, nowInput) 
   if (value.attestations.length !== expectedCount) {
     fail("control evidence assembly does not contain every required attestation");
   }
+
   const assembly = { expiresAt, generatedAt, releaseDigest };
-  const attestations = value.attestations
-    .map((attestation, index) => normalizeAttestation(attestation, assembly, index))
-    .sort(
-      (left, right) =>
-        left.controlId.localeCompare(right.controlId) ||
-        left.issuerClass.localeCompare(right.issuerClass),
-    );
+  const attestations = value.attestations.map((attestation, index) =>
+    normalizeAttestation(attestation, assembly, index),
+  );
   distinct(
     attestations.map((attestation) => attestation.attestationDigest),
     "control attestation digests",
@@ -354,47 +380,28 @@ export function assembleInternalTokenProductionControlEvidence(input, nowInput) 
 
   const controls = INTERNAL_TOKEN_PRODUCTION_LAUNCH_REQUIRED_CONTROLS.map(
     (controlId) => {
-      const policy = CONTROL_POLICY[controlId];
-      const controlAttestations = attestations.filter(
-        (attestation) => attestation.controlId === controlId,
-      );
-      if (controlAttestations.length !== policy.issuerClasses.length) {
-        fail(`control ${controlId} has an invalid attestation count`);
-      }
-      if (
-        controlAttestations.some(
-          (attestation, index) =>
-            attestation.issuerClass !== policy.issuerClasses[index],
-        )
-      ) {
-        fail(`control ${controlId} issuer coverage is incomplete`);
-      }
-      const providerClasses = new Set(
-        controlAttestations.map((attestation) => attestation.providerClass),
-      );
-      if (providerClasses.size !== 1) {
-        fail(`control ${controlId} provider binding is inconsistent`);
-      }
+      const ordered = orderControlAttestations(attestations, controlId);
       const verifiedAt = Math.min(
-        ...controlAttestations.map((attestation) => attestation.observedAt),
+        ...ordered.map((attestation) => attestation.observedAt),
       );
-      const control = {
-        attestations: controlAttestations,
+      const normalized = {
+        attestations: ordered,
         controlId,
-        providerClass: controlAttestations[0].providerClass,
+        providerClass: ordered[0].providerClass,
         releaseDigest,
         verifiedAt,
       };
       return Object.freeze({
         controlId,
-        evidenceDigest: createControlEvidenceDigest(control),
-        providerClass: control.providerClass,
+        evidenceDigest: controlEvidenceDigest(normalized),
+        providerClass: normalized.providerClass,
         schemaVersion: 1,
         status: "verified",
         verifiedAt,
       });
     },
   );
+
   distinct(
     [
       releaseDigest,
