@@ -198,9 +198,9 @@ test("signed evidence completes admission and clear revocation end to end", () =
 test("signature tampering and unknown issuers fail closed", () => {
   const tampered = createProductionAttestationIssuerIdentityFixture();
   const originalSignature = tampered.input.receipts[0].signature;
-  tampered.input.receipts[0].signature = `${originalSignature.slice(0, -1)}${
-    originalSignature.endsWith("A") ? "B" : "A"
-  }`;
+  const signatureBytes = Buffer.from(originalSignature, "base64url");
+  signatureBytes[0] ^= 0x01;
+  tampered.input.receipts[0].signature = signatureBytes.toString("base64url");
   assert.notEqual(tampered.input.receipts[0].signature, originalSignature);
   assert.throws(() => verifyFixture(tampered), /signature did not verify/u);
 
