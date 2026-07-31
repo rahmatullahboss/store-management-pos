@@ -8,8 +8,17 @@ test("persistent staging uses a dedicated Neon project instead of generic dispos
   );
   assert.equal(
     packageJson.scripts["ci:neon-preview"],
-    "node tooling/scripts/neon-preview-policy.mjs",
+    "node tooling/scripts/run-neon-preview-ci.mjs",
   );
+
+  const runner = await readFile(
+    new URL("../../tooling/scripts/run-neon-preview-ci.mjs", import.meta.url),
+    "utf8",
+  );
+  assert.match(runner, /selectEvictableRepositoryPreviewBranches/u);
+  assert.match(runner, /repositoryStaleBranchEvictionBound: 3/u);
+  assert.match(runner, /repositoryStaleBranchMinimumAgeSeconds: 3600/u);
+  assert.match(runner, /await import\("\.\/neon-preview-policy\.mjs"\)/u);
 
   const policy = await readFile(
     new URL("../../tooling/scripts/neon-preview-policy.mjs", import.meta.url),
