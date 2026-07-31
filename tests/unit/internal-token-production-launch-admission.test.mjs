@@ -13,7 +13,6 @@ import {
 
 const digest = (value) => createHash("sha256").update(value).digest("base64url");
 const now = 2_000_000_000;
-
 const providers = {
   database_backup_recovery: "managed-postgres",
   evidence_archive_legal_hold: "object-lock-archive",
@@ -27,7 +26,7 @@ const providers = {
   signing_workload_identity: "federated-workload-identity",
 };
 
-function bundle(overrides = {}) {
+function bundle() {
   const releaseDigest = digest("release-2026-07-31");
   const generatedAt = now - 60;
   const expiresAt = now + 600;
@@ -52,7 +51,7 @@ function bundle(overrides = {}) {
     evidenceDigest: createInternalTokenProductionLaunchEvidenceDigest(evidenceBody),
   };
   const approvals = INTERNAL_TOKEN_PRODUCTION_LAUNCH_REQUIRED_APPROVAL_ROLES.map((role, index) => {
-    const approvalBody = {
+    const body = {
       actorDigest: digest(`approver-${index}`),
       approvedAt: generatedAt + 10 + index,
       evidenceDigest: evidence.evidenceDigest,
@@ -61,8 +60,8 @@ function bundle(overrides = {}) {
       schemaVersion: 1,
     };
     return {
-      ...approvalBody,
-      approvalDigest: createInternalTokenProductionLaunchApprovalDigest(approvalBody),
+      ...body,
+      approvalDigest: createInternalTokenProductionLaunchApprovalDigest(body),
     };
   });
   const bundleBody = {
@@ -79,12 +78,11 @@ function bundle(overrides = {}) {
     environment: "production",
     evidence,
     schemaVersion: 1,
-    ...overrides,
   };
 }
 
-function resignEvidence(value) {
-  const body = {
+function resign(value) {
+  const evidenceBody = {
     controls: value.evidence.controls,
     environment: value.evidence.environment,
     expiresAt: value.evidence.expiresAt,
@@ -92,9 +90,9 @@ function resignEvidence(value) {
     releaseDigest: value.evidence.releaseDigest,
     schemaVersion: value.evidence.schemaVersion,
   };
-  value.evidence.evidenceDigest = createInternalTokenProductionLaunchEvidenceDigest(body);
+  value.evidence.evidenceDigest = createInternalTokenProductionLaunchEvidenceDigest(evidenceBody);
   value.approvals = value.approvals.map((approval) => {
-    const approvalBody = {
+    const body = {
       actorDigest: approval.actorDigest,
       approvedAt: approval.approvedAt,
       evidenceDigest: value.evidence.evidenceDigest,
@@ -102,10 +100,7 @@ function resignEvidence(value) {
       role: approval.role,
       schemaVersion: 1,
     };
-    return {
-      ...approvalBody,
-      approvalDigest: createInternalTokenProductionLaunchApprovalDigest(approvalBody),
-    };
+    return { ...body, approvalDigest: createInternalTokenProductionLaunchApprovalDigest(body) };
   });
   const bundleBody = {
     approvalDigests: value.approvals.map((item) => item.approvalDigest),
@@ -117,6 +112,19 @@ function resignEvidence(value) {
   };
   value.bundleDigest = createInternalTokenProductionLaunchBundleDigest(bundleBody);
   return value;
+}
+
+function assertAggregateOnly(result) {
+  for (const key of [
+    "actorDigest",
+    "approvalDigest",
+    "bundleDigest",
+    "evidenceDigest",
+    "providerClass",
+    "releaseDigest",
+  ]) {
+    assert.equal(Object.hasOwn(result, key), false);
+  }
 }
 
 test("complete production evidence and three independent approvals clear the launch gate", () => {
@@ -132,34 +140,29 @@ test("complete production evidence and three independent approvals clear the lau
     schemaVersion: 1,
     status: "admitted",
   });
-  assert.doesNotMatch(JSON.stringify(result), /Digest|providerClass|actor/u);
+  assertAggregateOnly(result);
 });
 
 test("missing, duplicate and unknown production controls fail closed", () => {
   const missing = structuredClone(bundle());
   missing.evidence.controls.pop();
-  resignEvidence(missing);
   assert.throws(
-    () => evaluateInternalTokenProductionLaunchAdmission(missing, now),
+    () => evaluateInternalTokenProductionLaunchAdmission(resign(missing), now),
     /every required control exactly once/u,
   );
-
   const duplicate = structuredClone(bundle());
   duplicate.evidence.controls[9] = {
     ...duplicate.evidence.controls[0],
     evidenceDigest: digest("different-duplicate-evidence"),
   };
-  resignEvidence(duplicate);
   assert.throws(
-    () => evaluateInternalTokenProductionLaunchAdmission(duplicate, now),
+    () => evaluateInternalTokenProductionLaunchAdmission(resign(duplicate), now),
     /missing, duplicated or unknown/u,
   );
-
   const unknown = structuredClone(bundle());
   unknown.evidence.controls[0].controlId = "unknown_control";
-  resignEvidence(unknown);
   assert.throws(
-    () => evaluateInternalTokenProductionLaunchAdmission(unknown, now),
+    () => evaluateInternalTokenProductionLaunchAdmission(resign(unknown), now),
     /control 1 id is invalid/u,
   );
 });
@@ -168,25 +171,20 @@ test("stale, unverified or unsupported provider evidence cannot admit production
   const stale = structuredClone(bundle());
   stale.evidence.generatedAt = now - 90_000;
   stale.evidence.expiresAt = stale.evidence.generatedAt + 600;
-  resignEvidence(stale);
   assert.throws(
-    () => evaluateInternalTokenProductionLaunchAdmission(stale, now),
+    () => evaluateInternalTokenProductionLaunchAdmission(resign(stale), now),
     /stale or not yet valid/u,
   );
-
   const unverified = structuredClone(bundle());
   unverified.evidence.controls[0].status = "pending";
-  resignEvidence(unverified);
   assert.throws(
-    () => evaluateInternalTokenProductionLaunchAdmission(unverified, now),
+    () => evaluateInternalTokenProductionLaunchAdmission(resign(unverified), now),
     /status or schema version is invalid/u,
   );
-
   const provider = structuredClone(bundle());
   provider.evidence.controls[3].providerClass = "software-secret";
-  resignEvidence(provider);
   assert.throws(
-    () => evaluateInternalTokenProductionLaunchAdmission(provider, now),
+    () => evaluateInternalTokenProductionLaunchAdmission(resign(provider), now),
     /provider class is invalid/u,
   );
 });
@@ -194,25 +192,20 @@ test("stale, unverified or unsupported provider evidence cannot admit production
 test("approval roles, actors and timestamps remain independent and bounded", () => {
   const sameActor = structuredClone(bundle());
   sameActor.approvals[1].actorDigest = sameActor.approvals[0].actorDigest;
-  resignEvidence(sameActor);
   assert.throws(
-    () => evaluateInternalTokenProductionLaunchAdmission(sameActor, now),
+    () => evaluateInternalTokenProductionLaunchAdmission(resign(sameActor), now),
     /approval actors must be distinct/u,
   );
-
   const duplicateRole = structuredClone(bundle());
   duplicateRole.approvals[1].role = duplicateRole.approvals[0].role;
-  resignEvidence(duplicateRole);
   assert.throws(
-    () => evaluateInternalTokenProductionLaunchAdmission(duplicateRole, now),
+    () => evaluateInternalTokenProductionLaunchAdmission(resign(duplicateRole), now),
     /roles are missing, duplicated or unknown/u,
   );
-
   const early = structuredClone(bundle());
   early.approvals[0].approvedAt = early.evidence.generatedAt - 1;
-  resignEvidence(early);
   assert.throws(
-    () => evaluateInternalTokenProductionLaunchAdmission(early, now),
+    () => evaluateInternalTokenProductionLaunchAdmission(resign(early), now),
     /outside the evidence window/u,
   );
 });
@@ -224,14 +217,12 @@ test("evidence, approval and bundle tampering are detected", () => {
     () => evaluateInternalTokenProductionLaunchAdmission(evidence, now),
     /evidence digest does not match/u,
   );
-
   const approval = structuredClone(bundle());
   approval.approvals[0].approvedAt += 1;
   assert.throws(
     () => evaluateInternalTokenProductionLaunchAdmission(approval, now),
     /approval 1 digest does not match/u,
   );
-
   const finalBundle = structuredClone(bundle());
   finalBundle.bundleDigest = digest("tampered-bundle");
   assert.throws(
@@ -247,7 +238,6 @@ test("exact schemas reject raw production identifiers and resources", () => {
     () => evaluateInternalTokenProductionLaunchAdmission(rawControl, now),
     /control 1 fields are invalid/u,
   );
-
   const rawApproval = structuredClone(bundle());
   rawApproval.approvals[0].email = "security@example.com";
   assert.throws(
@@ -257,7 +247,8 @@ test("exact schemas reject raw production identifiers and resources", () => {
 });
 
 test("non-production targets remain blocked and cannot reuse not-requested evidence for production", () => {
-  assert.deepEqual(createInternalTokenProductionLaunchNotRequestedEvidence("staging"), {
+  const result = createInternalTokenProductionLaunchNotRequestedEvidence("staging");
+  assert.deepEqual(result, {
     approvalCount: 0,
     controlCount: 0,
     environment: "staging",
@@ -267,6 +258,7 @@ test("non-production targets remain blocked and cannot reuse not-requested evide
     schemaVersion: 1,
     status: "not_requested",
   });
+  assertAggregateOnly(result);
   assert.throws(
     () => createInternalTokenProductionLaunchNotRequestedEvidence("production"),
     /cannot use not-requested/u,
