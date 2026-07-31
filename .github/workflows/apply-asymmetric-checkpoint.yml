@@ -1,6 +1,6 @@
 name: Apply asymmetric token checkpoint
 
-# Verification trigger: TypeScript 7 BufferSource compatibility fix.
+# Verification trigger: generated lifecycle evidence normalization.
 on:
   push:
     branches:
@@ -64,8 +64,8 @@ jobs:
 
           patcher = Path("tooling/scripts/apply-asymmetric-checkpoint.py")
           text = patcher.read_text()
-          old = "    signing_algorithm: HS256_staging_only\\n    signing_secret: [REDACTED_SECRET]\\n    deployment_rotation: enabled"
-          new = "    signing_algorithm: HS256_staging_only\\n    signing_secret: cloudflare_worker_secret\\n    deployment_rotation: enabled"
+          old = "    signing_algorithm: HS256_staging_only\n    signing_secret: [REDACTED_SECRET]\n    deployment_rotation: enabled"
+          new = "    signing_algorithm: HS256_staging_only\n    signing_secret: cloudflare_worker_secret\n    deployment_rotation: enabled"
           if text.count(old) != 1:
               raise SystemExit("checkpoint status anchor repair target mismatch")
           patcher.write_text(text.replace(old, new))
@@ -77,25 +77,25 @@ jobs:
           source = Path("apps/api/src/staging-asymmetric-token.ts")
           text = source.read_text()
           old = '''  const signingInput = `${headerSegment}.${payloadSegment}`;
-  const verified = await crypto.subtle.verify(
-    "RSASSA-PKCS1-v1_5",
-    publicKey,
-    decodeBase64Url(signatureSegment, "Staging token signature is invalid"),
-    encoder.encode(signingInput),
-  );'''
+          const verified = await crypto.subtle.verify(
+            "RSASSA-PKCS1-v1_5",
+            publicKey,
+            decodeBase64Url(signatureSegment, "Staging token signature is invalid"),
+            encoder.encode(signingInput),
+          );'''
           new = '''  const signingInput = `${headerSegment}.${payloadSegment}`;
-  const decodedSignature = decodeBase64Url(
-    signatureSegment,
-    "Staging token signature is invalid",
-  );
-  const signature = new Uint8Array(decodedSignature.byteLength);
-  signature.set(decodedSignature);
-  const verified = await crypto.subtle.verify(
-    "RSASSA-PKCS1-v1_5",
-    publicKey,
-    signature.buffer,
-    encoder.encode(signingInput),
-  );'''
+          const decodedSignature = decodeBase64Url(
+            signatureSegment,
+            "Staging token signature is invalid",
+          );
+          const signature = new Uint8Array(decodedSignature.byteLength);
+          signature.set(decodedSignature);
+          const verified = await crypto.subtle.verify(
+            "RSASSA-PKCS1-v1_5",
+            publicKey,
+            signature.buffer,
+            encoder.encode(signingInput),
+          );'''
           if text.count(old) != 1:
               raise SystemExit("RS256 signature BufferSource repair target mismatch")
           source.write_text(text.replace(old, new))
@@ -114,6 +114,21 @@ jobs:
             tests/unit/staging-internal-token.test.mjs \
             tests/unit/staging-command-token.test.mjs \
             tests/unit/staging-operational-release.test.mjs
+      - name: Normalize generated lifecycle evidence
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("docs/architecture/staging/internal-token-key-lifecycle.md")
+          if not path.exists():
+              raise SystemExit("asymmetric key lifecycle document was not generated")
+          lines = path.read_text().splitlines()
+          indexes = [index for index, line in enumerate(lines) if line.rstrip() != line]
+          if len(indexes) != 1:
+              raise SystemExit(f"expected one lifecycle whitespace line, found {len(indexes)}")
+          lines[indexes[0]] = lines[indexes[0]].rstrip()
+          path.write_text("\n".join(lines) + "\n")
+          PY
       - name: Verify full repository
         run: npm run verify
       - name: Commit verified checkpoint
