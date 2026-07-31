@@ -2,11 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   INTERNAL_TOKEN_KEY_CHANGE_APPEND_SQL,
+  INTERNAL_TOKEN_KEY_CHANGE_HISTORY_SQL,
   recordInternalTokenKeyChangeJournalEvent,
 } from "../../tooling/scripts/internal-token-key-change-command.mjs";
-import {
-  appendInternalTokenKeyChangeJournalEvent,
-} from "../../tooling/scripts/internal-token-key-change-journal.mjs";
 
 const changeDigest = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 const requested = {
@@ -55,14 +53,25 @@ function approval(changeType = "scheduled_rotation") {
   };
 }
 
-test("approval and transition validation finish before the database command", async () => {
+function requestedRow() {
+  return {
+    change_digest: requested.changeDigest,
+    change_type: requested.changeType,
+    event_digest: requested.eventDigest,
+    evidence_digest: requested.evidenceDigest,
+    occurred_at: String(requested.occurredAt),
+    previous_event_digest: null,
+    sequence: 1,
+    stage: "requested",
+  };
+}
+
+test("approval and event validation finish before authoritative history access", async () => {
   let queries = 0;
-  const client = { query: async () => { queries += 1; return { rows: [{ recorded: true }] }; } };
-  const history = appendInternalTokenKeyChangeJournalEvent([], requested);
+  const client = { query: async () => { queries += 1; return { rows: [] }; } };
 
   await assert.rejects(
     recordInternalTokenKeyChangeJournalEvent(client, {
-      history,
       event: approved,
       approval: approval("urgent_replacement"),
     }),
@@ -70,7 +79,6 @@ test("approval and transition validation finish before the database command", as
   );
   await assert.rejects(
     recordInternalTokenKeyChangeJournalEvent(client, {
-      history: [],
       event: requested,
       approval: approval(),
     }),
@@ -78,30 +86,66 @@ test("approval and transition validation finish before the database command", as
   );
   await assert.rejects(
     recordInternalTokenKeyChangeJournalEvent(client, {
-      history,
       event: { ...approved, previousEventDigest: null },
       approval: approval(),
     }),
     /later events require a previous event digest/u,
   );
+  await assert.rejects(
+    recordInternalTokenKeyChangeJournalEvent(client, {
+      event: requested,
+      approval: undefined,
+      history: [],
+    }),
+    /command fields are invalid/u,
+  );
   assert.equal(queries, 0);
 });
 
-test("database acknowledgement is boolean and the command SQL cannot write the table directly", async () => {
+test("authoritative history is bounded and malformed rows block the append", async () => {
+  assert.match(INTERNAL_TOKEN_KEY_CHANGE_HISTORY_SQL, /^SELECT\s+/u);
+  assert.match(INTERNAL_TOKEN_KEY_CHANGE_HISTORY_SQL, /ORDER BY sequence ASC\s+LIMIT 4$/u);
+  assert.doesNotMatch(INTERNAL_TOKEN_KEY_CHANGE_HISTORY_SQL, /\bid\b|recorded_at|payload|actor/iu);
+  let queries = 0;
+  await assert.rejects(
+    recordInternalTokenKeyChangeJournalEvent(
+      {
+        async query(sql) {
+          queries += 1;
+          assert.equal(sql, INTERNAL_TOKEN_KEY_CHANGE_HISTORY_SQL);
+          return { rows: [{ ...requestedRow(), unexpected: true }] };
+        },
+      },
+      { event: approved, approval: approval() },
+    ),
+    /database history row 1 fields are invalid/u,
+  );
+  assert.equal(queries, 1);
+});
+
+test("database acknowledgement is boolean and append SQL cannot write the table directly", async () => {
   assert.match(INTERNAL_TOKEN_KEY_CHANGE_APPEND_SQL, /^SELECT\s+/u);
   assert.match(INTERNAL_TOKEN_KEY_CHANGE_APPEND_SQL, /append_internal_token_key_change_journal_event/u);
   assert.doesNotMatch(
     INTERNAL_TOKEN_KEY_CHANGE_APPEND_SQL,
     /(?:INSERT|UPDATE|DELETE)\s+(?:INTO\s+|FROM\s+)?platform\.internal_token_key_change_journal/iu,
   );
-  const history = appendInternalTokenKeyChangeJournalEvent([], requested);
   let queries = 0;
   await assert.rejects(
     recordInternalTokenKeyChangeJournalEvent(
-      { query: async () => { queries += 1; return { rows: [{ recorded: false }] }; } },
-      { history, event: approved, approval: approval() },
+      {
+        async query(sql) {
+          queries += 1;
+          if (sql === INTERNAL_TOKEN_KEY_CHANGE_HISTORY_SQL) {
+            return { rows: [requestedRow()] };
+          }
+          assert.equal(sql, INTERNAL_TOKEN_KEY_CHANGE_APPEND_SQL);
+          return { rows: [{ recorded: false }] };
+        },
+      },
+      { event: approved, approval: approval() },
     ),
     /database acknowledgement is invalid/u,
   );
-  assert.equal(queries, 1);
+  assert.equal(queries, 2);
 });
