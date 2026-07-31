@@ -27,9 +27,9 @@ test("migration discovery includes the complete explicitly ordered platform regi
     ],
   );
   const migrationIds = manifests.flatMap((manifest) => manifest.migrations.map((migration) => migration.id));
-  assert.equal(migrationIds.length, 64);
-  assert.equal(new Set(migrationIds).size, 64);
-  assert.deepEqual(migrationIds.slice(14, 22), [
+  assert.equal(migrationIds.length, 65);
+  assert.equal(new Set(migrationIds).size, 65);
+  assert.deepEqual(migrationIds.slice(15, 23), [
     "CAT-0001",
     "CAT-0002",
     "CAT-0003",
