@@ -79,6 +79,7 @@ export function buildCustomAuthStagingDeploy(originalDeploy) {
 
   const mfaJourney = `${accountNeedle}
     await probe(baseUrl, "/staging/mfa-crypto-check", '"status":"passed"', 200, { Cookie: account.cookie });
+    await probe(baseUrl, "/api/v1/inventory/availability?variantId=018f1000-0000-7000-8000-000000000201&warehouseId=018f0000-0000-7000-8000-000000000402", '"available"', 200, { Cookie: account.cookie });
     mfaReservationEvidence = await (await import("./staging-mfa-reservation-evidence.mjs")).runMfaReservationJourney({
       baseUrl, sessionCookie: account.cookie, password: authPassword, email: authEmail, connectionString, runId: GITHUB_RUN_ID || "manual",
     });`;
