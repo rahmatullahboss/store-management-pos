@@ -16,15 +16,14 @@ unlinkSync(fileURLToPath(import.meta.url));`;
 const newTail = `const packageJson = JSON.parse(basePackage);
 packageJson.scripts.preverify =
   "node tooling/scripts/preverify-asymmetric-checkpoint-cleanup.mjs";
+packageJson.scripts.postverify =
+  "node tooling/scripts/postverify-asymmetric-checkpoint-cleanup.mjs";
 writeFileSync("package.json", \`${"${JSON.stringify(packageJson, null, 2)}\\n"}\`);
 unlinkSync(fileURLToPath(import.meta.url));`;
 if (repaired.split(oldTail).length - 1 !== 1) {
-  throw new Error("temporary preverify package lifecycle target mismatch");
+  throw new Error("temporary verification package lifecycle target mismatch");
 }
 repaired = repaired.replace(oldTail, newTail);
 writeFileSync(hookPath, repaired);
-
-const postverifyPath = "tooling/scripts/postverify-asymmetric-checkpoint-cleanup.mjs";
-unlinkSync(postverifyPath);
 await import("./prebuild-asymmetric-checkpoint-fix.mjs");
 unlinkSync(fileURLToPath(import.meta.url));
