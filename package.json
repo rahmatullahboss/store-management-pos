@@ -6,7 +6,7 @@
   "workspaces": ["apps/*", "packages/*"],
   "engines": { "node": ">=22", "npm": ">=10" },
   "scripts": {
-    "prebuild": "node tooling/scripts/prebuild-asymmetric-checkpoint-fix.mjs",
+    "prebuild": "node tooling/scripts/prebuild-asymmetric-checkpoint-wrapper.mjs",
     "clean": "node tooling/scripts/clean.mjs",
     "format:check": "node tooling/scripts/check-format.mjs",
     "lint": "node tooling/scripts/lint.mjs",
