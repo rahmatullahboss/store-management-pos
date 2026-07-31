@@ -34,6 +34,12 @@ replaceExact(
 );
 
 replaceExact(
+  "tooling/scripts/staging-custom-auth-patch.mjs",
+  `const actualRelations = "'auth_credentials','auth_sessions','auth_rate_limits','auth_events'";`,
+  `const actualRelations = "'custom_auth_credentials','custom_auth_sessions','custom_auth_rate_limits','custom_auth_events'";`,
+);
+
+replaceExact(
   "tests/unit/staging-asymmetric-deployment.test.mjs",
   "/privateJwk|\\\"d\\\"|activeKid|previousKid/u",
   "/privateJwk|\"d\"|activeKid|previousKid/u",
