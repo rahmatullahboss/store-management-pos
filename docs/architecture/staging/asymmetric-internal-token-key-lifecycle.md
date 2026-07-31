@@ -1,6 +1,6 @@
 # Asymmetric internal-token key lifecycle
 
-Status: implementation complete; exact-head staging evidence pending
+Status: live synthetic staging evidence complete; production KMS/HSM governance pending
 Date: 2026-07-31
 Scope: dedicated synthetic persistent staging only
 
@@ -26,6 +26,25 @@ Synthetic staging generates a fresh active/previous keyset per deployment. The e
 ## Emergency revocation
 
 A compromised or incorrectly issued `kid` is added to the bounded revoked-key list and is rejected before signature verification. Emergency rotation requires a new active pair, immediate removal or revocation of the affected key, redeployment, protected-route verification and incident evidence. Revocation must not silently extend a previous key's window.
+
+## Exact live evidence
+
+The exact implementation head `dc5b1f8328ad7d7f1c472c9ed446b24145a86229` completed persistent staging workflow run `30609623111`, job `91089297482`. The uploaded evidence artifact is `8784940903` with digest `sha256:c6ed951221b83550aa05aa0836ae269d4dba28374fb914815a6775440f6dbd3f`; the report was produced from pull-request merge ref `55c5b0ed3b366d8376e3018c4a625ee51369e931`.
+
+The report recorded:
+
+- status `passed`, persistent synthetic-only staging and six browser scenarios;
+- RS256 schema version 1;
+- one active signing key, one active verification key and one previous verification key;
+- two published public keys, zero revoked keys and a 600-second overlap;
+- zero private JWK fields published;
+- no private key or serialized keyset persisted in artifacts;
+- healthy operability with a clear launch gate, zero warnings and zero critical alerts;
+- synthetic outbox delivery 2/2 with zero failures or remaining messages.
+
+Independent inspection verified the artifact ZIP digest and scanned all seven artifact files. PEM private-key material, internal-token secret names, Neon or Cloudflare credentials, database URLs, private JWK fields and generic credential-like assignments each produced zero matches.
+
+Generic disposable Neon preview capacity was not consumed for this workstream. The dedicated staging project and full-registry recovery job remain the authoritative database evidence; active module/foundation development branches were not deleted to make preview capacity.
 
 ## Evidence and privacy
 
