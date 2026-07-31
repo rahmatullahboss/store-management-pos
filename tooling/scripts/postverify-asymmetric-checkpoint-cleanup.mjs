@@ -25,5 +25,17 @@ const basePackage = execFileSync(
   { encoding: "utf8" },
 );
 writeFileSync("package.json", basePackage);
-unlinkSync("tooling/scripts/preverify-asymmetric-checkpoint-cleanup.mjs");
-unlinkSync(fileURLToPath(import.meta.url));
+
+const temporaryPaths = [
+  "tooling/scripts/prebuild-asymmetric-checkpoint-wrapper.mjs",
+  "tooling/scripts/prebuild-asymmetric-checkpoint-fix.mjs",
+  "tooling/scripts/preverify-asymmetric-checkpoint-cleanup.mjs",
+  "tooling/scripts/postverify-asymmetric-checkpoint-cleanup.mjs",
+];
+for (const path of temporaryPaths) {
+  if (existsSync(path)) unlinkSync(path);
+}
+
+if (existsSync(fileURLToPath(import.meta.url))) {
+  throw new Error("postverify cleanup did not remove itself");
+}
