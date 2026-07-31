@@ -66,9 +66,12 @@ jobs:
           text = patcher.read_text()
           old = "    signing_algorithm: HS256_staging_only\n    signing_secret: [REDACTED_SECRET]\n    deployment_rotation: enabled"
           new = "    signing_algorithm: HS256_staging_only\n    signing_secret: cloudflare_worker_secret\n    deployment_rotation: enabled"
-          if text.count(old) != 1:
-              raise SystemExit("checkpoint status anchor repair target mismatch")
-          patcher.write_text(text.replace(old, new))
+          if old in text:
+              if text.count(old) != 1:
+                  raise SystemExit("checkpoint status anchor repair target is ambiguous")
+              patcher.write_text(text.replace(old, new))
+          elif new not in text:
+              raise SystemExit("checkpoint status anchor is neither original nor repaired")
           PY
           python3 tooling/scripts/apply-asymmetric-checkpoint.py
           python3 - <<'PY'
@@ -96,9 +99,12 @@ jobs:
             signature.buffer,
             encoder.encode(signingInput),
           );'''
-          if text.count(old) != 1:
-              raise SystemExit("RS256 signature BufferSource repair target mismatch")
-          source.write_text(text.replace(old, new))
+          if old in text:
+              if text.count(old) != 1:
+                  raise SystemExit("RS256 signature BufferSource repair target is ambiguous")
+              source.write_text(text.replace(old, new))
+          elif new not in text:
+              raise SystemExit("RS256 signature BufferSource is neither original nor repaired")
           PY
           rm -rf .checkpoint
           rm -f tooling/scripts/apply-asymmetric-checkpoint.py
