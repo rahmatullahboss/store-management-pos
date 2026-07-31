@@ -10,6 +10,18 @@ const end = source.indexOf(endMarker, start + startMarker.length);
 if (start < 0 || end < 0 || source.indexOf(startMarker, start + 1) >= 0) {
   throw new Error("lifecycle whitespace cleanup block is not uniquely bounded");
 }
-writeFileSync(hookPath, `${source.slice(0, start)}${source.slice(end)}`);
+let repaired = `${source.slice(0, start)}${source.slice(end)}`;
+const oldTail = `writeFileSync("package.json", basePackage);
+unlinkSync(fileURLToPath(import.meta.url));`;
+const newTail = `const packageJson = JSON.parse(basePackage);
+packageJson.scripts.postverify =
+  "node tooling/scripts/postverify-asymmetric-checkpoint-cleanup.mjs";
+writeFileSync("package.json", \`${"${JSON.stringify(packageJson, null, 2)}\\n"}\`);
+unlinkSync(fileURLToPath(import.meta.url));`;
+if (repaired.split(oldTail).length - 1 !== 1) {
+  throw new Error("temporary postverify package lifecycle target mismatch");
+}
+repaired = repaired.replace(oldTail, newTail);
+writeFileSync(hookPath, repaired);
 await import("./prebuild-asymmetric-checkpoint-fix.mjs");
 unlinkSync(fileURLToPath(import.meta.url));
