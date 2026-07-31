@@ -8,25 +8,32 @@ const branch = (
   process.env.GITHUB_REF_NAME ||
   ""
 ).trim();
-const dedicatedStagingBranches = new Set([
-  "ops/persistent-admin-pos-staging-v1",
+const persistentStagingBranch = "ops/persistent-admin-pos-staging-v1";
+const dedicatedStagingImplementationBranches = new Set([
+  "agent/asymmetric-internal-token-jwks",
 ]);
+const usesDedicatedStagingNeon =
+  branch === persistentStagingBranch ||
+  dedicatedStagingImplementationBranches.has(branch);
 
-if (dedicatedStagingBranches.has(branch)) {
+if (usesDedicatedStagingNeon) {
   const artifactsDir = path.join(root, "artifacts", "foundation");
   await mkdir(artifactsDir, { recursive: true });
   await writeFile(
     path.join(artifactsDir, "neon-preview-lifecycle.json"),
     `${JSON.stringify(
       {
-        schemaVersion: 1,
+        schemaVersion: 2,
         status: "skipped",
         reason: "dedicated-persistent-staging-neon",
         branch,
+        persistentStagingBranch,
+        implementationBranch: branch !== persistentStagingBranch,
         genericProjectId: "twilight-boat-26805962",
         dedicatedProjectId: "morning-flower-46531465",
         dedicatedBranchId: "br-empty-sound-afkx5vkj",
         destructiveCleanupPerformed: false,
+        genericPreviewCapacityConsumed: false,
         evidence:
           "Persistent staging workflow applies and verifies the full migration chain on the dedicated project.",
       },
