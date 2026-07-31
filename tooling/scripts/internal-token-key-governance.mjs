@@ -141,6 +141,7 @@ export function planEmergencyInternalTokenKeyRotation(options) {
     previous = previousFromActive(state.active, now, overlapSeconds);
   } else if (
     state.previous &&
+    now >= state.previous.notBefore &&
     now <= state.previous.verifyUntil &&
     !revokedKids.includes(state.previous.kid)
   ) {
@@ -170,10 +171,15 @@ export function summarizeInternalTokenKeyGovernance(stateInput, nowInput) {
   const activeSigningKeyCount =
     now >= state.active.notBefore && now <= state.active.signUntil ? 1 : 0;
   const activeVerificationKeyCount =
-    !state.revokedKids.includes(state.active.kid) && now <= state.active.verifyUntil ? 1 : 0;
+    !state.revokedKids.includes(state.active.kid) &&
+    now >= state.active.notBefore &&
+    now <= state.active.verifyUntil
+      ? 1
+      : 0;
   const previousVerificationKeyCount =
     state.previous &&
     !state.revokedKids.includes(state.previous.kid) &&
+    now >= state.previous.notBefore &&
     now <= state.previous.verifyUntil
       ? 1
       : 0;
