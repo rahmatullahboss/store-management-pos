@@ -70,4 +70,4 @@ Artifacts and workflow summaries may contain only algorithm, schema version, act
 
 ## Production blockers
 
-This staging implementation does not approve production key ownership. Production still requires a provisioned KMS/HSM-backed non-exportable private key, named security ownership, provider-side least-privilege signing policy, immutable audited signing access, a deployed adapter for the provider receipt contract, scheduled and emergency rotation procedures, protected JWKS publication, monitoring/paging, incident response, evidence retention and controlled launch approval.
+This staging implementation does not approve production key ownership. Production still requires provisioned KMS/HSM-backed non-exportable private keys, named security ownership, provider-side least-privilege signing policy, immutable audited signing access, a deployed adapter for the provider receipt contract, scheduled and emergency rotation procedures, protected JWKS publication, monitoring/paging, incident response, evidence retention and controlled launch approval.
