@@ -276,7 +276,11 @@ test("stale and tampered policy or health evidence is rejected", () => {
     () =>
       evaluateInternalTokenProviderOperationalReadiness(
         policy(),
-        health({ observedAt: now - 31, lastAuditAt: now - 40 }),
+        health({
+          observedAt: now - 31,
+          lastAuditAt: now - 40,
+          lastJournalAckAt: now - 35,
+        }),
         commandContext(),
         now,
       ),
