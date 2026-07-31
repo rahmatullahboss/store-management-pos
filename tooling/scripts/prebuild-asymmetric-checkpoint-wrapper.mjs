@@ -12,15 +12,6 @@ if (start < 0 || end < 0 || source.indexOf(startMarker, start + 1) >= 0) {
 }
 writeFileSync(hookPath, `${source.slice(0, start)}${source.slice(end)}`);
 
-const patcherPath = "tooling/scripts/staging-custom-auth-patch.mjs";
-const patcher = readFileSync(patcherPath, "utf8");
-const oldStatus = "Status: staging implementation pending exact-head live evidence  ";
-const newStatus = "Status: staging implementation pending exact-head live evidence";
-if (patcher.split(oldStatus).length - 1 !== 1) {
-  throw new Error("lifecycle status generation target is not unique");
-}
-writeFileSync(patcherPath, patcher.replace(oldStatus, newStatus));
-
 const postverifyPath = "tooling/scripts/postverify-asymmetric-checkpoint-cleanup.mjs";
 unlinkSync(postverifyPath);
 await import("./prebuild-asymmetric-checkpoint-fix.mjs");
