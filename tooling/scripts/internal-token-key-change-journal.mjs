@@ -68,9 +68,11 @@ function stage(value) {
 
 export function normalizeInternalTokenKeyChangeJournalEvent(input) {
   const value = object(input, "event");
+  const normalized = Object.hasOwn(value, "schemaVersion");
   exactKeys(
     value,
     [
+      ...(normalized ? ["schemaVersion"] : []),
       "changeDigest",
       "changeType",
       "eventDigest",
@@ -82,6 +84,12 @@ export function normalizeInternalTokenKeyChangeJournalEvent(input) {
     ],
     "event",
   );
+  if (
+    normalized &&
+    value.schemaVersion !== INTERNAL_TOKEN_KEY_CHANGE_JOURNAL_SCHEMA_VERSION
+  ) {
+    fail("event schema version is invalid");
+  }
   const sequence = positiveInteger(value.sequence, "sequence");
   const eventDigest = digest(value.eventDigest, "event digest");
   const evidenceDigest = digest(value.evidenceDigest, "evidence digest");
