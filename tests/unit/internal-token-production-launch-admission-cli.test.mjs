@@ -1,196 +1,231 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
 import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import {
-  createInternalTokenProductionLaunchApprovalDigest,
-  createInternalTokenProductionLaunchBundleDigest,
-  createInternalTokenProductionLaunchEvidenceDigest,
-  INTERNAL_TOKEN_PRODUCTION_LAUNCH_REQUIRED_APPROVAL_ROLES,
-  INTERNAL_TOKEN_PRODUCTION_LAUNCH_REQUIRED_CONTROLS,
-} from "../../tooling/scripts/internal-token-production-launch-admission.mjs";
-import {
   checkProductionLaunchAdmission,
 } from "../../tooling/scripts/check-production-launch-admission.mjs";
-
-const digest = (value) => createHash("sha256").update(value).digest("base64url");
-const now = 2_000_000_000;
-const providers = {
-  database_backup_recovery: "verified-external-backup",
-  evidence_archive_legal_hold: "vault-archive",
-  incident_response_ownership: "documented-human-ownership",
-  kms_non_exportable_signing: "cloud-kms",
-  production_monitoring_paging: "managed-observability",
-  protected_jwks_publication: "origin-protected-jwks",
-  provider_audit_sink: "immutable-security-lake",
-  recovery_email_delivery: "transactional-email-provider",
-  retention_disposition_ownership: "documented-human-ownership",
-  signing_workload_identity: "hardware-bound-service-identity",
-};
-
-function validBundle() {
-  const releaseDigest = digest("cli-release");
-  const generatedAt = now - 60;
-  const expiresAt = now + 600;
-  const controls = INTERNAL_TOKEN_PRODUCTION_LAUNCH_REQUIRED_CONTROLS.map((controlId, index) => ({
-    controlId,
-    evidenceDigest: digest(`cli-control-${index}`),
-    providerClass: providers[controlId],
-    schemaVersion: 1,
-    status: "verified",
-    verifiedAt: generatedAt - index,
-  }));
-  const evidenceBody = {
-    controls,
-    environment: "production",
-    expiresAt,
-    generatedAt,
-    releaseDigest,
-    schemaVersion: 1,
-  };
-  const evidence = {
-    ...evidenceBody,
-    evidenceDigest: createInternalTokenProductionLaunchEvidenceDigest(evidenceBody),
-  };
-  const approvals = INTERNAL_TOKEN_PRODUCTION_LAUNCH_REQUIRED_APPROVAL_ROLES.map((role, index) => {
-    const body = {
-      actorDigest: digest(`cli-actor-${index}`),
-      approvedAt: generatedAt + 20 + index,
-      evidenceDigest: evidence.evidenceDigest,
-      releaseDigest,
-      role,
-      schemaVersion: 1,
-    };
-    return {
-      ...body,
-      approvalDigest: createInternalTokenProductionLaunchApprovalDigest(body),
-    };
-  });
-  const bundleBody = {
-    approvalDigests: approvals.map((item) => item.approvalDigest),
-    environment: "production",
-    evidenceDigest: evidence.evidenceDigest,
-    expiresAt,
-    releaseDigest,
-    schemaVersion: 1,
-  };
-  return {
-    approvals,
-    bundleDigest: createInternalTokenProductionLaunchBundleDigest(bundleBody),
-    environment: "production",
-    evidence,
-    schemaVersion: 1,
-  };
-}
+import {
+  createProductionLaunchBundle,
+  createProductionLaunchRevocationSnapshot,
+  productionLaunchDigest,
+  productionLaunchNow,
+} from "../helpers/production-launch-governance-fixtures.mjs";
 
 function assertAggregateOnly(result) {
   for (const key of [
     "actorDigest",
+    "admissionBundleDigest",
     "approvalDigest",
     "bundleDigest",
+    "entryDigest",
     "evidenceDigest",
+    "genesisDigest",
+    "headDigest",
+    "incidentDigest",
     "providerClass",
+    "reasonDigest",
     "releaseDigest",
+    "snapshotDigest",
   ]) {
     assert.equal(Object.hasOwn(result, key), false);
   }
 }
 
-async function paths() {
-  const directory = await mkdtemp(path.join(os.tmpdir(), "production-launch-admission-"));
+async function fixturePaths() {
+  const directory = await mkdtemp(
+    path.join(os.tmpdir(), "production-launch-admission-"),
+  );
   return {
     evidencePath: path.join(directory, "evidence.json"),
     reportPath: path.join(directory, "report.json"),
+    revocationPath: path.join(directory, "revocation.json"),
   };
 }
 
-test("non-production CLI mode writes aggregate blocked evidence and succeeds", async () => {
-  const { reportPath } = await paths();
+async function writeGovernanceFiles(paths, actions = []) {
+  const bundle = createProductionLaunchBundle();
+  const revocation = createProductionLaunchRevocationSnapshot({ actions, bundle });
+  await writeFile(paths.evidencePath, JSON.stringify(bundle), "utf8");
+  await writeFile(paths.revocationPath, JSON.stringify(revocation), "utf8");
+  return { bundle, revocation };
+}
+
+function productionEnvironment(paths, revocation) {
+  return {
+    PRODUCTION_LAUNCH_EVIDENCE_PATH: paths.evidencePath,
+    PRODUCTION_LAUNCH_REVOCATION_EXPECTED_HEAD_DIGEST: revocation.headDigest,
+    PRODUCTION_LAUNCH_REVOCATION_STATE_PATH: paths.revocationPath,
+    STORE_DEPLOYMENT_TARGET: "production",
+  };
+}
+
+test("non-production CLI mode remains blocked, aggregate-only and successful", async () => {
+  const { reportPath } = await fixturePaths();
   const result = await checkProductionLaunchAdmission({
     environment: { STORE_DEPLOYMENT_TARGET: "staging" },
-    now,
+    now: productionLaunchNow,
     reportPath,
   });
-  assert.equal(result.status, "not_requested");
-  assert.equal(result.launchGate, "blocked");
+  assert.deepEqual(result, {
+    approvalCount: 0,
+    controlCount: 0,
+    environment: "staging",
+    evidenceDigestsIncluded: false,
+    identifiersIncluded: false,
+    launchGate: "blocked",
+    schemaVersion: 1,
+    status: "not_requested",
+  });
   assert.deepEqual(JSON.parse(await readFile(reportPath, "utf8")), result);
   assertAggregateOnly(result);
 });
 
-test("production CLI mode validates a file and writes aggregate admission evidence", async () => {
-  const { evidencePath, reportPath } = await paths();
-  await writeFile(evidencePath, JSON.stringify(validBundle()), "utf8");
+test("production CLI clears only with admission, revocation snapshot and protected head", async () => {
+  const paths = await fixturePaths();
+  const { revocation } = await writeGovernanceFiles(paths);
   const result = await checkProductionLaunchAdmission({
-    environment: {
-      PRODUCTION_LAUNCH_EVIDENCE_PATH: evidencePath,
+    environment: productionEnvironment(paths, revocation),
+    now: productionLaunchNow,
+    reportPath: paths.reportPath,
+  });
+  assert.deepEqual(result, {
+    approvalCount: 3,
+    controlCount: 10,
+    environment: "production",
+    evidenceDigestsIncluded: false,
+    expiresAt: productionLaunchNow + 120,
+    identifiersIncluded: false,
+    latestRevocationAction: "none",
+    launchGate: "clear",
+    revocationApprovalCount: 0,
+    revocationEmergencyStopCount: 0,
+    revocationEntryCount: 0,
+    revocationState: "clear",
+    schemaVersion: 1,
+    status: "admitted",
+  });
+  assert.deepEqual(JSON.parse(await readFile(paths.reportPath, "utf8")), result);
+  assertAggregateOnly(result);
+});
+
+test("valid suspension and emergency-stop journals write aggregate blocked reports", async () => {
+  for (const actions of [["suspend"], ["emergency_stop"]]) {
+    const paths = await fixturePaths();
+    const { revocation } = await writeGovernanceFiles(paths, actions);
+    const result = await checkProductionLaunchAdmission({
+      environment: productionEnvironment(paths, revocation),
+      now: productionLaunchNow,
+      reportPath: paths.reportPath,
+    });
+    assert.equal(result.status, "suspended");
+    assert.equal(result.launchGate, "blocked");
+    assert.equal(result.revocationState, "suspended");
+    assert.equal(result.latestRevocationAction, actions[0]);
+    assert.equal(
+      result.revocationApprovalCount,
+      actions[0] === "emergency_stop" ? 1 : 3,
+    );
+    assert.deepEqual(JSON.parse(await readFile(paths.reportPath, "utf8")), result);
+    assertAggregateOnly(result);
+  }
+});
+
+test("production CLI requires both files and the protected journal checkpoint", async () => {
+  const paths = await fixturePaths();
+  const { revocation } = await writeGovernanceFiles(paths);
+  const cases = [
+    {
+      environment: { STORE_DEPLOYMENT_TARGET: "production" },
+      message: /production evidence file is required/u,
+    },
+    {
+      environment: {
+        PRODUCTION_LAUNCH_EVIDENCE_PATH: paths.evidencePath,
+        STORE_DEPLOYMENT_TARGET: "production",
+      },
+      message: /production revocation state file is required/u,
+    },
+    {
+      environment: {
+        PRODUCTION_LAUNCH_EVIDENCE_PATH: paths.evidencePath,
+        PRODUCTION_LAUNCH_REVOCATION_STATE_PATH: paths.revocationPath,
+        STORE_DEPLOYMENT_TARGET: "production",
+      },
+      message: /protected revocation journal head digest is required/u,
+    },
+  ];
+  for (const item of cases) {
+    await assert.rejects(
+      checkProductionLaunchAdmission({
+        environment: item.environment,
+        now: productionLaunchNow,
+        reportPath: paths.reportPath,
+      }),
+      item.message,
+    );
+  }
+
+  await assert.rejects(
+    checkProductionLaunchAdmission({
+      environment: {
+        ...productionEnvironment(paths, revocation),
+        PRODUCTION_LAUNCH_REVOCATION_EXPECTED_HEAD_DIGEST:
+          productionLaunchDigest("wrong-protected-head"),
+      },
+      now: productionLaunchNow,
+      reportPath: paths.reportPath,
+    }),
+    /production revocation state validation failed/u,
+  );
+});
+
+test("inline admission and revocation state are prohibited without leaking content", async () => {
+  const paths = await fixturePaths();
+  for (const environment of [
+    {
+      PRODUCTION_LAUNCH_EVIDENCE_JSON:
+        "{\"providerSecret\":\"admission-secret\"}",
       STORE_DEPLOYMENT_TARGET: "production",
     },
-    now,
-    reportPath,
-  });
-  assert.equal(result.status, "admitted");
-  assert.equal(result.launchGate, "clear");
-  assert.equal(result.controlCount, 10);
-  assert.equal(result.approvalCount, 3);
-  assert.deepEqual(JSON.parse(await readFile(reportPath, "utf8")), result);
-  assertAggregateOnly(result);
+    {
+      PRODUCTION_LAUNCH_REVOCATION_STATE_JSON:
+        "{\"incidentUrl\":\"private-incident\"}",
+      STORE_DEPLOYMENT_TARGET: "production",
+    },
+  ]) {
+    await assert.rejects(
+      checkProductionLaunchAdmission({
+        environment,
+        now: productionLaunchNow,
+        reportPath: paths.reportPath,
+      }),
+      (error) => {
+        assert.match(error.message, /inline production/u);
+        assert.doesNotMatch(
+          error.message,
+          /providerSecret|admission-secret|incidentUrl|private-incident/u,
+        );
+        return true;
+      },
+    );
+  }
 });
 
-test("production CLI mode rejects missing or inline evidence before reading content", async () => {
-  const { reportPath } = await paths();
-  await assert.rejects(
-    checkProductionLaunchAdmission({
-      environment: { STORE_DEPLOYMENT_TARGET: "production" },
-      now,
-      reportPath,
-    }),
-    /production evidence file is required/u,
+test("malformed and invalid revocation evidence is masked at the command boundary", async () => {
+  const paths = await fixturePaths();
+  const { revocation } = await writeGovernanceFiles(paths);
+  await writeFile(
+    paths.revocationPath,
+    "{not-json:private-provider-resource}",
+    "utf8",
   );
   await assert.rejects(
     checkProductionLaunchAdmission({
-      environment: {
-        PRODUCTION_LAUNCH_EVIDENCE_JSON: "{\"providerSecret\":\"do-not-log\"}",
-        STORE_DEPLOYMENT_TARGET: "production",
-      },
-      now,
-      reportPath,
-    }),
-    (error) => {
-      assert.match(error.message, /inline production evidence is prohibited/u);
-      assert.doesNotMatch(error.message, /providerSecret|do-not-log/u);
-      return true;
-    },
-  );
-});
-
-test("production CLI mode masks unreadable, malformed and invalid evidence details", async () => {
-  const { evidencePath, reportPath } = await paths();
-  await assert.rejects(
-    checkProductionLaunchAdmission({
-      environment: {
-        PRODUCTION_LAUNCH_EVIDENCE_PATH: `${evidencePath}-missing-sensitive-provider`,
-        STORE_DEPLOYMENT_TARGET: "production",
-      },
-      now,
-      reportPath,
-    }),
-    (error) => {
-      assert.match(error.message, /could not be read or parsed/u);
-      assert.doesNotMatch(error.message, /missing-sensitive-provider/u);
-      return true;
-    },
-  );
-  await writeFile(evidencePath, "{not-json:private-provider-resource}", "utf8");
-  await assert.rejects(
-    checkProductionLaunchAdmission({
-      environment: {
-        PRODUCTION_LAUNCH_EVIDENCE_PATH: evidencePath,
-        STORE_DEPLOYMENT_TARGET: "production",
-      },
-      now,
-      reportPath,
+      environment: productionEnvironment(paths, revocation),
+      now: productionLaunchNow,
+      reportPath: paths.reportPath,
     }),
     (error) => {
       assert.match(error.message, /could not be read or parsed/u);
@@ -198,21 +233,22 @@ test("production CLI mode masks unreadable, malformed and invalid evidence detai
       return true;
     },
   );
-  const invalid = validBundle();
-  invalid.bundleDigest = digest("invalid-cli-bundle");
-  await writeFile(evidencePath, JSON.stringify(invalid), "utf8");
+
+  const invalid = createProductionLaunchRevocationSnapshot();
+  invalid.snapshotDigest = productionLaunchDigest("invalid-snapshot");
+  await writeFile(paths.revocationPath, JSON.stringify(invalid), "utf8");
   await assert.rejects(
     checkProductionLaunchAdmission({
       environment: {
-        PRODUCTION_LAUNCH_EVIDENCE_PATH: evidencePath,
-        STORE_DEPLOYMENT_TARGET: "production",
+        ...productionEnvironment(paths, invalid),
+        PRODUCTION_LAUNCH_REVOCATION_EXPECTED_HEAD_DIGEST: invalid.headDigest,
       },
-      now,
-      reportPath,
+      now: productionLaunchNow,
+      reportPath: paths.reportPath,
     }),
     (error) => {
-      assert.match(error.message, /production evidence validation failed/u);
-      assert.doesNotMatch(error.message, /bundle digest|invalid-cli-bundle/u);
+      assert.match(error.message, /revocation state validation failed/u);
+      assert.doesNotMatch(error.message, /snapshot digest|invalid-snapshot/u);
       return true;
     },
   );
