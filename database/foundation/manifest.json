@@ -86,6 +86,11 @@
       "id": "FND-0017",
       "file": "FND-0017-internal-token-provider-evidence-custody.sql",
       "sha256": "a36bf0b9ff211ca351cf0278dbb11c216065f5be0939d8564c5577731f5c7e8a"
+    },
+    {
+      "id": "FND-0018",
+      "file": "FND-0018-internal-token-provider-evidence-disposition.sql",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
     }
   ]
 }
