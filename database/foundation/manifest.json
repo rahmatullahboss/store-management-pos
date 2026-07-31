@@ -96,6 +96,11 @@
       "id": "FND-0019",
       "file": "FND-0019-internal-token-production-attestation-receipt-journal.sql",
       "sha256": "393321f13e663d4dc5e01c0bd9894b336aa895ad7c922fb95e63bd0de147d3c9"
+    },
+    {
+      "id": "FND-0020",
+      "file": "FND-0020-internal-token-production-attestation-receipt-append-hardening.sql",
+      "sha256": "ee9fa8612b9a778b0dbf265baf82069bb8b547d8d11086fb2cd59e9f01118860"
     }
   ]
 }
