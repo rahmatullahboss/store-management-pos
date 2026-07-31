@@ -3,13 +3,17 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const migrationUrl = new URL(
+const storageMigrationUrl = new URL(
   "../../database/foundation/migrations/FND-0019-internal-token-production-attestation-receipt-journal.sql",
   import.meta.url,
 );
+const hardeningMigrationUrl = new URL(
+  "../../database/foundation/migrations/FND-0020-internal-token-production-attestation-receipt-append-hardening.sql",
+  import.meta.url,
+);
 
-test("FND-0019 creates isolated atomic receipt-journal storage", async () => {
-  const sql = await readFile(migrationUrl, "utf8");
+test("FND-0019 creates isolated append-only receipt-journal storage", async () => {
+  const sql = await readFile(storageMigrationUrl, "utf8");
   assert.match(sql, /internal_token_production_attestation_receipt_journal_state/u);
   assert.match(sql, /internal_token_production_attestation_receipt_journal \(/u);
   assert.match(sql, /journal_version bigint PRIMARY KEY/u);
@@ -17,16 +21,59 @@ test("FND-0019 creates isolated atomic receipt-journal storage", async () => {
   assert.match(sql, /entry_digest text NOT NULL UNIQUE/u);
   assert.match(sql, /batch_digest text NOT NULL UNIQUE/u);
   assert.match(sql, /evidence_digest text NOT NULL UNIQUE/u);
-  assert.match(sql, /receipt_count smallint NOT NULL CHECK \(receipt_count = 13\)/u);
+  assert.match(
+    sql,
+    /receipt_count smallint NOT NULL CHECK \(receipt_count = 13\)/u,
+  );
   assert.match(sql, /BEFORE UPDATE OR DELETE/u);
   assert.match(sql, /reject_append_only_mutation/u);
+  assert.doesNotMatch(
+    sql,
+    /receipt_payload|private_key|provider_resource|database_url|operator_id|actor_id/iu,
+  );
 });
 
-test("FND-0019 serializes, recomputes digests and applies compare-and-swap", async () => {
-  const sql = await readFile(migrationUrl, "utf8");
-  const lock = sql.indexOf("pg_advisory_xact_lock(742901, 19)");
-  const nonceLookup = sql.indexOf("WHERE batch_nonce_digest = p_batch_nonce_digest");
-  const stateLock = sql.indexOf("FOR UPDATE", nonceLookup);
+test("FND-0020 disables the positional append and requires one exact JSON command", async () => {
+  const sql = await readFile(hardeningMigrationUrl, "utf8");
+  assert.match(
+    sql,
+    /REVOKE EXECUTE ON FUNCTION platform\.append_internal_token_production_attestation_receipt_journal[\s\S]*FROM store_key_governance_runtime/u,
+  );
+  assert.match(
+    sql,
+    /record_internal_token_production_attestation_receipt_batch\(\s*p_command jsonb/u,
+  );
+  assert.match(sql, /jsonb_object_length\(p_command\) <> 13/u);
+  for (const key of [
+    "schemaVersion",
+    "batchDigest",
+    "batchNonceDigest",
+    "evidenceDigest",
+    "previousJournalDigest",
+    "previousSequenceCheckpointDigest",
+    "nextSequenceCheckpointDigest",
+    "registryDigest",
+    "releaseDigest",
+    "receiptDigests",
+    "expectedJournalVersion",
+    "recordedAt",
+    "entryDigest",
+  ]) {
+    assert.match(sql, new RegExp(`'${key}'`, "u"));
+  }
+  assert.match(sql, /jsonb_array_length\(p_command->'receiptDigests'\) <> 13/u);
+  assert.match(sql, /count\(DISTINCT receipt_digest\)/u);
+  assert.match(sql, /v_distinct_count <> 22/u);
+});
+
+test("FND-0020 serializes, recomputes digests and applies compare-and-swap", async () => {
+  const sql = await readFile(hardeningMigrationUrl, "utf8");
+  const lock = sql.indexOf("pg_advisory_xact_lock(742901, 20)");
+  const nonceLookup = sql.indexOf(
+    "WHERE journal.batch_nonce_digest = v_batch_nonce_digest",
+  );
+  const stateSelect = sql.indexOf("SELECT state.*", nonceLookup);
+  const stateLock = sql.indexOf("FOR UPDATE", stateSelect);
   const entryInsert = sql.indexOf(
     "INSERT INTO platform.internal_token_production_attestation_receipt_journal(",
     stateLock,
@@ -37,67 +84,82 @@ test("FND-0019 serializes, recomputes digests and applies compare-and-swap", asy
   );
   assert.ok(lock > 0);
   assert.ok(nonceLookup > lock);
-  assert.ok(stateLock > nonceLookup);
+  assert.ok(stateSelect > nonceLookup);
+  assert.ok(stateLock > stateSelect);
   assert.ok(entryInsert > stateLock);
   assert.ok(stateUpdate > entryInsert);
-  assert.match(sql, /cardinality\(p_receipt_digests\) <> 13/u);
-  assert.match(sql, /count\(DISTINCT receipt_digest\)/u);
   assert.match(sql, /internal_token_production_attestation_batch_digest/u);
   assert.match(sql, /internal_token_production_attestation_entry_digest/u);
-  assert.match(sql, /v_batch_digest <> p_batch_digest/u);
-  assert.match(sql, /v_entry_digest <> p_entry_digest/u);
-  assert.match(sql, /journal_version = p_expected_journal_version/u);
-  assert.match(sql, /head_digest = p_previous_journal_digest/u);
+  assert.match(sql, /v_recomputed_batch_digest <> v_batch_digest/u);
+  assert.match(sql, /v_recomputed_entry_digest <> v_entry_digest/u);
+  assert.match(sql, /v_state\.journal_version <> v_expected_journal_version/u);
+  assert.match(sql, /v_state\.head_digest <> v_previous_journal_digest/u);
   assert.match(
     sql,
-    /latest_sequence_checkpoint_digest = p_previous_sequence_checkpoint_digest/u,
+    /v_state\.latest_sequence_checkpoint_digest[\s\S]*<> v_previous_sequence_checkpoint_digest/u,
   );
   assert.match(sql, /GET DIAGNOSTICS v_updated = ROW_COUNT/u);
   assert.match(sql, /v_updated <> 1/u);
   assert.match(sql, /ERRCODE = '40001'/u);
   assert.match(sql, /ERRCODE = '23505'/u);
+  assert.match(sql, /'status', 'idempotent'/u);
+  assert.match(sql, /'status', 'recorded'/u);
 });
 
-test("FND-0019 exposes only narrow privileged commands", async () => {
-  const sql = await readFile(migrationUrl, "utf8");
-  assert.match(
-    sql,
-    /REVOKE ALL ON TABLE platform\.internal_token_production_attestation_receipt_journal[\s\S]*FROM PUBLIC/u,
-  );
-  assert.match(sql, /FROM store_app_runtime/u);
-  assert.match(sql, /FROM store_app_reporting/u);
-  assert.match(
-    sql,
-    /GRANT EXECUTE ON FUNCTION platform\.append_internal_token_production_attestation_receipt_journal/u,
-  );
-  assert.match(sql, /TO store_key_governance_runtime/u);
+test("FND-0020 exposes only the JSON command to the governance role", async () => {
+  const storageSql = await readFile(storageMigrationUrl, "utf8");
+  const hardeningSql = await readFile(hardeningMigrationUrl, "utf8");
+  assert.match(storageSql, /FROM store_app_runtime/u);
+  assert.match(storageSql, /FROM store_app_reporting/u);
   assert.doesNotMatch(
-    sql,
+    storageSql,
     /GRANT (?:SELECT|INSERT|UPDATE|DELETE).*store_app_(?:runtime|reporting)/u,
   );
   assert.match(
-    sql,
-    /read_internal_token_production_attestation_receipt_journal_state/u,
+    hardeningSql,
+    /REVOKE ALL ON FUNCTION platform\.record_internal_token_production_attestation_receipt_batch\(jsonb\)[\s\S]*FROM PUBLIC/u,
   );
-  assert.doesNotMatch(sql, /receipt_payload|signature|private_key|provider_resource|database_url/iu);
+  assert.match(
+    hardeningSql,
+    /GRANT EXECUTE ON FUNCTION platform\.record_internal_token_production_attestation_receipt_batch\(jsonb\)[\s\S]*TO store_key_governance_runtime/u,
+  );
+  assert.doesNotMatch(
+    hardeningSql,
+    /receipt_payload|private_key|provider_resource|database_url|operator_id|actor_id/iu,
+  );
 });
 
-test("foundation manifest pins the exact FND-0019 checksum last", async () => {
-  const sql = await readFile(migrationUrl);
+test("foundation manifest pins FND-0019 and FND-0020 exact checksums last", async () => {
+  const storageSql = await readFile(storageMigrationUrl);
+  const hardeningSql = await readFile(hardeningMigrationUrl);
   const manifest = JSON.parse(
     await readFile(new URL("../../database/foundation/manifest.json", import.meta.url), "utf8"),
   );
-  const expected = createHash("sha256").update(sql).digest("hex");
-  const entry = manifest.migrations.at(-1);
-  assert.deepEqual(entry, {
-    id: "FND-0019",
-    file: "FND-0019-internal-token-production-attestation-receipt-journal.sql",
-    sha256: expected,
-  });
-  assert.equal(expected, "393321f13e663d4dc5e01c0bd9894b336aa895ad7c922fb95e63bd0de147d3c9");
+  const storageChecksum = createHash("sha256").update(storageSql).digest("hex");
+  const hardeningChecksum = createHash("sha256").update(hardeningSql).digest("hex");
+  assert.deepEqual(manifest.migrations.slice(-2), [
+    {
+      id: "FND-0019",
+      file: "FND-0019-internal-token-production-attestation-receipt-journal.sql",
+      sha256: storageChecksum,
+    },
+    {
+      id: "FND-0020",
+      file: "FND-0020-internal-token-production-attestation-receipt-append-hardening.sql",
+      sha256: hardeningChecksum,
+    },
+  ]);
+  assert.equal(
+    storageChecksum,
+    "393321f13e663d4dc5e01c0bd9894b336aa895ad7c922fb95e63bd0de147d3c9",
+  );
+  assert.equal(
+    hardeningChecksum,
+    "ee9fa8612b9a778b0dbf265baf82069bb8b547d8d11086fb2cd59e9f01118860",
+  );
 });
 
-test("Postgres adapter is one stored-function call and aggregate-only", async () => {
+test("Postgres adapter uses one JSONB command and an aggregate-only result", async () => {
   const source = await readFile(
     new URL(
       "../../tooling/scripts/internal-token-production-attestation-receipt-postgres.mjs",
@@ -107,17 +169,26 @@ test("Postgres adapter is one stored-function call and aggregate-only", async ()
   );
   assert.match(
     source,
-    /platform\.append_internal_token_production_attestation_receipt_journal/u,
+    /platform\.record_internal_token_production_attestation_receipt_batch/u,
   );
+  assert.match(source, /\$1::jsonb/u);
+  assert.match(source, /\[JSON\.stringify\(proposedCommand\)\]/u);
+  assert.match(source, /\["acknowledgment"\]/u);
   assert.match(
     source,
     /platform\.read_internal_token_production_attestation_receipt_journal_state/u,
   );
-  assert.match(source, /createInternalTokenProductionAttestationReceiptJournalEntryDigest/u);
+  assert.match(
+    source,
+    /createInternalTokenProductionAttestationReceiptJournalEntryDigest/u,
+  );
   assert.match(
     source,
     /createInternalTokenProductionAttestationReceiptJournalAcknowledgmentDigest/u,
   );
   assert.doesNotMatch(source, /SELECT \*/u);
-  assert.doesNotMatch(source, /privateKey|providerResource|databaseUrl|receiptPayload/u);
+  assert.doesNotMatch(
+    source,
+    /privateKey|providerResource|databaseUrl|receiptPayload/u,
+  );
 });
