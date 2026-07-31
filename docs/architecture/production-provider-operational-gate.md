@@ -4,7 +4,7 @@
 
 The operational gate sits in front of the recorded internal-token provider signing path. It verifies that a provider is currently permitted and healthy enough to receive a signing request before any provider or durable-journal operation runs.
 
-This boundary does not provision a provider, create a KMS or HSM key, configure workload identity, choose a production owner, or approve production launch.
+This boundary does not provision a provider, create a KMS or HSM key, configure workload identity, or choose a production owner. It does not approve production launch.
 
 ## Policy evidence
 
