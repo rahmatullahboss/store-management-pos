@@ -1,6 +1,6 @@
 name: Apply asymmetric token checkpoint
 
-# Verification trigger: obsolete status rewrite removed.
+# Verification trigger: patcher aligned to current status contract.
 on:
   push:
     branches:
@@ -59,6 +59,19 @@ jobs:
           echo "66cc18095a55c3007f6711a27f00380ac643078da18d6a73ca5983d0f3618a2a  /tmp/asymmetric-overlay.tar.gz" | sha256sum --check --strict
           gzip --test /tmp/asymmetric-overlay.tar.gz
           tar --extract --gzip --file /tmp/asymmetric-overlay.tar.gz --directory .
+          python3 - <<'PY'
+          from pathlib import Path
+
+          patcher = Path("tooling/scripts/apply-asymmetric-checkpoint.py")
+          text = patcher.read_text()
+          old = "[REDACTED_SECRET]"
+          new = "cloudflare_worker_secret"
+          if text.count(old) != 1:
+              raise SystemExit(
+                  f"expected one obsolete status secret marker in patcher, found {text.count(old)}"
+              )
+          patcher.write_text(text.replace(old, new))
+          PY
           python3 tooling/scripts/apply-asymmetric-checkpoint.py
           python3 - <<'PY'
           from pathlib import Path
