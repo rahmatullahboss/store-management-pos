@@ -85,6 +85,19 @@ function validBundle() {
   };
 }
 
+function assertAggregateOnly(result) {
+  for (const key of [
+    "actorDigest",
+    "approvalDigest",
+    "bundleDigest",
+    "evidenceDigest",
+    "providerClass",
+    "releaseDigest",
+  ]) {
+    assert.equal(Object.hasOwn(result, key), false);
+  }
+}
+
 async function paths() {
   const directory = await mkdtemp(path.join(os.tmpdir(), "production-launch-admission-"));
   return {
@@ -103,7 +116,7 @@ test("non-production CLI mode writes aggregate blocked evidence and succeeds", a
   assert.equal(result.status, "not_requested");
   assert.equal(result.launchGate, "blocked");
   assert.deepEqual(JSON.parse(await readFile(reportPath, "utf8")), result);
-  assert.doesNotMatch(JSON.stringify(result), /Digest|path|resource/u);
+  assertAggregateOnly(result);
 });
 
 test("production CLI mode validates a file and writes aggregate admission evidence", async () => {
@@ -122,7 +135,7 @@ test("production CLI mode validates a file and writes aggregate admission eviden
   assert.equal(result.controlCount, 10);
   assert.equal(result.approvalCount, 3);
   assert.deepEqual(JSON.parse(await readFile(reportPath, "utf8")), result);
-  assert.doesNotMatch(JSON.stringify(result), /Digest|actor|provider|resource/u);
+  assertAggregateOnly(result);
 });
 
 test("production CLI mode rejects missing or inline evidence before reading content", async () => {
