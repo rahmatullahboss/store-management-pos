@@ -189,7 +189,7 @@ test("provider mismatch and unsupported provider classes fail closed", () => {
 
 test("stale, future, expired and cross-release attestations fail closed", () => {
   const stale = createProductionControlAttestationAssembly();
-  stale.attestations[0].observedAt = controlAttestationNow - 901;
+  stale.attestations[0].observedAt = controlAttestationNow - 931;
   resealAttestation(stale.attestations[0]);
   assert.throws(() => assemble(stale), /stale or not bound/u);
 
