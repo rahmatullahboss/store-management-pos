@@ -25,9 +25,12 @@ test("persistent staging uses a dedicated Neon project instead of generic dispos
     "utf8",
   );
   assert.match(policy, /ops\/persistent-admin-pos-staging-v1/u);
+  assert.match(policy, /agent\/asymmetric-internal-token-jwks/u);
   assert.match(policy, /dedicated-persistent-staging-neon/u);
   assert.match(policy, /morning-flower-46531465/u);
   assert.match(policy, /br-empty-sound-afkx5vkj/u);
+  assert.match(policy, /implementationBranch: branch !== persistentStagingBranch/u);
   assert.match(policy, /destructiveCleanupPerformed: false/u);
+  assert.match(policy, /genericPreviewCapacityConsumed: false/u);
   assert.match(policy, /await import\("\.\/neon-preview-ci\.mjs"\)/u);
 });
