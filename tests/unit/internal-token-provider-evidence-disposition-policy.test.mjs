@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   buildInternalTokenProviderEvidenceExport,
   createInternalTokenProviderEvidenceCustodyCommand,
+  createInternalTokenProviderEvidenceHoldDigest,
   createInternalTokenProviderEvidencePolicyDigest,
 } from "../../tooling/scripts/internal-token-provider-evidence-custody.mjs";
 import {
@@ -39,7 +40,11 @@ function sourceEvidence(index, occurredAt) {
   };
 }
 
-function custodyEvidence(records = [sourceEvidence(1, now - 3 * 86_400)], retentionDays = 1) {
+function custodyEvidence(
+  records = [sourceEvidence(1, now - 3 * 86_400)],
+  retentionDays = 1,
+  holds = [],
+) {
   const policyBody = {
     approvalDigest: digest("retention-approval"),
     effectiveAt: now - 10_000,
@@ -54,7 +59,7 @@ function custodyEvidence(records = [sourceEvidence(1, now - 3 * 86_400)], retent
       ...policyBody,
       policyDigest: createInternalTokenProviderEvidencePolicyDigest(policyBody),
     },
-    [],
+    holds,
     now,
   );
   return createInternalTokenProviderEvidenceCustodyCommand(exported, 1, null);
@@ -153,12 +158,23 @@ test("two-person approval, hold recheck and receipt produce a sealed disposition
 });
 
 test("request requires the complete sealed export to be eligible and past retention", () => {
-  const partial = custodyEvidence([
-    sourceEvidence(1, now - 3 * 86_400),
-    sourceEvidence(2, now - 100),
-  ]);
+  const holdBody = {
+    imposedAt: now - 100,
+    releasedAt: null,
+    scopeEndsAt: null,
+    scopeStartsAt: now - 4 * 86_400,
+    schemaVersion: 1,
+  };
+  const held = custodyEvidence(
+    [sourceEvidence(1, now - 3 * 86_400)],
+    1,
+    [{
+      ...holdBody,
+      holdDigest: createInternalTokenProviderEvidenceHoldDigest(holdBody),
+    }],
+  );
   assert.throws(
-    () => dispositionRequest(partial),
+    () => dispositionRequest(held),
     /not entirely eligible/u,
   );
   const futureRetention = custodyEvidence([sourceEvidence(1, now - 100)], 1);
