@@ -17,6 +17,7 @@ const dedicatedStagingImplementationBranches = new Set([
   "agent/internal-token-durable-journal",
   "agent/internal-token-journal-command-boundary",
   "agent/internal-token-journal-authoritative-history",
+  "agent/internal-token-provider-signing-receipt",
 ]);
 const usesDedicatedStagingNeon =
   branch === persistentStagingBranch ||
