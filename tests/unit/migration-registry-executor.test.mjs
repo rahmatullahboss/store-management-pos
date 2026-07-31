@@ -48,7 +48,7 @@ test("current migration registry is deterministic, complete and bounded", async 
   assert.deepEqual(plan.metadata, {
     schemaVersion: 1,
     manifestCount: 17,
-    migrationCount: 64,
+    migrationCount: 65,
     moduleIds: [
       "FOUNDATION",
       "MOD-A-CATALOG",
@@ -70,8 +70,8 @@ test("current migration registry is deterministic, complete and bounded", async 
     ],
     migrationIds: plan.metadata.migrationIds,
   });
-  assert.equal(plan.metadata.migrationIds.length, 64);
-  assert.equal(new Set(plan.metadata.migrationIds).size, 64);
+  assert.equal(plan.metadata.migrationIds.length, 65);
+  assert.equal(new Set(plan.metadata.migrationIds).size, 65);
   assert.equal(plan.metadata.migrationIds[0], "FND-0001");
   assert.equal(plan.metadata.migrationIds.at(-1), "INT-0007");
   assert.deepEqual(Object.keys(plan).sort(), ["apply", "metadata"]);
