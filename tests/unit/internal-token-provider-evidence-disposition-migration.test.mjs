@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
@@ -47,12 +48,15 @@ test("disposition schema requires two approvals and zero legal holds without raw
 });
 
 test("foundation manifest pins the provider evidence disposition checksum", async () => {
+  const sql = await migration();
+  const actual = createHash("sha256").update(sql).digest("hex");
   const manifest = JSON.parse(
     await readFile(new URL("../../database/foundation/manifest.json", import.meta.url), "utf8"),
   );
+  assert.equal(actual, "0".repeat(64));
   assert.deepEqual(manifest.migrations.find(({ id }) => id === "FND-0018"), {
     id: "FND-0018",
     file: "FND-0018-internal-token-provider-evidence-disposition.sql",
-    sha256: "CHECKSUM_PENDING",
+    sha256: "0".repeat(64),
   });
 });
