@@ -2,11 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   INTERNAL_TOKEN_KEY_CHANGE_APPEND_SQL,
+  INTERNAL_TOKEN_KEY_CHANGE_HISTORY_SQL,
   recordInternalTokenKeyChangeJournalEvent,
 } from "../../tooling/scripts/internal-token-key-change-command.mjs";
-import {
-  appendInternalTokenKeyChangeJournalEvent,
-} from "../../tooling/scripts/internal-token-key-change-journal.mjs";
 
 const changeDigest = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 const proposerDigest = "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB";
@@ -27,15 +25,34 @@ function event(sequence, stage, eventDigest, previousEventDigest, evidenceDigest
 }
 
 function governanceClient(calls) {
+  const rows = [];
   return {
     async query(sql, params) {
       calls.push({ sql, params });
+      if (sql === INTERNAL_TOKEN_KEY_CHANGE_HISTORY_SQL) {
+        return {
+          rows: rows
+            .filter((row) => row.change_digest === params[0])
+            .sort((left, right) => left.sequence - right.sequence),
+        };
+      }
+      assert.equal(sql, INTERNAL_TOKEN_KEY_CHANGE_APPEND_SQL);
+      rows.push({
+        change_digest: params[0],
+        change_type: params[1],
+        sequence: params[2],
+        stage: params[3],
+        event_digest: params[4],
+        evidence_digest: params[5],
+        previous_event_digest: params[6],
+        occurred_at: String(Math.floor(Date.parse(params[7]) / 1_000)),
+      });
       return { rows: [{ recorded: true }] };
     },
   };
 }
 
-test("durable journal command records a validated lifecycle without exposing identifiers", async () => {
+test("durable journal command loads authoritative history and exposes aggregates only", async () => {
   const calls = [];
   const client = governanceClient(calls);
   const requested = event(
@@ -46,11 +63,9 @@ test("durable journal command records a validated lifecycle without exposing ide
     "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
   );
   const requestedResult = await recordInternalTokenKeyChangeJournalEvent(client, {
-    history: [],
     event: requested,
     approval: undefined,
   });
-  const requestedHistory = appendInternalTokenKeyChangeJournalEvent([], requested);
 
   const approved = event(
     2,
@@ -60,7 +75,6 @@ test("durable journal command records a validated lifecycle without exposing ide
     "HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH",
   );
   const approvedResult = await recordInternalTokenKeyChangeJournalEvent(client, {
-    history: requestedHistory,
     event: approved,
     approval: {
       request: {
@@ -77,7 +91,6 @@ test("durable journal command records a validated lifecycle without exposing ide
       now: 1_800_000_030,
     },
   });
-  const approvedHistory = appendInternalTokenKeyChangeJournalEvent(requestedHistory, approved);
 
   const applied = event(
     3,
@@ -87,7 +100,6 @@ test("durable journal command records a validated lifecycle without exposing ide
     "JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ",
   );
   const appliedResult = await recordInternalTokenKeyChangeJournalEvent(client, {
-    history: approvedHistory,
     event: applied,
     approval: undefined,
   });
@@ -108,9 +120,20 @@ test("durable journal command records a validated lifecycle without exposing ide
   assert.equal(approvedResult.eventCount, 2);
   assert.equal(appliedResult.finalStage, "applied");
   assert.equal(appliedResult.terminal, true);
-  assert.equal(calls.length, 3);
-  assert.ok(calls.every((call) => call.sql === INTERNAL_TOKEN_KEY_CHANGE_APPEND_SQL));
-  assert.deepEqual(calls[2].params, [
+  assert.equal(calls.length, 6);
+  assert.deepEqual(
+    calls.map((call) => call.sql),
+    [
+      INTERNAL_TOKEN_KEY_CHANGE_HISTORY_SQL,
+      INTERNAL_TOKEN_KEY_CHANGE_APPEND_SQL,
+      INTERNAL_TOKEN_KEY_CHANGE_HISTORY_SQL,
+      INTERNAL_TOKEN_KEY_CHANGE_APPEND_SQL,
+      INTERNAL_TOKEN_KEY_CHANGE_HISTORY_SQL,
+      INTERNAL_TOKEN_KEY_CHANGE_APPEND_SQL,
+    ],
+  );
+  assert.deepEqual(calls[4].params, [changeDigest]);
+  assert.deepEqual(calls[5].params, [
     changeDigest,
     "scheduled_rotation",
     3,
