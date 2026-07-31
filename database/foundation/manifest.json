@@ -76,6 +76,11 @@
       "id": "FND-0015",
       "file": "FND-0015-internal-token-key-change-journal.sql",
       "sha256": "9c01584b710f8332aeb80381b7ef504f743fcdbb47589740288d19f2d37f6dda"
+    },
+    {
+      "id": "FND-0016",
+      "file": "FND-0016-internal-token-provider-signing-journal.sql",
+      "sha256": "e790b6245ba49724cdd65f8142213249a9c7a59cb3151f366d8e699e9c820ad8"
     }
   ]
 }
