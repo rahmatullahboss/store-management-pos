@@ -10,18 +10,18 @@ const end = source.indexOf(endMarker, start + startMarker.length);
 if (start < 0 || end < 0 || source.indexOf(startMarker, start + 1) >= 0) {
   throw new Error("lifecycle whitespace cleanup block is not uniquely bounded");
 }
-let repaired = `${source.slice(0, start)}${source.slice(end)}`;
-const oldTail = `writeFileSync("package.json", basePackage);
-unlinkSync(fileURLToPath(import.meta.url));`;
-const newTail = `const packageJson = JSON.parse(basePackage);
-packageJson.scripts.postverify =
-  "node tooling/scripts/postverify-asymmetric-checkpoint-cleanup.mjs";
-writeFileSync("package.json", \`${"${JSON.stringify(packageJson, null, 2)}\\n"}\`);
-unlinkSync(fileURLToPath(import.meta.url));`;
-if (repaired.split(oldTail).length - 1 !== 1) {
-  throw new Error("temporary postverify package lifecycle target mismatch");
+writeFileSync(hookPath, `${source.slice(0, start)}${source.slice(end)}`);
+
+const patcherPath = "tooling/scripts/staging-custom-auth-patch.mjs";
+const patcher = readFileSync(patcherPath, "utf8");
+const oldStatus = "Status: staging implementation pending exact-head live evidence  ";
+const newStatus = "Status: staging implementation pending exact-head live evidence";
+if (patcher.split(oldStatus).length - 1 !== 1) {
+  throw new Error("lifecycle status generation target is not unique");
 }
-repaired = repaired.replace(oldTail, newTail);
-writeFileSync(hookPath, repaired);
+writeFileSync(patcherPath, patcher.replace(oldStatus, newStatus));
+
+const postverifyPath = "tooling/scripts/postverify-asymmetric-checkpoint-cleanup.mjs";
+unlinkSync(postverifyPath);
 await import("./prebuild-asymmetric-checkpoint-fix.mjs");
 unlinkSync(fileURLToPath(import.meta.url));
