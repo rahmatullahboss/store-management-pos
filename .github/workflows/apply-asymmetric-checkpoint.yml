@@ -37,20 +37,24 @@ jobs:
           import pathlib
           import re
 
-          expected = "66024f121e9df814c78449d534d6c8192f2911dd5ef259e6075233479544fa1b"
-          chunks = [path.read_text(encoding="utf-8") for path in sorted(pathlib.Path(".checkpoint").glob("asymmetric-overlay-*.b64"))]
-          if len(chunks) != 5:
-              raise SystemExit(f"expected 5 checkpoint chunks, found {len(chunks)}")
-          encoded = re.sub(r"[^A-Za-z0-9+/]", "", "".join(chunks))
-          encoded += "=" * (-len(encoded) % 4)
-          payload = base64.b64decode(encoded, validate=True)
+          expected = "c9a75c8592808bffc5c16f590d167352f2db3d1ce20f97235a9a3337c7ab0c3b"
+          paths = sorted(pathlib.Path(".checkpoint").glob("asymmetric-overlay-*.b64"))
+          if len(paths) != 5:
+              raise SystemExit(f"expected 5 checkpoint chunks, found {len(paths)}")
+
+          parts = []
+          for path in paths:
+              encoded = re.sub(r"[^A-Za-z0-9+/]", "", path.read_text(encoding="utf-8"))
+              encoded += "=" * (-len(encoded) % 4)
+              parts.append(base64.b64decode(encoded, validate=True))
+          payload = b"".join(parts)
           digest = hashlib.sha256(payload).hexdigest()
-          print(f"joined checkpoint bytes={len(payload)} sha256={digest}")
+          print(f"per-chunk checkpoint bytes={len(payload)} sha256={digest}")
           if digest != expected:
               raise SystemExit("checkpoint transport digest mismatch")
           pathlib.Path("/tmp/asymmetric-overlay.tar.gz").write_bytes(payload)
           PY
-          echo "66024f121e9df814c78449d534d6c8192f2911dd5ef259e6075233479544fa1b  /tmp/asymmetric-overlay.tar.gz" | sha256sum --check --strict
+          echo "c9a75c8592808bffc5c16f590d167352f2db3d1ce20f97235a9a3337c7ab0c3b  /tmp/asymmetric-overlay.tar.gz" | sha256sum --check --strict
           tar --list --gzip --file /tmp/asymmetric-overlay.tar.gz
           tar --extract --gzip --file /tmp/asymmetric-overlay.tar.gz --directory .
           python3 tooling/scripts/apply-asymmetric-checkpoint.py
