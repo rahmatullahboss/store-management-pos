@@ -33,6 +33,7 @@ test("persistent staging uses a dedicated Neon project instead of generic dispos
   assert.match(policy, /agent\/internal-token-journal-command-boundary/u);
   assert.match(policy, /agent\/internal-token-journal-authoritative-history/u);
   assert.match(policy, /agent\/internal-token-provider-signing-receipt/u);
+  assert.match(policy, /agent\/internal-token-provider-signing-journal/u);
   assert.match(policy, /dedicated-persistent-staging-neon/u);
   assert.match(policy, /morning-flower-46531465/u);
   assert.match(policy, /br-empty-sound-afkx5vkj/u);
