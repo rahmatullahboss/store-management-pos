@@ -41,14 +41,22 @@ replaceExact(
   );`,
 );
 
-replaceOrAccept(
-  "apps/api/src/staging-asymmetric-token.ts",
-  "async function importPublicKey(publicJwk: RsaPublicJwk, error: () => PlatformError): Promise<CryptoKey> {",
-  `async function importPublicKey(
+{
+  const path = "apps/api/src/staging-asymmetric-token.ts";
+  const source = readFileSync(path, "utf8");
+  const formatted = `async function importPublicKey(
   publicJwk: RsaPublicJwk,
   error: () => PlatformError,
-): Promise<CryptoKey> {`,
-);
+): Promise<CryptoKey> {`;
+  if (!source.includes("async function importPublicKey(\n")) {
+    const pattern = /async function importPublicKey\([^\n]+\): Promise<CryptoKey> \{/gu;
+    const matches = [...source.matchAll(pattern)];
+    if (matches.length !== 1) {
+      throw new Error(`${path}: expected one single-line importPublicKey signature, found ${matches.length}`);
+    }
+    writeFileSync(path, source.replace(pattern, formatted));
+  }
+}
 
 replaceExact(
   "tooling/scripts/staging-custom-auth-patch.mjs",
