@@ -9,14 +9,6 @@ function replaceExact(path, oldValue, newValue) {
   writeFileSync(path, source.replace(oldValue, newValue));
 }
 
-function replaceOrAccept(path, oldValue, newValue) {
-  const source = readFileSync(path, "utf8");
-  if (source.includes(newValue)) return;
-  const count = source.split(oldValue).length - 1;
-  if (count !== 1) throw new Error(`${path}: expected one shape target, found ${count}`);
-  writeFileSync(path, source.replace(oldValue, newValue));
-}
-
 replaceExact(
   "apps/api/src/staging-asymmetric-token.ts",
   `  const signingInput = \`${"${headerSegment}.${payloadSegment}"}\`;
@@ -91,25 +83,54 @@ replaceExact(
   "/privateJwk|\"d\"|activeKid|previousKid/u",
 );
 
-replaceOrAccept(
-  "tests/unit/staging-asymmetric-deployment.test.mjs",
-  "    assert.match(patchSource, /rotateStagingInternalTokenKeyset\\(activeKeyPair, previousKeyPair, now\\)/u);",
-  `    assert.match(
-      patchSource,
-      /rotateStagingInternalTokenKeyset\\(activeKeyPair, previousKeyPair, now\\)/u,
-    );`,
-);
-
-replaceOrAccept(
-  "tests/unit/staging-asymmetric-deployment.test.mjs",
-  "  assert.equal(workflow.match(/Persistent Admin POS Staging \\(asymmetric token lifecycle\\)/gu)?.length, 1);",
-  `  assert.equal(
-    workflow.match(
-      /Persistent Admin POS Staging \\(asymmetric token lifecycle\\)/gu,
-    )?.length,
-    1,
-  );`,
-);
+{
+  const path = "tests/unit/staging-asymmetric-deployment.test.mjs";
+  const source = readFileSync(path, "utf8");
+  const lines = source.split("\n");
+  const rotateIndexes = lines
+    .map((line, index) =>
+      line.includes("assert.match") && line.includes("rotateStagingInternalTokenKeyset")
+        ? index
+        : -1,
+    )
+    .filter((index) => index >= 0);
+  if (rotateIndexes.length > 1) {
+    throw new Error(`${path}: multiple long rotation assertions found`);
+  }
+  if (rotateIndexes.length === 1) {
+    lines.splice(
+      rotateIndexes[0],
+      1,
+      "    assert.match(",
+      "      patchSource,",
+      "      /rotateStagingInternalTokenKeyset\\(activeKeyPair, previousKeyPair, now\\)/u,",
+      "    );",
+    );
+  }
+  const workflowIndexes = lines
+    .map((line, index) =>
+      line.includes("assert.equal") && line.includes("Persistent Admin POS Staging")
+        ? index
+        : -1,
+    )
+    .filter((index) => index >= 0);
+  if (workflowIndexes.length > 1) {
+    throw new Error(`${path}: multiple long workflow assertions found`);
+  }
+  if (workflowIndexes.length === 1) {
+    lines.splice(
+      workflowIndexes[0],
+      1,
+      "  assert.equal(",
+      "    workflow.match(",
+      "      /Persistent Admin POS Staging \\(asymmetric token lifecycle\\)/gu,",
+      "    )?.length,",
+      "    1,",
+      "  );",
+    );
+  }
+  writeFileSync(path, lines.join("\n"));
+}
 
 {
   const path = "tests/unit/staging-asymmetric-deployment.test.mjs";
