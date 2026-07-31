@@ -1,6 +1,6 @@
 name: Apply asymmetric token checkpoint
 
-# Verification trigger: status compatibility repair is AST-scoped.
+# Verification trigger: compatibility repairs are structurally scoped.
 on:
   push:
     branches:
@@ -117,36 +117,59 @@ jobs:
           PY
           python3 tooling/scripts/apply-asymmetric-checkpoint.py
           python3 - <<'PY'
+          import re
           from pathlib import Path
 
           source = Path("apps/api/src/staging-asymmetric-token.ts")
           text = source.read_text()
-          old = '''  const signingInput = `${headerSegment}.${payloadSegment}`;
-          const verified = await crypto.subtle.verify(
-            "RSASSA-PKCS1-v1_5",
-            publicKey,
-            decodeBase64Url(signatureSegment, "Staging token signature is invalid"),
-            encoder.encode(signingInput),
-          );'''
-          new = '''  const signingInput = `${headerSegment}.${payloadSegment}`;
-          const decodedSignature = decodeBase64Url(
-            signatureSegment,
-            "Staging token signature is invalid",
-          );
-          const signature = new Uint8Array(decodedSignature.byteLength);
-          signature.set(decodedSignature);
-          const verified = await crypto.subtle.verify(
-            "RSASSA-PKCS1-v1_5",
-            publicKey,
-            signature.buffer,
-            encoder.encode(signingInput),
-          );'''
-          if old in text:
-              if text.count(old) != 1:
-                  raise SystemExit("RS256 signature BufferSource repair target is ambiguous")
-              source.write_text(text.replace(old, new))
-          elif new not in text:
-              raise SystemExit("RS256 signature BufferSource is neither original nor repaired")
+          desired = (
+              "const decodedSignature = decodeBase64Url(" in text
+              and "signature.buffer" in text
+          )
+          if not desired:
+              signature_pattern = re.compile(
+                  r'decodeBase64Url\(\s*signatureSegment,\s*'
+                  r'"Staging token signature is invalid",?\s*\)',
+                  re.MULTILINE,
+              )
+              matches = list(signature_pattern.finditer(text))
+              if len(matches) != 1:
+                  raise SystemExit(
+                      "expected one direct staging signature decode expression, "
+                      f"found {len(matches)}"
+                  )
+              match = matches[0]
+              verify_start = text.rfind(
+                  "const verified = await crypto.subtle.verify(",
+                  0,
+                  match.start(),
+              )
+              if verify_start < 0:
+                  raise SystemExit("staging signature verify call was not found")
+              line_start = text.rfind("\n", 0, verify_start) + 1
+              indentation = text[line_start:verify_start]
+              if indentation.strip():
+                  raise SystemExit("staging signature verify indentation is invalid")
+              declaration = (
+                  f'{indentation}const decodedSignature = decodeBase64Url(\n'
+                  f'{indentation}  signatureSegment,\n'
+                  f'{indentation}  "Staging token signature is invalid",\n'
+                  f'{indentation});\n'
+                  f'{indentation}const signature = new Uint8Array(decodedSignature.byteLength);\n'
+                  f'{indentation}signature.set(decodedSignature);\n'
+              )
+              repaired = (
+                  text[:line_start]
+                  + declaration
+                  + text[line_start:match.start()]
+                  + "signature.buffer"
+                  + text[match.end():]
+              )
+              if repaired.count("const decodedSignature = decodeBase64Url(") != 1:
+                  raise SystemExit("staging decoded signature declaration is not unique")
+              if repaired.count("signature.buffer") != 1:
+                  raise SystemExit("staging owned signature buffer is not unique")
+              source.write_text(repaired)
           PY
           rm -rf .checkpoint
           rm -f tooling/scripts/apply-asymmetric-checkpoint.py
