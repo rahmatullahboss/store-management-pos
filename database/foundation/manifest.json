@@ -91,6 +91,11 @@
       "id": "FND-0018",
       "file": "FND-0018-internal-token-provider-evidence-disposition.sql",
       "sha256": "411f098c38083d10f236aba8139878767cc2d2cc11b67cffa497856de2f569d0"
+    },
+    {
+      "id": "FND-0019",
+      "file": "FND-0019-internal-token-production-attestation-receipt-journal.sql",
+      "sha256": "393321f13e663d4dc5e01c0bd9894b336aa895ad7c922fb95e63bd0de147d3c9"
     }
   ]
 }
