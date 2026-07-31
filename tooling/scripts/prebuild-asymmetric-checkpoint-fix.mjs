@@ -39,15 +39,15 @@ replaceExact(
   "/privateJwk|\"d\"|activeKid|previousKid/u",
 );
 
-replaceExact(
-  "tests/unit/staging-asymmetric-deployment.test.mjs",
-  `  assert.match(lifecycle, /KMS\/HSM-backed non-exportable private keys/u);
-  assert.match(lifecycle, /Artifacts and workflow summaries may contain only algorithm/u);
-}`,
-  `  assert.match(lifecycle, /KMS\/HSM-backed non-exportable private keys/u);
-  assert.match(lifecycle, /Artifacts and workflow summaries may contain only algorithm/u);
-});`,
-);
+{
+  const path = "tests/unit/staging-asymmetric-deployment.test.mjs";
+  const source = readFileSync(path, "utf8");
+  if (source.endsWith("\n}\n")) {
+    writeFileSync(path, `${source.slice(0, -3)}\n});\n`);
+  } else if (!source.endsWith("\n});\n")) {
+    throw new Error(`${path}: bounded final test closure target mismatch`);
+  }
+}
 
 replaceExact(
   "tests/unit/staging-operational-release.test.mjs",
