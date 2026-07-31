@@ -49,14 +49,15 @@ test("disposition schema requires two approvals and zero legal holds without raw
 
 test("foundation manifest pins the provider evidence disposition checksum", async () => {
   const sql = await migration();
+  const expected = "95e649bd586f76af963a50fa796a247c62ae1b54b9b069c0e6d6d4d61823c24f";
   const actual = createHash("sha256").update(sql).digest("hex");
   const manifest = JSON.parse(
     await readFile(new URL("../../database/foundation/manifest.json", import.meta.url), "utf8"),
   );
-  assert.equal(actual, "0".repeat(64));
+  assert.equal(actual, expected);
   assert.deepEqual(manifest.migrations.find(({ id }) => id === "FND-0018"), {
     id: "FND-0018",
     file: "FND-0018-internal-token-provider-evidence-disposition.sql",
-    sha256: "0".repeat(64),
+    sha256: expected,
   });
 });
