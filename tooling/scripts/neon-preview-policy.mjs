@@ -14,6 +14,7 @@ const dedicatedStagingImplementationBranches = new Set([
   "agent/internal-token-kms-signer-boundary",
   "agent/internal-token-provider-audit-policy",
   "agent/internal-token-change-journal-policy",
+  "agent/internal-token-durable-journal",
 ]);
 const usesDedicatedStagingNeon =
   branch === persistentStagingBranch ||
