@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { setTimeout as delay } from "node:timers/promises";
 import { Client } from "@neondatabase/serverless";
 import {
   createInternalTokenProductionAttestationReceiptBatchDigest,
@@ -63,7 +64,7 @@ async function protectedCoordinates(client) {
   return result.rows[0];
 }
 
-async function rowCounts(client, batchNonceDigest) {
+async function rowCounts(client, batchNonceDigests) {
   const result = await client.query(
     `SELECT
        (SELECT count(*)::int
@@ -72,8 +73,8 @@ async function rowCounts(client, batchNonceDigest) {
           FROM platform.internal_token_production_attestation_receipt_journal) AS entry_rows,
        (SELECT count(*)::int
           FROM platform.internal_token_production_attestation_receipt_journal
-         WHERE batch_nonce_digest = $1) AS matching_batch_rows`,
-    [batchNonceDigest],
+         WHERE batch_nonce_digest = ANY($1::text[])) AS matching_batch_rows`,
+    [batchNonceDigests],
   );
   return result.rows[0];
 }
@@ -81,36 +82,194 @@ async function rowCounts(client, batchNonceDigest) {
 async function privileges(client) {
   const result = await client.query(`
     SELECT
-      NOT has_table_privilege(
-        'store_app_runtime',
-        'platform.internal_token_production_attestation_receipt_journal',
-        'SELECT,INSERT,UPDATE,DELETE'
+      NOT (
+        has_table_privilege(
+          'store_app_runtime',
+          'platform.internal_token_production_attestation_receipt_journal',
+          'SELECT'
+        ) OR has_table_privilege(
+          'store_app_runtime',
+          'platform.internal_token_production_attestation_receipt_journal',
+          'INSERT'
+        ) OR has_table_privilege(
+          'store_app_runtime',
+          'platform.internal_token_production_attestation_receipt_journal',
+          'UPDATE'
+        ) OR has_table_privilege(
+          'store_app_runtime',
+          'platform.internal_token_production_attestation_receipt_journal',
+          'DELETE'
+        )
       ) AS runtime_entry_dml_denied,
-      NOT has_table_privilege(
-        'store_app_runtime',
-        'platform.internal_token_production_attestation_receipt_journal_state',
-        'SELECT,INSERT,UPDATE,DELETE'
+      NOT (
+        has_table_privilege(
+          'store_app_runtime',
+          'platform.internal_token_production_attestation_receipt_journal_state',
+          'SELECT'
+        ) OR has_table_privilege(
+          'store_app_runtime',
+          'platform.internal_token_production_attestation_receipt_journal_state',
+          'INSERT'
+        ) OR has_table_privilege(
+          'store_app_runtime',
+          'platform.internal_token_production_attestation_receipt_journal_state',
+          'UPDATE'
+        ) OR has_table_privilege(
+          'store_app_runtime',
+          'platform.internal_token_production_attestation_receipt_journal_state',
+          'DELETE'
+        )
       ) AS runtime_state_dml_denied,
-      NOT has_table_privilege(
-        'store_app_reporting',
-        'platform.internal_token_production_attestation_receipt_journal',
-        'SELECT,INSERT,UPDATE,DELETE'
+      NOT (
+        has_table_privilege(
+          'store_app_reporting',
+          'platform.internal_token_production_attestation_receipt_journal',
+          'SELECT'
+        ) OR has_table_privilege(
+          'store_app_reporting',
+          'platform.internal_token_production_attestation_receipt_journal',
+          'INSERT'
+        ) OR has_table_privilege(
+          'store_app_reporting',
+          'platform.internal_token_production_attestation_receipt_journal',
+          'UPDATE'
+        ) OR has_table_privilege(
+          'store_app_reporting',
+          'platform.internal_token_production_attestation_receipt_journal',
+          'DELETE'
+        )
       ) AS reporting_entry_dml_denied,
       has_function_privilege(
         'store_key_governance_runtime',
-        'platform.append_internal_token_production_attestation_receipt_journal(smallint,text,text,text,text,text,text,text,text,text[],bigint,bigint,text)',
+        'platform.record_internal_token_production_attestation_receipt_batch(jsonb)',
         'EXECUTE'
       ) AS governance_append_granted,
       NOT has_function_privilege(
-        'public',
+        'store_app_runtime',
+        'platform.record_internal_token_production_attestation_receipt_batch(jsonb)',
+        'EXECUTE'
+      ) AS runtime_append_denied,
+      NOT has_function_privilege(
+        'store_app_reporting',
+        'platform.record_internal_token_production_attestation_receipt_batch(jsonb)',
+        'EXECUTE'
+      ) AS reporting_append_denied,
+      NOT has_function_privilege(
+        'store_key_governance_runtime',
         'platform.append_internal_token_production_attestation_receipt_journal(smallint,text,text,text,text,text,text,text,text,text[],bigint,bigint,text)',
         'EXECUTE'
-      ) AS public_append_denied`);
+      ) AS positional_append_revoked`);
   return result.rows[0];
 }
 
 function sameCoordinates(left, right) {
   return JSON.stringify(left) === JSON.stringify(right);
+}
+
+async function rejectedInsideSavepoint(client, savepoint, operation) {
+  await client.query(`SAVEPOINT ${savepoint}`);
+  let rejected = false;
+  try {
+    await operation();
+  } catch {
+    rejected = true;
+  }
+  await client.query(`ROLLBACK TO SAVEPOINT ${savepoint}`);
+  await client.query(`RELEASE SAVEPOINT ${savepoint}`);
+  return rejected;
+}
+
+async function waitForAdvisoryWaiter(client) {
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    const result = await client.query(`
+      SELECT count(*)::int AS waiter_count
+      FROM pg_locks
+      WHERE locktype = 'advisory'
+        AND classid::bigint = 742901
+        AND objid::bigint = 20
+        AND granted = false`);
+    if (Number(result.rows[0]?.waiter_count) > 0) return true;
+    await delay(200);
+  }
+  return false;
+}
+
+async function verifyConcurrentSerialization({
+  connectionString,
+  label,
+  expectedJournalVersion,
+  expectedPreviousJournalDigest,
+  previousSequenceCheckpointDigest,
+}) {
+  const first = new Client({ connectionString });
+  const second = new Client({ connectionString });
+  const observer = new Client({ connectionString });
+  await Promise.all([first.connect(), second.connect(), observer.connect()]);
+  let firstOpen = false;
+  let secondOpen = false;
+  try {
+    await Promise.all([first.query("BEGIN"), second.query("BEGIN")]);
+    firstOpen = true;
+    secondOpen = true;
+    const recordedAt = Date.now();
+    const firstRecorder =
+      createPostgresInternalTokenProductionAttestationReceiptJournalRecorder(first);
+    const secondRecorder =
+      createPostgresInternalTokenProductionAttestationReceiptJournalRecorder(second);
+    const firstCommand = createCommand({
+      label: `${label}:concurrent-first`,
+      expectedJournalVersion,
+      expectedPreviousJournalDigest,
+      previousSequenceCheckpointDigest,
+      recordedAt,
+    });
+    const secondCommand = createCommand({
+      label: `${label}:concurrent-second`,
+      expectedJournalVersion,
+      expectedPreviousJournalDigest,
+      previousSequenceCheckpointDigest,
+      recordedAt,
+    });
+
+    const firstAcknowledgment = await firstRecorder.append(firstCommand);
+    if (firstAcknowledgment.status !== "recorded") {
+      throw new Error("First concurrent append was not recorded");
+    }
+    const secondPromise = secondRecorder.append(secondCommand);
+    if (!(await waitForAdvisoryWaiter(observer))) {
+      throw new Error("Concurrent append did not wait on the journal advisory lock");
+    }
+
+    await first.query("ROLLBACK");
+    firstOpen = false;
+    const secondAcknowledgment = await secondPromise;
+    if (secondAcknowledgment.status !== "recorded") {
+      throw new Error("Serialized concurrent append did not record after rollback");
+    }
+    await second.query("ROLLBACK");
+    secondOpen = false;
+    return Object.freeze({
+      firstBatchNonceDigest: firstCommand.batch.batchNonceDigest,
+      secondBatchNonceDigest: secondCommand.batch.batchNonceDigest,
+      serialized: true,
+    });
+  } finally {
+    if (firstOpen) {
+      try {
+        await first.query("ROLLBACK");
+      } catch {
+        // Preserve the primary evidence error.
+      }
+    }
+    if (secondOpen) {
+      try {
+        await second.query("ROLLBACK");
+      } catch {
+        // Preserve the primary evidence error.
+      }
+    }
+    await Promise.allSettled([first.end(), second.end(), observer.end()]);
+  }
 }
 
 export async function runProductionAttestationReceiptPostgresEvidence({
@@ -129,7 +288,6 @@ export async function runProductionAttestationReceiptPostgresEvidence({
   let transactionOpen = false;
   try {
     const beforeState = await protectedCoordinates(client);
-    const beforeCounts = await rowCounts(client, batchNonceDigest);
     const expectedJournalVersion = beforeState
       ? Number(beforeState.journal_version)
       : 0;
@@ -159,6 +317,12 @@ export async function runProductionAttestationReceiptPostgresEvidence({
           return await client.query(sql, parameters);
         },
       });
+    const concurrentNonces = [
+      digest(`${label}:concurrent-first:batch-nonce`),
+      digest(`${label}:concurrent-second:batch-nonce`),
+    ];
+    const trackedNonces = [batchNonceDigest, ...concurrentNonces];
+    const beforeCounts = await rowCounts(client, trackedNonces);
 
     await client.query("BEGIN");
     transactionOpen = true;
@@ -187,57 +351,63 @@ export async function runProductionAttestationReceiptPostgresEvidence({
       throw new Error("Attestation receipt journal transactional state is inconsistent");
     }
 
-    let staleCasRejected = false;
-    try {
-      await recorder.append(
-        createCommand({
-          label: `${label}:stale`,
-          expectedJournalVersion,
-          expectedPreviousJournalDigest,
-          previousSequenceCheckpointDigest,
-          recordedAt,
-        }),
-      );
-    } catch {
-      staleCasRejected = true;
-    }
+    const staleCasRejected = await rejectedInsideSavepoint(
+      client,
+      "receipt_stale_cas",
+      async () =>
+        await recorder.append(
+          createCommand({
+            label: `${label}:stale`,
+            expectedJournalVersion,
+            expectedPreviousJournalDigest,
+            previousSequenceCheckpointDigest,
+            recordedAt,
+          }),
+        ),
+    );
     if (!staleCasRejected) {
       throw new Error("Attestation receipt journal stale compare-and-swap was accepted");
     }
 
-    let nonceConflictRejected = false;
-    try {
-      await recorder.append(
-        createCommand({
-          label: `${label}:nonce-conflict`,
-          batchNonceDigest,
-          expectedJournalVersion: state.version,
-          expectedPreviousJournalDigest: state.headDigest,
-          previousSequenceCheckpointDigest:
-            state.latestSequenceCheckpointDigest,
-          recordedAt,
-        }),
-      );
-    } catch {
-      nonceConflictRejected = true;
-    }
+    const nonceConflictRejected = await rejectedInsideSavepoint(
+      client,
+      "receipt_nonce_conflict",
+      async () =>
+        await recorder.append(
+          createCommand({
+            label: `${label}:nonce-conflict`,
+            batchNonceDigest,
+            expectedJournalVersion: state.version,
+            expectedPreviousJournalDigest: state.headDigest,
+            previousSequenceCheckpointDigest:
+              state.latestSequenceCheckpointDigest,
+            recordedAt,
+          }),
+        ),
+    );
     if (!nonceConflictRejected) {
       throw new Error("Attestation receipt journal conflicting nonce was accepted");
     }
 
     const firstParameters = captured[0];
-    if (!Array.isArray(firstParameters) || firstParameters.length !== 13) {
-      throw new Error("Attestation receipt journal append parameters were not captured");
+    if (!Array.isArray(firstParameters) || firstParameters.length !== 1) {
+      throw new Error("Attestation receipt journal JSON command was not captured");
     }
-    let tamperedEntryRejected = false;
-    try {
-      await client.query(
-        INTERNAL_TOKEN_PRODUCTION_ATTESTATION_RECEIPT_POSTGRES_APPEND_SQL,
-        [...firstParameters.slice(0, 12), digest(`${label}:tampered-entry`)],
-      );
-    } catch {
-      tamperedEntryRejected = true;
-    }
+    const originalDatabaseCommand = JSON.parse(firstParameters[0]);
+    const tamperedEntryRejected = await rejectedInsideSavepoint(
+      client,
+      "receipt_tampered_entry",
+      async () =>
+        await client.query(
+          INTERNAL_TOKEN_PRODUCTION_ATTESTATION_RECEIPT_POSTGRES_APPEND_SQL,
+          [
+            JSON.stringify({
+              ...originalDatabaseCommand,
+              entryDigest: digest(`${label}:tampered-entry`),
+            }),
+          ],
+        ),
+    );
     if (!tamperedEntryRejected) {
       throw new Error("Attestation receipt journal tampered entry digest was accepted");
     }
@@ -248,7 +418,9 @@ export async function runProductionAttestationReceiptPostgresEvidence({
       privilegeEvidence.runtime_state_dml_denied !== true ||
       privilegeEvidence.reporting_entry_dml_denied !== true ||
       privilegeEvidence.governance_append_granted !== true ||
-      privilegeEvidence.public_append_denied !== true
+      privilegeEvidence.runtime_append_denied !== true ||
+      privilegeEvidence.reporting_append_denied !== true ||
+      privilegeEvidence.positional_append_revoked !== true
     ) {
       throw new Error("Attestation receipt journal privilege boundary is incomplete");
     }
@@ -256,8 +428,22 @@ export async function runProductionAttestationReceiptPostgresEvidence({
     await client.query("ROLLBACK");
     transactionOpen = false;
 
+    const concurrency = await verifyConcurrentSerialization({
+      connectionString,
+      label,
+      expectedJournalVersion,
+      expectedPreviousJournalDigest,
+      previousSequenceCheckpointDigest,
+    });
+    if (
+      concurrency.firstBatchNonceDigest !== concurrentNonces[0] ||
+      concurrency.secondBatchNonceDigest !== concurrentNonces[1]
+    ) {
+      throw new Error("Concurrent receipt journal command identity drifted");
+    }
+
     const afterState = await protectedCoordinates(client);
-    const afterCounts = await rowCounts(client, batchNonceDigest);
+    const afterCounts = await rowCounts(client, trackedNonces);
     if (
       !sameCoordinates(beforeState, afterState) ||
       Number(afterCounts.state_rows) !== Number(beforeCounts.state_rows) ||
@@ -269,9 +455,11 @@ export async function runProductionAttestationReceiptPostgresEvidence({
 
     return Object.freeze({
       applicationDmlDenied: true,
+      concurrentRaceSerialized: concurrency.serialized,
       databaseDigestRecomputed: true,
       exactReplayIdempotent: true,
       nonceConflictRejected: true,
+      positionalAppendRevoked: true,
       publicExecuteDenied: true,
       rollbackVerified: true,
       schemaVersion: 1,
