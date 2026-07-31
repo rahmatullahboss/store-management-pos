@@ -1,6 +1,6 @@
 name: Apply asymmetric token checkpoint
 
-# Verification trigger: compatibility repairs are structurally scoped and idempotent.
+# Verification trigger: code push excludes workflow mutations; connector transfers them after verification.
 on:
   push:
     branches:
@@ -233,7 +233,6 @@ jobs:
           PY
           rm -rf .checkpoint
           rm -f tooling/scripts/apply-asymmetric-checkpoint.py
-          rm -f .github/workflows/apply-asymmetric-checkpoint.yml
       - name: Install exact dependencies
         run: npm ci --ignore-scripts
       - name: Verify focused asymmetric contracts
@@ -264,8 +263,20 @@ jobs:
           PY
       - name: Verify full repository
         run: npm run verify
-      - name: Commit verified checkpoint
+      - name: Commit verified checkpoint without workflow mutations
         run: |
+          mkdir -p tooling/transfer
+          cp \
+            .github/workflows/persistent-admin-pos-staging.yml \
+            tooling/transfer/persistent-admin-pos-staging-asymmetric.yml
+          git show \
+            6be2f1fdde595c2f4fa8080cac68b7932d042ada:.github/workflows/persistent-admin-pos-staging.yml \
+            > .github/workflows/persistent-admin-pos-staging.yml
+          if ! git diff --quiet -- .github/workflows; then
+            git diff -- .github/workflows
+            echo "workflow mutation remained in the Actions-authenticated commit" >&2
+            exit 1
+          fi
           git diff --check
           git status --short
           git config user.name "Ozzyl Enterprise Agent"
