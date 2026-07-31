@@ -9,6 +9,14 @@ function replaceExact(path, oldValue, newValue) {
   writeFileSync(path, source.replace(oldValue, newValue));
 }
 
+function replaceOrAccept(path, oldValue, newValue) {
+  const source = readFileSync(path, "utf8");
+  if (source.includes(newValue)) return;
+  const count = source.split(oldValue).length - 1;
+  if (count !== 1) throw new Error(`${path}: expected one shape target, found ${count}`);
+  writeFileSync(path, source.replace(oldValue, newValue));
+}
+
 replaceExact(
   "apps/api/src/staging-asymmetric-token.ts",
   `  const signingInput = \`${"${headerSegment}.${payloadSegment}"}\`;
@@ -33,7 +41,7 @@ replaceExact(
   );`,
 );
 
-replaceExact(
+replaceOrAccept(
   "apps/api/src/staging-asymmetric-token.ts",
   "async function importPublicKey(publicJwk: RsaPublicJwk, error: () => PlatformError): Promise<CryptoKey> {",
   `async function importPublicKey(
@@ -54,7 +62,7 @@ replaceExact(
   "/privateJwk|\"d\"|activeKid|previousKid/u",
 );
 
-replaceExact(
+replaceOrAccept(
   "tests/unit/staging-asymmetric-deployment.test.mjs",
   "    assert.match(patchSource, /rotateStagingInternalTokenKeyset\\(activeKeyPair, previousKeyPair, now\\)/u);",
   `    assert.match(
@@ -63,7 +71,7 @@ replaceExact(
     );`,
 );
 
-replaceExact(
+replaceOrAccept(
   "tests/unit/staging-asymmetric-deployment.test.mjs",
   "  assert.equal(workflow.match(/Persistent Admin POS Staging \\(asymmetric token lifecycle\\)/gu)?.length, 1);",
   `  assert.equal(
