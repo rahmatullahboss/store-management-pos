@@ -54,8 +54,7 @@ function digest(value, name) {
 }
 
 function optionalDigest(value, name) {
-  if (value === null) return null;
-  return digest(value, name);
+  return value === null ? null : digest(value, name);
 }
 
 function canonical(value) {
@@ -74,20 +73,18 @@ function hash(value) {
 }
 
 function assertDistinct(values, name) {
-  if (new Set(values).size !== values.length) {
-    fail(`${name} must be distinct`);
-  }
+  if (new Set(values).size !== values.length) fail(`${name} must be distinct`);
 }
 
-function normalizeAction(value, name) {
+function action(value, name) {
   if (typeof value !== "string" || !ACTIONS.has(value)) {
     fail(`${name} is invalid`);
   }
   return value;
 }
 
-function requiredRoles(action) {
-  return action === "emergency_stop" ? ["security_owner"] : OWNER_ROLES;
+function requiredRoles(entryAction) {
+  return entryAction === "emergency_stop" ? ["security_owner"] : OWNER_ROLES;
 }
 
 function normalizeApproval(input, entry, index) {
@@ -189,10 +186,8 @@ function normalizeEntry(input, context, index) {
     fail(`revocation entry ${index + 1} schema version is invalid`);
   }
   const sequence = integer(value.sequence, `revocation entry ${index + 1} sequence`, 1);
-  if (sequence !== index + 1) {
-    fail("revocation entry sequence is not contiguous");
-  }
-  const action = normalizeAction(value.action, `revocation entry ${index + 1} action`);
+  if (sequence !== index + 1) fail("revocation entry sequence is not contiguous");
+  const entryAction = action(value.action, `revocation entry ${index + 1} action`);
   const proposedAt = integer(
     value.proposedAt,
     `revocation entry ${index + 1} proposed-at`,
@@ -233,22 +228,20 @@ function normalizeEntry(input, context, index) {
     `revocation entry ${index + 1} incident digest`,
   );
   if (
-    (action === "emergency_stop" && incidentDigest === null) ||
-    (action !== "emergency_stop" && incidentDigest !== null)
+    (entryAction === "emergency_stop" && incidentDigest === null) ||
+    (entryAction !== "emergency_stop" && incidentDigest !== null)
   ) {
     fail(`revocation entry ${index + 1} incident binding is invalid`);
   }
-  const expectedPreviousDigest =
-    index === 0 ? context.genesisDigest : context.entries[index - 1].entryDigest;
   const previousEntryDigest = digest(
     value.previousEntryDigest,
     `revocation entry ${index + 1} previous digest`,
   );
-  if (previousEntryDigest !== expectedPreviousDigest) {
+  if (previousEntryDigest !== context.previousEntryDigest) {
     fail("revocation journal chain is not contiguous");
   }
   const entry = {
-    action,
+    action: entryAction,
     admissionBundleDigest,
     effectiveAt,
     incidentDigest,
@@ -259,7 +252,7 @@ function normalizeEntry(input, context, index) {
     schemaVersion: INTERNAL_TOKEN_PRODUCTION_LAUNCH_REVOCATION_SCHEMA_VERSION,
     sequence,
   };
-  const roles = requiredRoles(action);
+  const roles = requiredRoles(entryAction);
   if (!Array.isArray(value.approvals) || value.approvals.length !== roles.length) {
     fail(`revocation entry ${index + 1} approval count is invalid`);
   }
@@ -305,26 +298,26 @@ function normalizeEntry(input, context, index) {
     ],
     `revocation entry ${index + 1} digests`,
   );
-  return Object.freeze({ ...body, approvals, entryDigest });
+  return Object.freeze({ ...entry, approvals, entryDigest });
 }
 
-function transition(state, action, index) {
+function transition(state, entryAction, index) {
   if (state === "revoked") {
     fail(`revocation entry ${index + 1} follows a terminal revocation`);
   }
-  if (action === "suspend" || action === "emergency_stop") {
+  if (entryAction === "suspend" || entryAction === "emergency_stop") {
     if (state !== "clear") {
       fail(`revocation entry ${index + 1} cannot suspend a non-clear launch`);
     }
     return "suspended";
   }
-  if (action === "reinstate") {
+  if (entryAction === "reinstate") {
     if (state !== "suspended") {
       fail(`revocation entry ${index + 1} cannot reinstate a non-suspended launch`);
     }
     return "clear";
   }
-  if (action === "revoke") return "revoked";
+  if (entryAction === "revoke") return "revoked";
   fail(`revocation entry ${index + 1} transition is invalid`);
 }
 
@@ -399,13 +392,17 @@ export function evaluateInternalTokenProductionLaunchRevocation(
   const now = integer(nowInput, "revocation clock", 1);
   const expected = exact(
     expectedInput,
-    ["admissionBundleDigest", "releaseDigest"],
+    ["admissionBundleDigest", "headDigest", "releaseDigest"],
     "expected launch binding",
   );
   const expectedReleaseDigest = digest(expected.releaseDigest, "expected release digest");
   const expectedAdmissionBundleDigest = digest(
     expected.admissionBundleDigest,
     "expected admission bundle digest",
+  );
+  const expectedHeadDigest = digest(
+    expected.headDigest,
+    "expected revocation head digest",
   );
   const value = exact(
     input,
@@ -458,32 +455,36 @@ export function evaluateInternalTokenProductionLaunchRevocation(
   if (!Array.isArray(value.entries) || value.entries.length > MAX_ENTRIES) {
     fail("revocation entries are invalid or exceed the maximum");
   }
-  const context = {
-    admissionBundleDigest,
-    entries: [],
-    generatedAt,
-    genesisDigest,
-    releaseDigest,
-  };
+  const entries = [];
+  let previousEntryDigest = genesisDigest;
   let state = "clear";
   let approvalCount = 0;
   let emergencyStopCount = 0;
   for (const [index, rawEntry] of value.entries.entries()) {
-    const entry = normalizeEntry(rawEntry, context, index);
-    context.entries.push(entry);
+    const entry = normalizeEntry(
+      rawEntry,
+      {
+        admissionBundleDigest,
+        generatedAt,
+        previousEntryDigest,
+        releaseDigest,
+      },
+      index,
+    );
+    entries.push(entry);
+    previousEntryDigest = entry.entryDigest;
     state = transition(state, entry.action, index);
     approvalCount += entry.approvals.length;
     if (entry.action === "emergency_stop") emergencyStopCount += 1;
   }
   const headDigest = digest(value.headDigest, "revocation head digest");
-  const expectedHeadDigest =
-    context.entries.length === 0
-      ? genesisDigest
-      : context.entries[context.entries.length - 1].entryDigest;
-  if (headDigest !== expectedHeadDigest) {
+  if (headDigest !== previousEntryDigest) {
     fail("revocation snapshot head does not match the journal chain");
   }
-  const normalizedEntries = context.entries.map((entry) => ({
+  if (headDigest !== expectedHeadDigest) {
+    fail("revocation snapshot head does not match the protected checkpoint");
+  }
+  const normalizedEntries = entries.map((entry) => ({
     action: entry.action,
     admissionBundleDigest: entry.admissionBundleDigest,
     approvals: entry.approvals,
@@ -516,21 +517,17 @@ export function evaluateInternalTokenProductionLaunchRevocation(
     [
       snapshotDigest,
       genesisDigest,
-      headDigest,
       releaseDigest,
       admissionBundleDigest,
-      ...context.entries.map((entry) => entry.entryDigest),
+      ...entries.map((entry) => entry.entryDigest),
     ],
     "revocation snapshot digests",
   );
-  const latestAction =
-    context.entries.length === 0
-      ? "none"
-      : context.entries[context.entries.length - 1].action;
+  const latestAction = entries.length === 0 ? "none" : entries.at(-1).action;
   return Object.freeze({
     approvalCount,
     emergencyStopCount,
-    entryCount: context.entries.length,
+    entryCount: entries.length,
     environment: "production",
     evidenceDigestsIncluded: false,
     expiresAt,
