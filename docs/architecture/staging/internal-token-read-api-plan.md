@@ -20,7 +20,7 @@ Move the usable Admin/POS release candidate from direct server-side presentation
 - The internal token is audience-bound, tamper-evident and valid for at most `300` seconds.
 - Every verification rechecks the active custom session and current database authorization context, so logout, expiry, membership suspension, role removal and permission drift fail closed.
 - Internal token material is not persisted in cookies, HTML, screenshots, reports or artifacts.
-- The signing secret is stored as a Cloudflare Worker secret and rotated by each staging deployment run.
+- A schema-v1 RS256 keyset is stored as a Cloudflare Worker secret and rotated by each staging deployment run; only active and still-valid previous public keys are exposed through the bounded JWKS endpoint.
 
 ## Protected reads delivered
 
@@ -41,7 +41,7 @@ All acceptance gates passed on implementation head `6949b5e39c21203102b1ab51601c
 - custom session is required before an internal token is issued;
 - lifetime is at most five minutes;
 - issuer and audience are exact;
-- signature comparison is constant-time and tampering is rejected;
+- Web Crypto RS256 verification requires a mandatory `kid`; tampering, algorithm confusion, unknown, revoked and expired keys are rejected;
 - user, tenant, permissions and resource scope must match a fresh database context;
 - expired, revoked, inactive and cross-warehouse requests fail with bounded `401`/`403` responses;
 - no write, manage, approve, execute, post, capture, refund, close or reopen permission can be issued;
@@ -52,7 +52,7 @@ All acceptance gates passed on implementation head `6949b5e39c21203102b1ab51601c
 
 ## Deferred
 
-- production asymmetric signing key and JWKS lifecycle;
+- production KMS/HSM-backed non-exportable key ownership, audited signing access, scheduled rotation and emergency revocation governance;
 - MFA enrollment and privileged step-up;
 - authoritative commands;
 - payment, refund, journal, banking and fiscal actions;

@@ -97,9 +97,13 @@ Protected reads use a maximum five-minute audience-bound internal token. The con
 - database-resolved tenant, actor and warehouse scope;
 - fresh session and authorization resolution during verification;
 - no browser exposure or persistence;
-- a Cloudflare Worker secret rotated by each staging deployment run.
+- an RS256 token signed with a mandatory bounded `kid`;
+- one active signing key plus one previous verify-only overlap key;
+- a private-field-free public JWKS at `/internal-identity/.well-known/jwks.json`;
+- explicit unknown, revoked, expired and algorithm-confused key rejection;
+- an ephemeral asymmetric Cloudflare keyset rotated by each staging deployment run.
 
-Production RS256/JWKS OIDC behaviour remains unchanged. HS256 and in-process verifier injection remain staging-only.
+The production OIDC verifier remains provider-neutral RS256/JWKS and unchanged. The internal keyset implementation is staging-only until KMS/HSM ownership, scheduled and emergency rotation, audited signing access, monitoring and launch approval exist.
 
 ## Protected business reads
 
@@ -303,7 +307,7 @@ Before production launch:
 - production transactional-email provider, verified sender domain, templates, bounce handling and delivery monitoring;
 - production policy deciding when email verification is mandatory before session issuance;
 - production MFA recovery, factor replacement and support governance;
-- asymmetric internal-token signing and JWKS lifecycle;
+- production KMS/HSM-backed internal-token key ownership, audited signing access, scheduled rotation and emergency revocation governance;
 - protected read integration for remaining enabled modules;
 - dedicated gates for every additional write, especially payment, refund, journal, period close, banking, fiscal and destructive actions;
 - production monitoring, alerting, privacy, incident and support runbooks;

@@ -56,7 +56,8 @@ test("authenticated operational routes replace empty staging shells", async () =
 test("persistent deployment proves useful routes and responsive browser surfaces", async () => {
   const runner = await source("tooling/scripts/run-custom-auth-staging.mjs");
   const deploy = await source("tooling/scripts/deploy-custom-auth-staging.mjs");
-  const evidenceSources = `${runner}\n${deploy}`;
+  const patcher = await source("tooling/scripts/staging-custom-auth-patch.mjs");
+  const evidenceSources = `${runner}\n${deploy}\n${patcher}`;
   for (const marker of [
     '"/admin/catalog"',
     '"/admin/customers"',
@@ -135,7 +136,12 @@ test("operability documentation fixes ownership while preserving production bloc
   assert.match(plan, /twelve fixed low-cardinality aggregate signals/u);
   assert.match(plan, /schema-v7 atomic report enrichment/u);
   assert.match(plan, /production monitoring backend, alert delivery, paging and approved SLOs/u);
-  assert.match(status, /schema_version: 14/u);
+  assert.match(status, /schema_version: 15/u);
+  assert.match(status, /status: asymmetric_internal_token_implemented_pending_live_evidence/u);
+  assert.match(status, /signing_algorithm: RS256/u);
+  assert.match(status, /key_id_required: true/u);
+  assert.ok(status.includes("public_jwks_path: /internal-identity/.well-known/jwks.json"));
+  assert.match(status, /private_key_published: false/u);
   assert.match(status, /report_schema_version: 7/u);
   assert.match(status, /signal_count: 12/u);
   assert.match(status, /live_evidence_state: exact_head_verified/u);

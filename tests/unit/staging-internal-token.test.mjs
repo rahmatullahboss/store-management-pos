@@ -6,6 +6,11 @@ import {
   STAGING_INTERNAL_TOKEN_LIFETIME_SECONDS,
 } from "../../build/apps/api/src/staging-internal-token.js";
 import { createTokenVerifier } from "../../build/apps/api/src/token-verifier.js";
+import {
+  decodeJwtHeader,
+  generateTestRsaPair,
+  serializeTestStagingTokenKeyset,
+} from "../helpers/staging-token-keyset.mjs";
 
 const context = {
   sessionId: "018f0000-0000-7000-8000-000000009002",
@@ -35,21 +40,27 @@ const context = {
   ],
 };
 
-const secret = "s".repeat(64);
+const now = 1_800_000_000;
+const pair = await generateTestRsaPair("staging-read-0001");
+const keyset = serializeTestStagingTokenKeyset({ active: pair, now });
 const issuer = "https://staging.example.test/internal-identity";
 const audience = "store-management-api-staging";
 
-test("internal token is audience-bound, short-lived and resolves a verified identity", async () => {
-  const now = 1_800_000_000;
+test("internal token is RS256, kid-bound, short-lived and resolves a verified identity", async () => {
   const token = await issueStagingInternalToken({
-    secret,
+    keyset,
     issuer,
     audience,
     context,
     now: () => now,
   });
+  assert.deepEqual(decodeJwtHeader(token), {
+    alg: "RS256",
+    typ: "ozzyl-staging-internal+jwt",
+    kid: pair.kid,
+  });
   const verifier = new StagingInternalTokenVerifier({
-    secret,
+    keyset,
     issuer,
     audience,
     freshContext: async () => context,
@@ -65,16 +76,15 @@ test("internal token is audience-bound, short-lived and resolves a verified iden
 });
 
 test("tampered and expired internal tokens fail closed", async () => {
-  const now = 1_800_000_000;
   const token = await issueStagingInternalToken({
-    secret,
+    keyset,
     issuer,
     audience,
     context,
     now: () => now,
   });
   const verifier = new StagingInternalTokenVerifier({
-    secret,
+    keyset,
     issuer,
     audience,
     freshContext: async () => context,
@@ -88,7 +98,7 @@ test("tampered and expired internal tokens fail closed", async () => {
   await assert.rejects(() => verifier.verify(tampered), /signature is invalid/u);
 
   const expiredVerifier = new StagingInternalTokenVerifier({
-    secret,
+    keyset,
     issuer,
     audience,
     freshContext: async () => context,
@@ -98,16 +108,15 @@ test("tampered and expired internal tokens fail closed", async () => {
 });
 
 test("revoked session and changed database permissions invalidate an issued token", async () => {
-  const now = 1_800_000_000;
   const token = await issueStagingInternalToken({
-    secret,
+    keyset,
     issuer,
     audience,
     context,
     now: () => now,
   });
   const revoked = new StagingInternalTokenVerifier({
-    secret,
+    keyset,
     issuer,
     audience,
     freshContext: async () => null,
@@ -116,7 +125,7 @@ test("revoked session and changed database permissions invalidate an issued toke
   await assert.rejects(() => revoked.verify(token), /no longer active/u);
 
   const changed = new StagingInternalTokenVerifier({
-    secret,
+    keyset,
     issuer,
     audience,
     freshContext: async () => ({
@@ -135,7 +144,7 @@ test("non-read permissions cannot be issued", async () => {
   await assert.rejects(
     () =>
       issueStagingInternalToken({
-        secret,
+        keyset,
         issuer,
         audience,
         context: {
@@ -145,6 +154,17 @@ test("non-read permissions cannot be issued", async () => {
       }),
     /non-read permission/u,
   );
+});
+
+test("legacy binding option carries an asymmetric keyset rather than an HMAC secret", async () => {
+  const token = await issueStagingInternalToken({
+    secret: keyset,
+    issuer,
+    audience,
+    context,
+    now: () => now,
+  });
+  assert.equal(decodeJwtHeader(token).alg, "RS256");
 });
 
 test("in-process verifier injection is staging-only", () => {

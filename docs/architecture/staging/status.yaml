@@ -1,6 +1,6 @@
-schema_version: 14
+schema_version: 15
 workstream: persistent-admin-pos-staging
-status: full_registry_recovery_live_evidence_complete_production_acceptance_pending
+status: asymmetric_internal_token_implemented_pending_live_evidence
 branch: ops/persistent-admin-pos-staging-v1
 base_sha: 3a414363a40f48bd6e526418d9e82679501b170e
 verified_implementation_head: 2f589e3de7a7352757172fbb19937885487f04a2
@@ -123,9 +123,18 @@ checkpoints:
     lifetime_seconds: 300
     audience: store-management-api-staging
     issuer_mode: exact_worker_origin
-    signing_algorithm: HS256_staging_only
-    signing_secret: cloudflare_worker_secret
-    deployment_rotation: enabled
+    signing_algorithm: RS256
+    key_id_required: true
+    keyset_schema_version: 1
+    active_signing_key_count: 1
+    active_verification_key_count: 1
+    previous_verification_key_count: 1
+    rotation_overlap_seconds: 600
+    public_jwks_path: /internal-identity/.well-known/jwks.json
+    private_key_published: false
+    deployment_keyset: [REDACTED_SECRET]
+    deployment_rotation: ephemeral_active_plus_previous
+    live_evidence_state: implementation_complete_pending_exact_head
     browser_exposed: false
     cookie_persisted: false
     artifact_persisted: false
@@ -139,6 +148,9 @@ checkpoints:
   controlled_command_token:
     status: complete
     lifetime_seconds: 60
+    signing_algorithm: RS256
+    key_id_required: true
+    shared_asymmetric_keyset: true
     permission: inventory.reservation.manage
     assurance: pwd_plus_totp
     browser_exposed: false
@@ -390,6 +402,8 @@ evidence:
   outbox_publisher_implementation_plan: docs/superpowers/plans/2026-07-31-staging-outbox-publisher.md
   backup_restore_acceptance: docs/architecture/staging/backup-restore-acceptance.md
   full_registry_recovery_implementation_plan: docs/superpowers/plans/2026-07-31-full-registry-neon-recovery.md
+  asymmetric_internal_token_plan: docs/superpowers/plans/2026-07-31-asymmetric-internal-token-jwks.md
+  asymmetric_internal_token_lifecycle: docs/architecture/staging/asymmetric-internal-token-key-lifecycle.md
 limitations:
   - this is a production-shaped synthetic staging release candidate, not a production launch
   - repository policy prohibits production credentials, production data and production database branches in this workstream
@@ -398,4 +412,4 @@ limitations:
   - password recovery and email-verification token lifecycles are implemented, but production sender domain, transactional email provider, templates, bounce handling, delivery monitoring and support policy are not configured
   - schema-v7 synthetic outbox publisher live evidence is complete with a healthy clear gate; production transport/provider, SLO, paging and dead-letter ownership remain pending
   - full-registry disposable PITR recovery live evidence is complete for 17 manifests and 64 migrations; generic preview was intentionally skipped by dedicated-branch policy, and production PITR retention, encrypted logical export, regional recovery, approved RPO/RTO and production-class restore acceptance remain pending
-  - production domain, production MFA recovery and factor governance, asymmetric token lifecycle, production alert delivery and controlled launch approval remain pending
+  - production domain, production MFA recovery and factor governance, KMS/HSM-backed internal-token key ownership, scheduled/emergency rotation governance, production alert delivery and controlled launch approval remain pending

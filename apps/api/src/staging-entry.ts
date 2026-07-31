@@ -4,6 +4,10 @@ import {
   type StagingAccountRecoveryEnvironment,
 } from "./staging-account-recovery.js";
 import {
+  handleStagingInternalJwks,
+  STAGING_INTERNAL_JWKS_PATH,
+} from "./staging-asymmetric-token.js";
+import {
   decryptTotpSecret,
   encryptTotpSecret,
   handleStagingMfaRequest,
@@ -113,6 +117,13 @@ export default {
     env: PersistentStagingEnvironment,
   ): Promise<Response> {
     const url = new URL(request.url);
+    if (url.pathname === STAGING_INTERNAL_JWKS_PATH) {
+      if (env.APP_ENV !== "staging") return new Response(null, { status: 404 });
+      return await handleStagingInternalJwks(
+        request,
+        env.STAGING_INTERNAL_TOKEN_SECRET,
+      );
+    }
     if (url.pathname === "/auth/context") {
       return await handleStagingReadContext(request, env);
     }
@@ -145,7 +156,12 @@ export default {
               mfa: "encrypted-totp-current-password-step-up",
               accountRecovery: "hashed-single-use-token-lifecycle",
               productionEmailDelivery: false,
-              protectedReadTransport: "short-lived-internal-token",
+              protectedReadTransport: "short-lived-rs256-internal-token",
+              internalTokenSigning: "RS256",
+              internalTokenKidRequired: true,
+              internalTokenJwksPath: STAGING_INTERNAL_JWKS_PATH,
+              internalTokenKeyLifecycle: "active-plus-previous-overlap-and-revocation",
+              internalTokenPrivateKeyPublished: false,
               internalReadTokenLifetimeSeconds: 300,
               internalCommandTokenLifetimeSeconds: 60,
               stepUpGrantLifetimeSeconds: 300,
