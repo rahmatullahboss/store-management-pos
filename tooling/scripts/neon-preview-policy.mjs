@@ -21,6 +21,7 @@ const dedicatedStagingImplementationBranches = new Set([
   "agent/internal-token-provider-signing-journal",
   "agent/internal-token-provider-evidence-custody",
   "agent/internal-token-provider-evidence-disposition",
+  "agent/internal-token-production-launch-admission",
 ]);
 const usesDedicatedStagingNeon =
   branch === persistentStagingBranch ||
