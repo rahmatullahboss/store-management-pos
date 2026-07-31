@@ -67,6 +67,18 @@ Active legal holds apply to bounded occurrence windows. A held record cannot bec
 
 This provides a tamper-evident custody contract, not an external archive. Production still needs an approved organizational schedule, authorized legal-hold operators, immutable off-platform storage, restoration drills and documented disposal authorization.
 
+## Controlled evidence disposition
+
+Disposal eligibility is never treated as destruction authority. `tooling/scripts/internal-token-provider-evidence-disposition.mjs` accepts only a valid FND-0017 custody command whose complete sealed export is past its retention horizon, has zero active legal holds and marks every record eligible.
+
+A disposition request is bounded to a maximum 30-minute authorization window and binds the custody, export, retention-policy, case and proposer digests. Authorization requires exactly two distinct approvers in the policy roles `security_owner` and `records_owner`; the proposer cannot approve and one actor cannot satisfy both roles.
+
+Immediately before accepting an external destruction receipt, the workflow validates a new custody/export snapshot digest and requires the legal-hold count to remain zero. A successful receipt must bind the request, approval, recheck, custody digest and candidate count, identify an approved provider class and occur inside the authorization window. The repository contract validates receipt evidence but does not invoke a delete or purge operation.
+
+`FND-0018` appends the digest-only outcome to an isolated disposition journal. It requires two approvals, zero legal holds, purpose-separated custody/request/approval/recheck/operation/provider-audit/disposition digests, contiguous sequence and previous-digest linkage. Normal application and reporting roles cannot write this journal, and database failures are masked.
+
+The status `destroyed` represents a validated external receipt, not independent proof that media was destroyed. Production still requires an authorized archive/destruction provider, provider-side immutable audit, a documented chain-of-custody handoff, restoration and exception procedures, and human approval that the receipt is legally sufficient.
+
 ## Exact live evidence
 
 The exact implementation head `dc5b1f8328ad7d7f1c472c9ed446b24145a86229` completed persistent staging workflow run `30609623111`, job `91089297482`. The uploaded evidence artifact is `8784940903` with digest `sha256:c6ed951221b83550aa05aa0836ae269d4dba28374fb914815a6775440f6dbd3f`; the report was produced from pull-request merge ref `55c5b0ed3b366d8376e3018c4a625ee51369e931`.
@@ -90,8 +102,8 @@ Generic disposable Neon preview capacity was not consumed for this workstream. T
 
 Artifacts and workflow summaries may contain only algorithm, schema version, active/previous/published/revoked counts, overlap seconds, provider class, receipt-validation booleans, durable-recording state, signature length, bounded latency and private-field leak count. Private JWKs, serialized keysets, tokens, signatures, `kid` values, provider resource names, key versions, provider audit identifiers and receipt digests are prohibited from artifacts and logs.
 
-Controlled custody exports may additionally contain source-record, chain-root, export, policy and custody digests plus aggregate retention and legal-hold state. They must not be copied into ordinary CI artifacts or application logs.
+Controlled custody exports may additionally contain source-record, chain-root, export, policy and custody digests plus aggregate retention and legal-hold state. Controlled disposition records may contain custody, request, approval, recheck, provider-operation, provider-audit and disposition digests plus aggregate candidate/approval/hold state. Neither form may be copied into ordinary CI artifacts or application logs.
 
 ## Production blockers
 
-This staging implementation does not approve production key ownership. Production still requires provisioned KMS/HSM-backed non-exportable private keys, named security ownership, provider-side least-privilege signing policy, immutable audited signing access, a deployed adapter for the provider receipt contract, scheduled and emergency rotation procedures, protected JWKS publication, monitoring/paging, incident response, an approved organizational retention and legal-hold process, immutable external evidence storage and controlled launch approval.
+This staging implementation does not approve production key ownership. Production still requires provisioned KMS/HSM-backed non-exportable private keys, named security ownership, provider-side least-privilege signing policy, immutable audited signing access, a deployed adapter for the provider receipt contract, scheduled and emergency rotation procedures, protected JWKS publication, monitoring/paging, incident response, an approved organizational retention and legal-hold process, immutable external evidence storage, an authorized evidence-disposition provider and controlled launch approval.
