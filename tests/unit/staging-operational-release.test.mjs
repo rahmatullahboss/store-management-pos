@@ -136,10 +136,10 @@ test("operability documentation fixes ownership while preserving production bloc
   assert.match(plan, /twelve fixed low-cardinality aggregate signals/u);
   assert.match(plan, /schema-v7 atomic report enrichment/u);
   assert.match(plan, /production monitoring backend, alert delivery, paging and approved SLOs/u);
-  assert.match(status, /schema_version: (?:15|16)/u);
+  assert.match(status, /schema_version: 16/u);
   assert.match(
     status,
-    /status: (?:asymmetric_internal_token_implemented_pending_live_evidence|live_evidence_complete_production_kms_pending)/u,
+    /status: asymmetric_internal_token_live_evidence_complete_production_kms_pending/u,
   );
   assert.match(status, /signing_algorithm: RS256/u);
   assert.match(status, /key_id_required: true/u);
