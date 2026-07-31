@@ -24,6 +24,7 @@ const dedicatedStagingImplementationBranches = new Set([
   "agent/internal-token-production-launch-admission",
   "agent/internal-token-provider-operational-gate",
   "agent/internal-token-production-launch-revocation",
+  "agent/internal-token-production-control-attestation",
 ]);
 const usesDedicatedStagingNeon =
   branch === persistentStagingBranch ||
