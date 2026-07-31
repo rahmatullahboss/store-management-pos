@@ -27,8 +27,10 @@ test("staging waits on an authenticated read before the MFA write journey", asyn
   assert.match(patched, /for \(let attempt = 1; attempt <= 12; attempt \+= 1\)/u);
   assert.match(patched, /setTimeout\(resolve, 2_500\)/u);
   assert.equal(patched.match(/runMfaReservationJourney\(/gu)?.length, 1);
-  assert.doesNotMatch(
-    readiness,
-    /POST|reservations\"|\/release/u,
+  assert.equal(readiness.includes("POST"), false);
+  assert.equal(
+    readiness.includes("/api/v1/inventory/reservations"),
+    false,
   );
+  assert.equal(readiness.includes("/release"), false);
 });
