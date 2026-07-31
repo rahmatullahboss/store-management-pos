@@ -167,7 +167,7 @@ test("missing, duplicate and unknown production controls fail closed", () => {
 test("stale, unverified or unsupported provider evidence cannot admit production", () => {
   const stale = structuredClone(bundle());
   stale.evidence.generatedAt = now - 90_000;
-  stale.evidence.expiresAt = now + 100;
+  stale.evidence.expiresAt = stale.evidence.generatedAt + 600;
   resignEvidence(stale);
   assert.throws(
     () => evaluateInternalTokenProductionLaunchAdmission(stale, now),
