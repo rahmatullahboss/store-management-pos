@@ -1,6 +1,6 @@
 name: Apply asymmetric token checkpoint
 
-# Verification trigger: status compatibility repair is path-scoped.
+# Verification trigger: status compatibility repair is AST-scoped.
 on:
   push:
     branches:
@@ -60,39 +60,60 @@ jobs:
           gzip --test /tmp/asymmetric-overlay.tar.gz
           tar --extract --gzip --file /tmp/asymmetric-overlay.tar.gz --directory .
           python3 - <<'PY'
+          import ast
           from pathlib import Path
 
           patcher = Path("tooling/scripts/apply-asymmetric-checkpoint.py")
           text = patcher.read_text()
+          tree = ast.parse(text)
+          status_path = "docs/architecture/staging/status.yaml"
           marker = "[REDACTED_SECRET]"
-          positions = []
-          offset = 0
-          while True:
-              position = text.find(marker, offset)
-              if position < 0:
-                  break
-              positions.append(position)
-              offset = position + len(marker)
+          matches = []
 
-          candidates = []
-          for position in positions:
-              operation_start = text.rfind("replace_once(", 0, position)
-              if operation_start < 0:
+          for node in ast.walk(tree):
+              if not isinstance(node, ast.Call):
                   continue
-              operation_prefix = text[operation_start:position]
-              if "docs/architecture/staging/status.yaml" in operation_prefix:
-                  candidates.append(position)
+              string_args = [
+                  (index, argument)
+                  for index, argument in enumerate(node.args)
+                  if isinstance(argument, ast.Constant) and isinstance(argument.value, str)
+              ]
+              path_indexes = [
+                  index for index, argument in string_args if argument.value == status_path
+              ]
+              if len(path_indexes) != 1:
+                  continue
+              path_index = path_indexes[0]
+              old_value_args = [
+                  argument
+                  for index, argument in string_args
+                  if index > path_index and marker in argument.value
+              ]
+              if old_value_args:
+                  matches.append(old_value_args[0])
 
-          if len(candidates) != 1:
+          if len(matches) != 1:
               raise SystemExit(
-                  "expected one path-scoped obsolete status marker in patcher, "
-                  f"found {len(candidates)} from {len(positions)} total markers"
+                  "expected one AST-scoped obsolete status value, "
+                  f"found {len(matches)}"
               )
 
-          position = candidates[0]
-          patcher.write_text(
-              text[:position] + "cloudflare_worker_secret" + text[position + len(marker):]
-          )
+          target = matches[0]
+          lines = text.splitlines(keepends=True)
+          starts = []
+          offset = 0
+          for line in lines:
+              starts.append(offset)
+              offset += len(line)
+          start = starts[target.lineno - 1] + target.col_offset
+          end = starts[target.end_lineno - 1] + target.end_col_offset
+          segment = text[start:end]
+          if segment.count(marker) != 1:
+              raise SystemExit(
+                  "AST-scoped obsolete status value must contain exactly one marker"
+              )
+          repaired_segment = segment.replace(marker, "cloudflare_worker_secret")
+          patcher.write_text(text[:start] + repaired_segment + text[end:])
           PY
           python3 tooling/scripts/apply-asymmetric-checkpoint.py
           python3 - <<'PY'
