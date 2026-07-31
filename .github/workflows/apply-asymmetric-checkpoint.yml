@@ -1,6 +1,6 @@
 name: Apply asymmetric token checkpoint
 
-# Verification trigger: generated lifecycle evidence normalization.
+# Verification trigger: obsolete status rewrite removed.
 on:
   push:
     branches:
@@ -59,20 +59,6 @@ jobs:
           echo "66cc18095a55c3007f6711a27f00380ac643078da18d6a73ca5983d0f3618a2a  /tmp/asymmetric-overlay.tar.gz" | sha256sum --check --strict
           gzip --test /tmp/asymmetric-overlay.tar.gz
           tar --extract --gzip --file /tmp/asymmetric-overlay.tar.gz --directory .
-          python3 - <<'PY'
-          from pathlib import Path
-
-          patcher = Path("tooling/scripts/apply-asymmetric-checkpoint.py")
-          text = patcher.read_text()
-          old = "    signing_algorithm: HS256_staging_only\n    signing_secret: [REDACTED_SECRET]\n    deployment_rotation: enabled"
-          new = "    signing_algorithm: HS256_staging_only\n    signing_secret: cloudflare_worker_secret\n    deployment_rotation: enabled"
-          if old in text:
-              if text.count(old) != 1:
-                  raise SystemExit("checkpoint status anchor repair target is ambiguous")
-              patcher.write_text(text.replace(old, new))
-          elif new not in text:
-              raise SystemExit("checkpoint status anchor is neither original nor repaired")
-          PY
           python3 tooling/scripts/apply-asymmetric-checkpoint.py
           python3 - <<'PY'
           from pathlib import Path
