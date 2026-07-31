@@ -7,6 +7,20 @@ import {
   summarizeInternalTokenKeyChangeJournal,
 } from "./internal-token-key-change-journal.mjs";
 
+export const INTERNAL_TOKEN_KEY_CHANGE_HISTORY_SQL = `SELECT
+  change_digest,
+  change_type,
+  sequence::integer AS sequence,
+  stage,
+  event_digest,
+  evidence_digest,
+  previous_event_digest,
+  floor(extract(epoch FROM occurred_at))::bigint::text AS occurred_at
+FROM platform.internal_token_key_change_journal
+WHERE change_digest = $1::text
+ORDER BY sequence ASC
+LIMIT 4`;
+
 export const INTERNAL_TOKEN_KEY_CHANGE_APPEND_SQL = `SELECT
   platform.append_internal_token_key_change_journal_event(
     $1::text,
@@ -66,6 +80,52 @@ function approvalForStage(stage, approvalInput, changeType) {
   return result;
 }
 
+function positiveDatabaseInteger(value, name) {
+  const parsed = typeof value === "number" ? value : Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed <= 0) fail(`${name} is invalid`);
+  return parsed;
+}
+
+function databaseHistory(resultInput, expectedChangeDigest) {
+  if (!Array.isArray(resultInput?.rows)) fail("database history response is invalid");
+  if (resultInput.rows.length > 3) fail("database history is too long");
+  return resultInput.rows.map((rowInput, index) => {
+    const row = exactKeys(
+      rowInput,
+      [
+        "change_digest",
+        "change_type",
+        "event_digest",
+        "evidence_digest",
+        "occurred_at",
+        "previous_event_digest",
+        "sequence",
+        "stage",
+      ],
+      `database history row ${index + 1}`,
+    );
+    if (row.change_digest !== expectedChangeDigest) {
+      fail("database history change identity is invalid");
+    }
+    return {
+      changeDigest: row.change_digest,
+      changeType: row.change_type,
+      eventDigest: row.event_digest,
+      evidenceDigest: row.evidence_digest,
+      occurredAt: positiveDatabaseInteger(
+        row.occurred_at,
+        `database history row ${index + 1} timestamp`,
+      ),
+      previousEventDigest: row.previous_event_digest,
+      sequence: positiveDatabaseInteger(
+        row.sequence,
+        `database history row ${index + 1} sequence`,
+      ),
+      stage: row.stage,
+    };
+  });
+}
+
 function occurredAt(value) {
   const date = new Date(value * 1_000);
   if (!Number.isFinite(date.getTime())) fail("event timestamp is invalid");
@@ -78,14 +138,18 @@ export async function recordInternalTokenKeyChangeJournalEvent(
 ) {
   const command = exactKeys(
     commandInput,
-    ["event", "history", "approval"],
+    ["event", "approval"],
     "command",
   );
-  if (!Array.isArray(command.history)) fail("history is invalid");
   const event = normalizeInternalTokenKeyChangeJournalEvent(command.event);
   approvalForStage(event.stage, command.approval, event.changeType);
-  const nextHistory = appendInternalTokenKeyChangeJournalEvent(command.history, event);
   const client = queryClient(clientInput);
+  const historyResult = await client.query(
+    INTERNAL_TOKEN_KEY_CHANGE_HISTORY_SQL,
+    [event.changeDigest],
+  );
+  const history = databaseHistory(historyResult, event.changeDigest);
+  const nextHistory = appendInternalTokenKeyChangeJournalEvent(history, event);
   const result = await client.query(INTERNAL_TOKEN_KEY_CHANGE_APPEND_SQL, [
     event.changeDigest,
     event.changeType,
