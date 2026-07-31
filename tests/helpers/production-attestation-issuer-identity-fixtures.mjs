@@ -107,6 +107,7 @@ export function createProductionAttestationIssuerIdentityFixture({
     schemaVersion: rawAssembly.schemaVersion,
   };
   const privateKeys = new Map();
+  const receiptPrivateKeys = [];
   const principals = rawAssembly.attestations.map((attestation, index) => {
     const { privateKey, publicKey } = generateKeyPairSync("ed25519");
     const body = principalBody(attestation, publicJwk(publicKey), index, assembly);
@@ -116,6 +117,7 @@ export function createProductionAttestationIssuerIdentityFixture({
         createInternalTokenProductionAttestationIssuerKeyDigest(body),
     };
     privateKeys.set(attestation.issuerDigest, privateKey);
+    receiptPrivateKeys.push(privateKey);
     return principal;
   });
   const registryBase = registryBody(principals, now);
@@ -152,7 +154,7 @@ export function createProductionAttestationIssuerIdentityFixture({
     );
     return {
       ...body,
-      signature: signature(body, privateKeys.get(attestation.issuerDigest)),
+      signature: signature(body, receiptPrivateKeys[index]),
     };
   });
   return {
@@ -168,6 +170,7 @@ export function createProductionAttestationIssuerIdentityFixture({
       sequenceCheckpoint,
     },
     privateKeys,
+    receiptPrivateKeys,
   };
 }
 
@@ -183,10 +186,7 @@ export function resignProductionAttestationReceipt(fixture, index) {
     schemaVersion: receipt.schemaVersion,
     sequenceCheckpointDigest: receipt.sequenceCheckpointDigest,
   };
-  receipt.signature = signature(
-    body,
-    fixture.privateKeys.get(receipt.attestation.issuerDigest),
-  );
+  receipt.signature = signature(body, fixture.receiptPrivateKeys[index]);
   return receipt;
 }
 
