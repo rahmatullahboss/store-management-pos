@@ -45,6 +45,16 @@ The contract requires:
 
 A real production adapter must supply the provider-side authorization policy, immutable audit source, non-exportable key attestation and signature bytes. The application contract validates the returned receipt but cannot independently prove a cloud or hardware provider exists without that adapter and its deployment evidence.
 
+## Durable provider-signing evidence
+
+`FND-0016` adds an isolated append-only provider-signing journal for validated production-provider receipts. The recorded-signing wrapper does not return the signature until the digest-only evidence write succeeds.
+
+The journal stores only purpose-separated SHA-256 digests, provider class, token purpose, RS256/SHA-256 identifiers, non-exportable and hardware-protected attestation booleans, receipt-validation state, signature byte length, bounded latency and timestamps. It does not store a raw key reference, key version, provider audit identifier, JWT signing input, signature or provider response payload.
+
+Replay and mutation controls include unique request, provider-operation and signature digests, an advisory transaction lock, a five-minute recording window, append-only update/delete rejection and an isolated `store_key_governance_runtime` role. Normal application and reporting roles have no journal-write access. `test-double` receipts are intentionally ineligible for durable provider evidence.
+
+This journal establishes an evidence-retention boundary only. It does not establish that a real provider exists, that its key is non-exportable, or that provider-side audit and authorization controls have been deployed.
+
 ## Exact live evidence
 
 The exact implementation head `dc5b1f8328ad7d7f1c472c9ed446b24145a86229` completed persistent staging workflow run `30609623111`, job `91089297482`. The uploaded evidence artifact is `8784940903` with digest `sha256:c6ed951221b83550aa05aa0836ae269d4dba28374fb914815a6775440f6dbd3f`; the report was produced from pull-request merge ref `55c5b0ed3b366d8376e3018c4a625ee51369e931`.
@@ -66,8 +76,8 @@ Generic disposable Neon preview capacity was not consumed for this workstream. T
 
 ## Evidence and privacy
 
-Artifacts and workflow summaries may contain only algorithm, schema version, active/previous/published/revoked counts, overlap seconds, provider class, receipt-validation booleans, signature length, bounded latency and private-field leak count. Private JWKs, serialized keysets, tokens, signatures, `kid` values, provider resource names, key versions, provider audit identifiers and receipt digests are prohibited from artifacts and logs.
+Artifacts and workflow summaries may contain only algorithm, schema version, active/previous/published/revoked counts, overlap seconds, provider class, receipt-validation booleans, durable-recording state, signature length, bounded latency and private-field leak count. Private JWKs, serialized keysets, tokens, signatures, `kid` values, provider resource names, key versions, provider audit identifiers and receipt digests are prohibited from artifacts and logs.
 
 ## Production blockers
 
-This staging implementation does not approve production key ownership. Production still requires provisioned KMS/HSM-backed non-exportable private keys, named security ownership, provider-side least-privilege signing policy, immutable audited signing access, a deployed adapter for the provider receipt contract, scheduled and emergency rotation procedures, protected JWKS publication, monitoring/paging, incident response, evidence retention and controlled launch approval.
+This staging implementation does not approve production key ownership. Production still requires provisioned KMS/HSM-backed non-exportable private keys, named security ownership, provider-side least-privilege signing policy, immutable audited signing access, a deployed adapter for the provider receipt contract, scheduled and emergency rotation procedures, protected JWKS publication, monitoring/paging, incident response, approved evidence retention and controlled launch approval.
