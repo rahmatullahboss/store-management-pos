@@ -34,6 +34,15 @@ replaceExact(
 );
 
 replaceExact(
+  "apps/api/src/staging-asymmetric-token.ts",
+  "async function importPublicKey(publicJwk: RsaPublicJwk, error: () => PlatformError): Promise<CryptoKey> {",
+  `async function importPublicKey(
+  publicJwk: RsaPublicJwk,
+  error: () => PlatformError,
+): Promise<CryptoKey> {`,
+);
+
+replaceExact(
   "tooling/scripts/staging-custom-auth-patch.mjs",
   `const actualRelations = "'auth_credentials','auth_sessions','auth_rate_limits','auth_events'";`,
   `const actualRelations = "'custom_auth_credentials','custom_auth_sessions','custom_auth_rate_limits','custom_auth_events'";`,
@@ -43,6 +52,26 @@ replaceExact(
   "tests/unit/staging-asymmetric-deployment.test.mjs",
   "/privateJwk|\\\"d\\\"|activeKid|previousKid/u",
   "/privateJwk|\"d\"|activeKid|previousKid/u",
+);
+
+replaceExact(
+  "tests/unit/staging-asymmetric-deployment.test.mjs",
+  "    assert.match(patchSource, /rotateStagingInternalTokenKeyset\\(activeKeyPair, previousKeyPair, now\\)/u);",
+  `    assert.match(
+      patchSource,
+      /rotateStagingInternalTokenKeyset\\(activeKeyPair, previousKeyPair, now\\)/u,
+    );`,
+);
+
+replaceExact(
+  "tests/unit/staging-asymmetric-deployment.test.mjs",
+  "  assert.equal(workflow.match(/Persistent Admin POS Staging \\(asymmetric token lifecycle\\)/gu)?.length, 1);",
+  `  assert.equal(
+    workflow.match(
+      /Persistent Admin POS Staging \\(asymmetric token lifecycle\\)/gu,
+    )?.length,
+    1,
+  );`,
 );
 
 {
