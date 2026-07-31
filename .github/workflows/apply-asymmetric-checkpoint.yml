@@ -1,6 +1,6 @@
 name: Apply asymmetric token checkpoint
 
-# Verification trigger: patcher aligned to current status contract.
+# Verification trigger: status compatibility repair is path-scoped.
 on:
   push:
     branches:
@@ -64,13 +64,35 @@ jobs:
 
           patcher = Path("tooling/scripts/apply-asymmetric-checkpoint.py")
           text = patcher.read_text()
-          old = "[REDACTED_SECRET]"
-          new = "cloudflare_worker_secret"
-          if text.count(old) != 1:
+          marker = "[REDACTED_SECRET]"
+          positions = []
+          offset = 0
+          while True:
+              position = text.find(marker, offset)
+              if position < 0:
+                  break
+              positions.append(position)
+              offset = position + len(marker)
+
+          candidates = []
+          for position in positions:
+              operation_start = text.rfind("replace_once(", 0, position)
+              if operation_start < 0:
+                  continue
+              operation_prefix = text[operation_start:position]
+              if "docs/architecture/staging/status.yaml" in operation_prefix:
+                  candidates.append(position)
+
+          if len(candidates) != 1:
               raise SystemExit(
-                  f"expected one obsolete status secret marker in patcher, found {text.count(old)}"
+                  "expected one path-scoped obsolete status marker in patcher, "
+                  f"found {len(candidates)} from {len(positions)} total markers"
               )
-          patcher.write_text(text.replace(old, new))
+
+          position = candidates[0]
+          patcher.write_text(
+              text[:position] + "cloudflare_worker_secret" + text[position + len(marker):]
+          )
           PY
           python3 tooling/scripts/apply-asymmetric-checkpoint.py
           python3 - <<'PY'
