@@ -164,6 +164,22 @@ replaceExact(
   assert.match(status, /private_key_published: false/u);`,
 );
 
+{
+  const path = "docs/architecture/staging/internal-token-key-lifecycle.md";
+  const source = readFileSync(path, "utf8");
+  const lines = source.split("\n");
+  const trailingWhitespaceLines = lines.filter((line) => /[ \t]+$/u.test(line));
+  if (trailingWhitespaceLines.length !== 1) {
+    throw new Error(
+      `${path}: expected one trailing-whitespace line, found ${trailingWhitespaceLines.length}`,
+    );
+  }
+  writeFileSync(
+    path,
+    lines.map((line) => line.replace(/[ \t]+$/u, "")).join("\n"),
+  );
+}
+
 const basePackage = execFileSync(
   "git",
   ["show", "6be2f1fdde595c2f4fa8080cac68b7932d042ada:package.json"],
