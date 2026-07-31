@@ -94,6 +94,13 @@ export async function checkProductionLaunchAdmission({
   if (revocationPath === "") {
     fail("production revocation state file is required");
   }
+  const expectedHeadDigest =
+    typeof environment.PRODUCTION_LAUNCH_REVOCATION_EXPECTED_HEAD_DIGEST === "string"
+      ? environment.PRODUCTION_LAUNCH_REVOCATION_EXPECTED_HEAD_DIGEST.trim()
+      : "";
+  if (expectedHeadDigest === "") {
+    fail("protected revocation journal head digest is required");
+  }
 
   const bundle = await readJsonFile(evidencePath, "production evidence");
   const revocationSnapshot = await readJsonFile(
@@ -113,6 +120,7 @@ export async function checkProductionLaunchAdmission({
       revocationSnapshot,
       {
         admissionBundleDigest: bundle.bundleDigest,
+        headDigest: expectedHeadDigest,
         releaseDigest: bundle.evidence.releaseDigest,
       },
       now,
