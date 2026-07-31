@@ -182,6 +182,54 @@ jobs:
           if helper_text.find(start_marker, start + 1) >= 0:
               raise SystemExit("duplicate signature compatibility block is ambiguous")
           helper.write_text(helper_text[:start] + helper_text[end + 2:])
+
+          status_test = Path("tests/unit/staging-read-context.test.mjs")
+          status_test_text = status_test.read_text()
+          old_pattern = re.compile(
+              r'(?m)^(?P<indent>[ \t]*)protectedReadTransport: '
+              r'"short-lived-internal-token",$'
+          )
+          old_matches = list(old_pattern.finditer(status_test_text))
+          new_transport = (
+              'protectedReadTransport: "short-lived-rs256-internal-token",'
+          )
+          if len(old_matches) == 1:
+              old_match = old_matches[0]
+              indent = old_match.group("indent")
+              fields = [
+                  'protectedReadTransport: "short-lived-rs256-internal-token",',
+                  'internalTokenSigning: "RS256",',
+                  'internalTokenKidRequired: true,',
+                  'internalTokenJwksPath: "/internal-identity/.well-known/jwks.json",',
+                  'internalTokenKeyLifecycle: "active-plus-previous-overlap-and-revocation",',
+                  'internalTokenPrivateKeyPublished: false,',
+              ]
+              replacement = "\n".join(f"{indent}{field}" for field in fields)
+              status_test_text = (
+                  status_test_text[:old_match.start()]
+                  + replacement
+                  + status_test_text[old_match.end():]
+              )
+              status_test.write_text(status_test_text)
+          elif len(old_matches) != 0 or new_transport not in status_test_text:
+              raise SystemExit(
+                  "staging status expectation is neither legacy nor RS256-aligned"
+              )
+
+          required_status_fields = [
+              new_transport,
+              'internalTokenSigning: "RS256",',
+              'internalTokenKidRequired: true,',
+              'internalTokenJwksPath: "/internal-identity/.well-known/jwks.json",',
+              'internalTokenKeyLifecycle: "active-plus-previous-overlap-and-revocation",',
+              'internalTokenPrivateKeyPublished: false,',
+          ]
+          final_status_test = status_test.read_text()
+          for required_field in required_status_fields:
+              if final_status_test.count(required_field) != 1:
+                  raise SystemExit(
+                      f"staging status expectation field is not unique: {required_field}"
+                  )
           PY
           rm -rf .checkpoint
           rm -f tooling/scripts/apply-asymmetric-checkpoint.py
