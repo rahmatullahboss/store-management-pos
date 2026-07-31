@@ -55,6 +55,18 @@ Replay and mutation controls include unique request, provider-operation and sign
 
 This journal establishes an evidence-retention boundary only. It does not establish that a real provider exists, that its key is non-exportable, or that provider-side audit and authorization controls have been deployed.
 
+## Retention, legal hold and export custody
+
+`tooling/scripts/internal-token-provider-evidence-custody.mjs` builds deterministic sealed exports from projected FND-0016 records. An export is accepted only under an effective retention policy whose digest binds an external approval digest, policy window, retention days and maximum row count. The implementation deliberately does not select a legal or regulatory retention period.
+
+Each exported record contains only aggregate signing metadata, a source-record digest, a previous-record digest and a record digest. Raw provider key references, key versions, provider audit identifiers, signing inputs, signatures and the seven source receipt digests are not included. The final record digest becomes the export chain root and the complete manifest is bound to an export digest.
+
+Active legal holds apply to bounded occurrence windows. A held record cannot become disposal-eligible even after its policy retention horizon. Released holds no longer block eligibility. Eligibility is an assessment only: this checkpoint does not delete evidence or provide an automatic purge function.
+
+`FND-0017` records the sealed export digest, policy digest, chain root, contiguous custody sequence, previous custody digest, aggregate row/hold/eligibility counts, retention horizon and privacy profile in a second isolated append-only journal. Normal application and reporting roles cannot write the custody journal. A failed database acknowledgement is masked and treated as a failed custody operation.
+
+This provides a tamper-evident custody contract, not an external archive. Production still needs an approved organizational schedule, authorized legal-hold operators, immutable off-platform storage, restoration drills and documented disposal authorization.
+
 ## Exact live evidence
 
 The exact implementation head `dc5b1f8328ad7d7f1c472c9ed446b24145a86229` completed persistent staging workflow run `30609623111`, job `91089297482`. The uploaded evidence artifact is `8784940903` with digest `sha256:c6ed951221b83550aa05aa0836ae269d4dba28374fb914815a6775440f6dbd3f`; the report was produced from pull-request merge ref `55c5b0ed3b366d8376e3018c4a625ee51369e931`.
@@ -78,6 +90,8 @@ Generic disposable Neon preview capacity was not consumed for this workstream. T
 
 Artifacts and workflow summaries may contain only algorithm, schema version, active/previous/published/revoked counts, overlap seconds, provider class, receipt-validation booleans, durable-recording state, signature length, bounded latency and private-field leak count. Private JWKs, serialized keysets, tokens, signatures, `kid` values, provider resource names, key versions, provider audit identifiers and receipt digests are prohibited from artifacts and logs.
 
+Controlled custody exports may additionally contain source-record, chain-root, export, policy and custody digests plus aggregate retention and legal-hold state. They must not be copied into ordinary CI artifacts or application logs.
+
 ## Production blockers
 
-This staging implementation does not approve production key ownership. Production still requires provisioned KMS/HSM-backed non-exportable private keys, named security ownership, provider-side least-privilege signing policy, immutable audited signing access, a deployed adapter for the provider receipt contract, scheduled and emergency rotation procedures, protected JWKS publication, monitoring/paging, incident response, approved evidence retention and controlled launch approval.
+This staging implementation does not approve production key ownership. Production still requires provisioned KMS/HSM-backed non-exportable private keys, named security ownership, provider-side least-privilege signing policy, immutable audited signing access, a deployed adapter for the provider receipt contract, scheduled and emergency rotation procedures, protected JWKS publication, monitoring/paging, incident response, an approved organizational retention and legal-hold process, immutable external evidence storage and controlled launch approval.
