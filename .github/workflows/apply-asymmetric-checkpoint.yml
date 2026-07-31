@@ -31,7 +31,10 @@ jobs:
           package-manager-cache: false
       - name: Assemble checkpoint overlay
         run: |
-          cat .checkpoint/asymmetric-overlay-*.b64 | base64 --decode --ignore-garbage > /tmp/asymmetric-overlay.tar.gz
+          : > /tmp/asymmetric-overlay.tar.gz
+          for chunk in .checkpoint/asymmetric-overlay-*.b64; do
+            base64 --decode "$chunk" >> /tmp/asymmetric-overlay.tar.gz
+          done
           echo "66cc18095a55c3007f6711a27f00380ac643078da18d6a73ca5983d0f3618a2a  /tmp/asymmetric-overlay.tar.gz" | sha256sum --check --strict
           tar --extract --gzip --file /tmp/asymmetric-overlay.tar.gz --directory .
           python3 tooling/scripts/apply-asymmetric-checkpoint.py
