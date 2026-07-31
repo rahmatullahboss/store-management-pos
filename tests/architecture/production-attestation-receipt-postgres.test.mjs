@@ -192,3 +192,55 @@ test("Postgres adapter uses one JSONB command and an aggregate-only result", asy
     /privateKey|providerResource|databaseUrl|receiptPayload/u,
   );
 });
+
+test("live dedicated-Neon evidence proves savepoint isolation and concurrent serialization", async () => {
+  const source = await readFile(
+    new URL(
+      "../../tooling/scripts/staging-attestation-receipt-postgres-evidence.mjs",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.match(source, /SAVEPOINT \$\{savepoint\}/u);
+  assert.match(source, /ROLLBACK TO SAVEPOINT \$\{savepoint\}/u);
+  assert.match(source, /RELEASE SAVEPOINT \$\{savepoint\}/u);
+  assert.match(source, /FROM pg_locks/u);
+  assert.match(source, /classid::bigint = 742901/u);
+  assert.match(source, /objid::bigint = 20/u);
+  assert.match(source, /granted = false/u);
+  assert.match(source, /Concurrent append did not wait on the journal advisory lock/u);
+  assert.match(source, /await first\.query\("ROLLBACK"\)/u);
+  assert.match(source, /await second\.query\("ROLLBACK"\)/u);
+  assert.match(source, /transaction rollback was incomplete/u);
+  assert.match(source, /concurrentRaceSerialized: concurrency\.serialized/u);
+  assert.doesNotMatch(
+    source,
+    /console\.log\([^)]*(?:connectionString|batchNonceDigest|entryDigest)/u,
+  );
+});
+
+test("staging and admission workflows track the hardened database evidence", async () => {
+  const packageJson = JSON.parse(
+    await readFile(new URL("../../package.json", import.meta.url), "utf8"),
+  );
+  assert.match(
+    packageJson.scripts["ci:staging-deploy"],
+    /run-attestation-receipt-postgres-staging\.mjs/u,
+  );
+  const workflow = await readFile(
+    new URL("../../.github/workflows/production-launch-admission.yml", import.meta.url),
+    "utf8",
+  );
+  assert.match(
+    workflow,
+    /FND-0020-internal-token-production-attestation-receipt-append-hardening\.sql/u,
+  );
+  assert.match(
+    workflow,
+    /staging-attestation-receipt-postgres-evidence\.mjs/u,
+  );
+  assert.match(
+    workflow,
+    /run-attestation-receipt-postgres-staging\.mjs/u,
+  );
+});
