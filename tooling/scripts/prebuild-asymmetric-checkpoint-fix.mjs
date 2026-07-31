@@ -46,26 +46,31 @@ replaceExact(
   const source = readFileSync(path, "utf8");
   const lines = source.split("\n");
   const indexes = lines
-    .map((line, index) => line.includes("async function importPublicKey") ? index : -1)
+    .map((line, index) =>
+      line.includes("publicJwk: RsaPublicJwk") && line.includes("Promise<CryptoKey>")
+        ? index
+        : -1,
+    )
     .filter((index) => index >= 0);
-  if (indexes.length !== 1) {
-    throw new Error(`${path}: expected one importPublicKey declaration, found ${indexes.length}`);
+  if (indexes.length > 1) {
+    throw new Error(`${path}: expected at most one single-line public import helper, found ${indexes.length}`);
   }
-  const index = indexes[0];
-  const line = lines[index];
-  if (line.trim() !== "async function importPublicKey(") {
-    const required = [
-      "publicJwk: RsaPublicJwk",
-      "error: () => PlatformError",
-      "Promise<CryptoKey>",
-    ];
-    if (!required.every((value) => line.includes(value)) || !line.trim().endsWith("{")) {
-      throw new Error(`${path}: importPublicKey declaration shape is invalid`);
+  if (indexes.length === 1) {
+    const index = indexes[0];
+    const line = lines[index];
+    const match = /^\s*async function ([A-Za-z][A-Za-z0-9_]*)\(/u.exec(line);
+    if (
+      !match ||
+      !line.includes("error: () => PlatformError") ||
+      !line.trim().endsWith("{")
+    ) {
+      throw new Error(`${path}: public import helper declaration shape is invalid`);
     }
+    const helperName = match[1];
     lines.splice(
       index,
       1,
-      "async function importPublicKey(",
+      `async function ${helperName}(`,
       "  publicJwk: RsaPublicJwk,",
       "  error: () => PlatformError,",
       "): Promise<CryptoKey> {",
