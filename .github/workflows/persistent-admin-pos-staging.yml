@@ -21,10 +21,15 @@ on:
       - "tests/unit/staging-read-context.test.mjs"
       - "tests/unit/staging-mfa.test.mjs"
       - "tests/unit/staging-command-token.test.mjs"
+      - "tests/unit/staging-asymmetric-token.test.mjs"
+      - "tests/unit/staging-asymmetric-deployment.test.mjs"
+      - "tests/helpers/staging-token-keyset.mjs"
       - "tests/unit/staging-account-recovery.test.mjs"
       - "tooling/scripts/apply-migrations.mjs"
       - "tooling/scripts/deploy-custom-auth-staging.mjs"
       - "tooling/scripts/run-custom-auth-staging.mjs"
+      - "tooling/scripts/staging-custom-auth-patch.mjs"
+      - "tooling/scripts/staging-token-keyset.mjs"
       - "tooling/scripts/staging-mfa-reservation-evidence.mjs"
       - "tooling/scripts/staging-account-recovery-evidence.mjs"
       - "tooling/scripts/run-operational-staging.mjs"
@@ -54,10 +59,15 @@ on:
       - "tests/unit/staging-read-context.test.mjs"
       - "tests/unit/staging-mfa.test.mjs"
       - "tests/unit/staging-command-token.test.mjs"
+      - "tests/unit/staging-asymmetric-token.test.mjs"
+      - "tests/unit/staging-asymmetric-deployment.test.mjs"
+      - "tests/helpers/staging-token-keyset.mjs"
       - "tests/unit/staging-account-recovery.test.mjs"
       - "tooling/scripts/apply-migrations.mjs"
       - "tooling/scripts/deploy-custom-auth-staging.mjs"
       - "tooling/scripts/run-custom-auth-staging.mjs"
+      - "tooling/scripts/staging-custom-auth-patch.mjs"
+      - "tooling/scripts/staging-token-keyset.mjs"
       - "tooling/scripts/staging-mfa-reservation-evidence.mjs"
       - "tooling/scripts/staging-account-recovery-evidence.mjs"
       - "tooling/scripts/run-operational-staging.mjs"
@@ -124,6 +134,12 @@ jobs:
             `- Browser data: ${report.syntheticOnly === true ? 'synthetic only' : 'not confirmed'}`,
             `- Authentication: ${report.authentication?.provider ?? 'not confirmed'}`,
             `- Password hashing: ${report.authentication?.passwordHash ?? 'not confirmed'}`,
+            `- Internal token algorithm: ${report.internalToken?.algorithm ?? 'not confirmed'}`,
+            `- Internal token active/previous verification keys: ${report.internalToken?.activeVerificationKeyCount ?? 'not available'}/${report.internalToken?.previousVerificationKeyCount ?? 'not available'}`,
+            `- Internal token published/revoked keys: ${report.internalToken?.publishedKeyCount ?? 'not available'}/${report.internalToken?.revokedKeyCount ?? 'not available'}`,
+            `- Internal token rotation overlap: ${report.internalToken?.rotationOverlapSeconds ?? 'not available'} seconds`,
+            `- Internal token private fields published: ${report.internalToken?.privateFieldsPublished ?? 'not available'}`,
+            `- Internal token key material in artifacts: ${report.internalToken?.privateKeyPersistedInArtifacts === false && report.internalToken?.keysetPersistedInArtifacts === false ? 'no' : 'not confirmed'}`,
             `- TOTP MFA: ${report.mfa?.provider === 'totp' && report.mfa?.encryptedAtRest === true ? 'passed' : 'not confirmed'}`,
             `- Single-use step-up replay rejection: ${report.mfa?.replayRejected === true ? 'passed' : 'not confirmed'}`,
             `- Reservation create/release: ${report.controlledCommand?.createPassed === true && report.controlledCommand?.releasePassed === true ? 'passed' : 'not confirmed'}`,
