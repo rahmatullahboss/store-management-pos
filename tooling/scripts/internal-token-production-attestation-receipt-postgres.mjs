@@ -8,36 +8,9 @@ const RECEIPT_COUNT = 13;
 const SCHEMA_VERSION = 1;
 
 export const INTERNAL_TOKEN_PRODUCTION_ATTESTATION_RECEIPT_POSTGRES_APPEND_SQL = `
-SELECT
-  status,
-  journal_version::text,
-  entry_digest,
-  batch_digest,
-  batch_nonce_digest,
-  evidence_digest,
-  previous_journal_digest,
-  previous_sequence_checkpoint_digest,
-  next_sequence_checkpoint_digest,
-  registry_digest,
-  release_digest,
-  receipt_count::int,
-  recorded_at_epoch_ms::text,
-  schema_version::int
-FROM platform.append_internal_token_production_attestation_receipt_journal(
-  $1::smallint,
-  $2::text,
-  $3::text,
-  $4::text,
-  $5::text,
-  $6::text,
-  $7::text,
-  $8::text,
-  $9::text,
-  $10::text[],
-  $11::bigint,
-  $12::bigint,
-  $13::text
-)`;
+SELECT platform.record_internal_token_production_attestation_receipt_batch(
+  $1::jsonb
+) AS acknowledgment`;
 
 export const INTERNAL_TOKEN_PRODUCTION_ATTESTATION_RECEIPT_POSTGRES_STATE_SQL = `
 SELECT
@@ -71,7 +44,9 @@ function exact(value, keys, name) {
 }
 
 function digest(value, name) {
-  if (typeof value !== "string" || !DIGEST.test(value)) fail(`${name} is invalid`);
+  if (typeof value !== "string" || !DIGEST.test(value)) {
+    fail(`${name} is invalid`);
+  }
   return value;
 }
 
@@ -97,7 +72,9 @@ function normalizeCommand(input) {
     ],
     "append command",
   );
-  if (command.schemaVersion !== SCHEMA_VERSION) fail("append schema version is invalid");
+  if (command.schemaVersion !== SCHEMA_VERSION) {
+    fail("append schema version is invalid");
+  }
   const batch = exact(
     command.batch,
     [
@@ -112,8 +89,13 @@ function normalizeCommand(input) {
     ],
     "append batch",
   );
-  if (batch.schemaVersion !== SCHEMA_VERSION) fail("batch schema version is invalid");
-  if (!Array.isArray(batch.receiptDigests) || batch.receiptDigests.length !== RECEIPT_COUNT) {
+  if (batch.schemaVersion !== SCHEMA_VERSION) {
+    fail("batch schema version is invalid");
+  }
+  if (
+    !Array.isArray(batch.receiptDigests) ||
+    batch.receiptDigests.length !== RECEIPT_COUNT
+  ) {
     fail("batch must contain exactly thirteen receipt digests");
   }
   const receiptDigests = batch.receiptDigests.map((item, index) =>
@@ -171,98 +153,113 @@ function entryBody(command) {
   });
 }
 
-function normalizeRow(input, expected, expectedEntryDigest) {
-  const row = exact(
-    input,
+function databaseCommand(command, entryDigest) {
+  return Object.freeze({
+    batchDigest: command.batchDigest,
+    batchNonceDigest: command.batch.batchNonceDigest,
+    entryDigest,
+    evidenceDigest: command.batch.evidenceDigest,
+    expectedJournalVersion: command.expectedJournalVersion,
+    nextSequenceCheckpointDigest: command.batch.nextSequenceCheckpointDigest,
+    previousJournalDigest: command.expectedPreviousJournalDigest,
+    previousSequenceCheckpointDigest:
+      command.batch.previousSequenceCheckpointDigest,
+    receiptDigests: Object.freeze([...command.batch.receiptDigests]),
+    recordedAt: command.recordedAt,
+    registryDigest: command.batch.registryDigest,
+    releaseDigest: command.batch.releaseDigest,
+    schemaVersion: SCHEMA_VERSION,
+  });
+}
+
+function parseAcknowledgment(value) {
+  if (typeof value === "string") {
+    try {
+      return JSON.parse(value);
+    } catch {
+      fail("database acknowledgment JSON is invalid");
+    }
+  }
+  return value;
+}
+
+function normalizeAcknowledgment(input, expected, expectedEntryDigest) {
+  const value = exact(
+    parseAcknowledgment(input),
     [
-      "batch_digest",
-      "batch_nonce_digest",
-      "entry_digest",
-      "evidence_digest",
-      "journal_version",
-      "next_sequence_checkpoint_digest",
-      "previous_journal_digest",
-      "previous_sequence_checkpoint_digest",
-      "receipt_count",
-      "recorded_at_epoch_ms",
-      "registry_digest",
-      "release_digest",
-      "schema_version",
+      "batchDigest",
+      "batchNonceDigest",
+      "entryDigest",
+      "evidenceDigest",
+      "journalVersion",
+      "nextSequenceCheckpointDigest",
+      "previousJournalDigest",
+      "previousSequenceCheckpointDigest",
+      "receiptCount",
+      "recordedAt",
+      "registryDigest",
+      "releaseDigest",
+      "schemaVersion",
       "status",
     ],
     "database acknowledgment",
   );
-  if (row.status !== "recorded" && row.status !== "idempotent") {
+  if (value.status !== "recorded" && value.status !== "idempotent") {
     fail("database acknowledgment status is invalid");
   }
-  const normalized = Object.freeze({
-    batchDigest: digest(row.batch_digest, "database batch digest"),
-    batchNonceDigest: digest(row.batch_nonce_digest, "database batch nonce digest"),
-    entryDigest: digest(row.entry_digest, "database entry digest"),
-    evidenceDigest: digest(row.evidence_digest, "database evidence digest"),
-    journalVersion: integer(row.journal_version, "database journal version", 1),
+  const body = Object.freeze({
+    batchDigest: digest(value.batchDigest, "database batch digest"),
+    batchNonceDigest: digest(
+      value.batchNonceDigest,
+      "database batch nonce digest",
+    ),
+    entryDigest: digest(value.entryDigest, "database entry digest"),
+    evidenceDigest: digest(value.evidenceDigest, "database evidence digest"),
+    journalVersion: integer(value.journalVersion, "database journal version", 1),
     nextSequenceCheckpointDigest: digest(
-      row.next_sequence_checkpoint_digest,
+      value.nextSequenceCheckpointDigest,
       "database next sequence-checkpoint digest",
     ),
     previousJournalDigest: digest(
-      row.previous_journal_digest,
+      value.previousJournalDigest,
       "database previous journal digest",
     ),
     previousSequenceCheckpointDigest: digest(
-      row.previous_sequence_checkpoint_digest,
+      value.previousSequenceCheckpointDigest,
       "database previous sequence-checkpoint digest",
     ),
-    receiptCount: integer(row.receipt_count, "database receipt count", RECEIPT_COUNT),
-    recordedAt: integer(row.recorded_at_epoch_ms, "database recorded-at", 1),
-    registryDigest: digest(row.registry_digest, "database registry digest"),
-    releaseDigest: digest(row.release_digest, "database release digest"),
-    schemaVersion: integer(row.schema_version, "database schema version", 1),
-    status: row.status,
+    receiptCount: integer(value.receiptCount, "database receipt count", 1),
+    recordedAt: integer(value.recordedAt, "database recorded-at", 1),
+    registryDigest: digest(value.registryDigest, "database registry digest"),
+    releaseDigest: digest(value.releaseDigest, "database release digest"),
+    schemaVersion: integer(value.schemaVersion, "database schema version", 1),
+    status: value.status,
   });
   if (
-    normalized.schemaVersion !== SCHEMA_VERSION ||
-    normalized.receiptCount !== RECEIPT_COUNT ||
-    normalized.entryDigest !== expectedEntryDigest ||
-    normalized.batchDigest !== expected.batchDigest ||
-    normalized.batchNonceDigest !== expected.batch.batchNonceDigest ||
-    normalized.evidenceDigest !== expected.batch.evidenceDigest ||
-    normalized.journalVersion !== expected.expectedJournalVersion + 1 ||
-    normalized.nextSequenceCheckpointDigest !==
+    body.schemaVersion !== SCHEMA_VERSION ||
+    body.receiptCount !== RECEIPT_COUNT ||
+    body.entryDigest !== expectedEntryDigest ||
+    body.batchDigest !== expected.batchDigest ||
+    body.batchNonceDigest !== expected.batch.batchNonceDigest ||
+    body.evidenceDigest !== expected.batch.evidenceDigest ||
+    body.journalVersion !== expected.expectedJournalVersion + 1 ||
+    body.nextSequenceCheckpointDigest !==
       expected.batch.nextSequenceCheckpointDigest ||
-    normalized.previousJournalDigest !== expected.expectedPreviousJournalDigest ||
-    normalized.previousSequenceCheckpointDigest !==
+    body.previousJournalDigest !== expected.expectedPreviousJournalDigest ||
+    body.previousSequenceCheckpointDigest !==
       expected.batch.previousSequenceCheckpointDigest ||
-    normalized.recordedAt !== expected.recordedAt ||
-    normalized.registryDigest !== expected.batch.registryDigest ||
-    normalized.releaseDigest !== expected.batch.releaseDigest
+    body.recordedAt !== expected.recordedAt ||
+    body.registryDigest !== expected.batch.registryDigest ||
+    body.releaseDigest !== expected.batch.releaseDigest
   ) {
     fail("database acknowledgment is not bound to the append command");
   }
-  return normalized;
-}
-
-function acknowledgment(row) {
-  const body = Object.freeze({
-    batchDigest: row.batchDigest,
-    batchNonceDigest: row.batchNonceDigest,
-    entryDigest: row.entryDigest,
-    evidenceDigest: row.evidenceDigest,
-    journalVersion: row.journalVersion,
-    nextSequenceCheckpointDigest: row.nextSequenceCheckpointDigest,
-    previousJournalDigest: row.previousJournalDigest,
-    previousSequenceCheckpointDigest: row.previousSequenceCheckpointDigest,
-    receiptCount: row.receiptCount,
-    recordedAt: row.recordedAt,
-    registryDigest: row.registryDigest,
-    releaseDigest: row.releaseDigest,
-    schemaVersion: row.schemaVersion,
-    status: row.status,
-  });
   return Object.freeze({
     ...body,
     acknowledgmentDigest:
-      createInternalTokenProductionAttestationReceiptJournalAcknowledgmentDigest(body),
+      createInternalTokenProductionAttestationReceiptJournalAcknowledgmentDigest(
+        body,
+      ),
   });
 }
 
@@ -280,28 +277,16 @@ export function createPostgresInternalTokenProductionAttestationReceiptJournalRe
   return Object.freeze({
     async append(commandInput) {
       const command = normalizeCommand(commandInput);
-      const body = entryBody(command);
-      const entryDigest =
-        createInternalTokenProductionAttestationReceiptJournalEntryDigest(body);
+      const proposedEntryDigest =
+        createInternalTokenProductionAttestationReceiptJournalEntryDigest(
+          entryBody(command),
+        );
+      const proposedCommand = databaseCommand(command, proposedEntryDigest);
       let result;
       try {
         result = await client.query(
           INTERNAL_TOKEN_PRODUCTION_ATTESTATION_RECEIPT_POSTGRES_APPEND_SQL,
-          [
-            command.schemaVersion,
-            command.batchDigest,
-            command.batch.batchNonceDigest,
-            command.batch.evidenceDigest,
-            command.expectedPreviousJournalDigest,
-            command.batch.previousSequenceCheckpointDigest,
-            command.batch.nextSequenceCheckpointDigest,
-            command.batch.registryDigest,
-            command.batch.releaseDigest,
-            [...command.batch.receiptDigests],
-            command.expectedJournalVersion,
-            command.recordedAt,
-            entryDigest,
-          ],
+          [JSON.stringify(proposedCommand)],
         );
       } catch {
         fail("append failed");
@@ -309,7 +294,16 @@ export function createPostgresInternalTokenProductionAttestationReceiptJournalRe
       if (!result || !Array.isArray(result.rows) || result.rows.length !== 1) {
         fail("database acknowledgment row count is invalid");
       }
-      return acknowledgment(normalizeRow(result.rows[0], command, entryDigest));
+      const row = exact(
+        result.rows[0],
+        ["acknowledgment"],
+        "database result row",
+      );
+      return normalizeAcknowledgment(
+        row.acknowledgment,
+        command,
+        proposedEntryDigest,
+      );
     },
 
     async readState() {
