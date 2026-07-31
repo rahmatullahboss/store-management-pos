@@ -16,8 +16,14 @@ test("provider evidence custody storage is isolated and append-only", async () =
   assert.match(sql, /CREATE TABLE IF NOT EXISTS platform\.internal_token_provider_evidence_custody_journal/u);
   assert.match(sql, /BEFORE UPDATE OR DELETE/u);
   assert.match(sql, /platform\.reject_append_only_mutation\(\)/u);
-  assert.match(sql, /REVOKE ALL ON TABLE platform\.internal_token_provider_evidence_custody_journal FROM store_app_runtime/u);
-  assert.match(sql, /REVOKE ALL ON TABLE platform\.internal_token_provider_evidence_custody_journal FROM store_app_reporting/u);
+  assert.match(
+    sql,
+    /REVOKE ALL ON TABLE platform\.internal_token_provider_evidence_custody_journal\s+FROM store_app_runtime/u,
+  );
+  assert.match(
+    sql,
+    /REVOKE ALL ON TABLE platform\.internal_token_provider_evidence_custody_journal\s+FROM store_app_reporting/u,
+  );
 });
 
 test("custody append serializes and enforces contiguous digest linkage", async () => {
