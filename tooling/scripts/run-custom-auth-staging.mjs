@@ -2,14 +2,19 @@ import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildCustomAuthStagingDeploy } from "./staging-custom-auth-patch.mjs";
-import { normalizeCustomAuthRelationEvidenceSource } from "./staging-custom-auth-source-contract.mjs";
+import {
+  finalizeCustomAuthRelationEvidenceSource,
+  normalizeCustomAuthRelationEvidenceSource,
+} from "./staging-custom-auth-source-contract.mjs";
 import { generateStagingTokenKeyset } from "./staging-token-keyset.mjs";
 
 const root = fileURLToPath(new URL("../..", import.meta.url));
 const deployPath = path.join(root, "tooling", "scripts", "deploy-custom-auth-staging.mjs");
 const originalDeploy = await readFile(deployPath, "utf8");
 const normalizedDeploy = normalizeCustomAuthRelationEvidenceSource(originalDeploy);
-const patchedDeploy = buildCustomAuthStagingDeploy(normalizedDeploy);
+const patchedDeploy = finalizeCustomAuthRelationEvidenceSource(
+  buildCustomAuthStagingDeploy(normalizedDeploy),
+);
 const generatedInternalTokenKeyset = await generateStagingTokenKeyset();
 
 process.env.STAGING_INTERNAL_TOKEN_SECRET = generatedInternalTokenKeyset.serialized;
