@@ -40,6 +40,16 @@ replaceExact(
 );
 
 replaceExact(
+  "tests/unit/staging-asymmetric-deployment.test.mjs",
+  `  assert.match(lifecycle, /KMS\/HSM-backed non-exportable private keys/u);
+  assert.match(lifecycle, /Artifacts and workflow summaries may contain only algorithm/u);
+}`,
+  `  assert.match(lifecycle, /KMS\/HSM-backed non-exportable private keys/u);
+  assert.match(lifecycle, /Artifacts and workflow summaries may contain only algorithm/u);
+});`,
+);
+
+replaceExact(
   "tests/unit/staging-operational-release.test.mjs",
   `  const runner = await source("tooling/scripts/run-custom-auth-staging.mjs");
   const deploy = await source("tooling/scripts/deploy-custom-auth-staging.mjs");
@@ -57,7 +67,7 @@ replaceExact(
   assert.match(status, /status: asymmetric_internal_token_implemented_pending_live_evidence/u);
   assert.match(status, /signing_algorithm: RS256/u);
   assert.match(status, /key_id_required: true/u);
-  assert.match(status, /public_jwks_path: \/internal-identity\/\.well-known\/jwks\.json/u);
+  assert.ok(status.includes("public_jwks_path: /internal-identity/.well-known/jwks.json"));
   assert.match(status, /private_key_published: false/u);`,
 );
 
