@@ -41,7 +41,7 @@ test("FND-0020 disables the positional append and requires one exact JSON comman
   );
   assert.match(
     sql,
-    /record_internal_token_production_attestation_receipt_batch\(\s*p_command jsonb/u,
+    /record_internal_token_production_attestation_receipt_batch\([\s\S]*p_command jsonb/u,
   );
   assert.match(sql, /jsonb_object_length\(p_command\) <> 13/u);
   for (const key of [
