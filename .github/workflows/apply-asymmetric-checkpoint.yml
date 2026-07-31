@@ -1,6 +1,6 @@
 name: Apply asymmetric token checkpoint
 
-# Verification trigger: compatibility repairs are structurally scoped.
+# Verification trigger: compatibility repairs are structurally scoped and idempotent.
 on:
   push:
     branches:
@@ -170,6 +170,18 @@ jobs:
               if repaired.count("signature.buffer") != 1:
                   raise SystemExit("staging owned signature buffer is not unique")
               source.write_text(repaired)
+
+          helper = Path("tooling/scripts/prebuild-asymmetric-checkpoint-fix.mjs")
+          helper_text = helper.read_text()
+          start_marker = 'replaceExact(\n  "apps/api/src/staging-asymmetric-token.ts",'
+          end_marker = '\n\n{\n  const path = "apps/api/src/staging-asymmetric-token.ts";'
+          start = helper_text.find(start_marker)
+          end = helper_text.find(end_marker, start + len(start_marker))
+          if start < 0 or end < 0:
+              raise SystemExit("duplicate signature compatibility block is not uniquely bounded")
+          if helper_text.find(start_marker, start + 1) >= 0:
+              raise SystemExit("duplicate signature compatibility block is ambiguous")
+          helper.write_text(helper_text[:start] + helper_text[end + 2:])
           PY
           rm -rf .checkpoint
           rm -f tooling/scripts/apply-asymmetric-checkpoint.py
