@@ -47,14 +47,14 @@ test("dedicated admission workflow tracks every revocation implementation surfac
     ),
     "utf8",
   );
-  for (const path of [
+  for (const requiredPath of [
     "internal-token-production-launch-revocation.mjs",
     "production-launch-governance-fixtures.mjs",
     "internal-token-production-launch-revocation*.test.mjs",
     "production-launch-revocation.test.mjs",
     "production-launch-revocation.md",
   ]) {
-    assert.match(workflow, new RegExp(path.replaceAll(".", "\\."), "u"));
+    assert.equal(workflow.includes(requiredPath), true);
   }
   assert.doesNotMatch(workflow, /STORE_DEPLOYMENT_TARGET:\s*production/u);
   assert.doesNotMatch(workflow, /PRODUCTION_LAUNCH_REVOCATION_STATE_PATH:/u);
