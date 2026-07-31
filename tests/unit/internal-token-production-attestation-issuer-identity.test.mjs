@@ -197,8 +197,11 @@ test("signed evidence completes admission and clear revocation end to end", () =
 
 test("signature tampering and unknown issuers fail closed", () => {
   const tampered = createProductionAttestationIssuerIdentityFixture();
-  tampered.input.receipts[0].signature =
-    `${tampered.input.receipts[0].signature.slice(0, -1)}A`;
+  const originalSignature = tampered.input.receipts[0].signature;
+  tampered.input.receipts[0].signature = `${originalSignature.slice(0, -1)}${
+    originalSignature.endsWith("A") ? "B" : "A"
+  }`;
+  assert.notEqual(tampered.input.receipts[0].signature, originalSignature);
   assert.throws(() => verifyFixture(tampered), /signature did not verify/u);
 
   const unknown = createProductionAttestationIssuerIdentityFixture();
