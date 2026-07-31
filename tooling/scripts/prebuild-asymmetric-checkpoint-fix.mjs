@@ -2,16 +2,23 @@ import { execFileSync } from "node:child_process";
 import { unlinkSync, writeFileSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-const sourcePath = "apps/api/src/staging-asymmetric-token.ts";
-const source = readFileSync(sourcePath, "utf8");
-const oldBlock = `  const signingInput = \`${"${headerSegment}.${payloadSegment}"}\`;
+function replaceExact(path, oldValue, newValue) {
+  const source = readFileSync(path, "utf8");
+  const count = source.split(oldValue).length - 1;
+  if (count !== 1) throw new Error(`${path}: expected one compatibility target, found ${count}`);
+  writeFileSync(path, source.replace(oldValue, newValue));
+}
+
+replaceExact(
+  "apps/api/src/staging-asymmetric-token.ts",
+  `  const signingInput = \`${"${headerSegment}.${payloadSegment}"}\`;
   const verified = await crypto.subtle.verify(
     "RSASSA-PKCS1-v1_5",
     publicKey,
     decodeBase64Url(signatureSegment, "Staging token signature is invalid"),
     encoder.encode(signingInput),
-  );`;
-const newBlock = `  const signingInput = \`${"${headerSegment}.${payloadSegment}"}\`;
+  );`,
+  `  const signingInput = \`${"${headerSegment}.${payloadSegment}"}\`;
   const decodedSignature = decodeBase64Url(
     signatureSegment,
     "Staging token signature is invalid",
@@ -23,13 +30,36 @@ const newBlock = `  const signingInput = \`${"${headerSegment}.${payloadSegment}
     publicKey,
     signature.buffer,
     encoder.encode(signingInput),
-  );`;
+  );`,
+);
 
-if (source.includes(oldBlock)) {
-  writeFileSync(sourcePath, source.replace(oldBlock, newBlock));
-} else if (!source.includes(newBlock)) {
-  throw new Error("RS256 signature BufferSource compatibility target mismatch");
-}
+replaceExact(
+  "tests/unit/staging-asymmetric-deployment.test.mjs",
+  "/privateJwk|\\\"d\\\"|activeKid|previousKid/u",
+  "/privateJwk|\"d\"|activeKid|previousKid/u",
+);
+
+replaceExact(
+  "tests/unit/staging-operational-release.test.mjs",
+  `  const runner = await source("tooling/scripts/run-custom-auth-staging.mjs");
+  const deploy = await source("tooling/scripts/deploy-custom-auth-staging.mjs");
+  const evidenceSources = \`${"${runner}\\n${deploy}"}\`;`,
+  `  const runner = await source("tooling/scripts/run-custom-auth-staging.mjs");
+  const deploy = await source("tooling/scripts/deploy-custom-auth-staging.mjs");
+  const patcher = await source("tooling/scripts/staging-custom-auth-patch.mjs");
+  const evidenceSources = \`${"${runner}\\n${deploy}\\n${patcher}"}\`;`,
+);
+
+replaceExact(
+  "tests/unit/staging-operational-release.test.mjs",
+  "  assert.match(status, /schema_version: 14/u);",
+  `  assert.match(status, /schema_version: 15/u);
+  assert.match(status, /status: asymmetric_internal_token_implemented_pending_live_evidence/u);
+  assert.match(status, /signing_algorithm: RS256/u);
+  assert.match(status, /key_id_required: true/u);
+  assert.match(status, /public_jwks_path: \/internal-identity\/\.well-known\/jwks\.json/u);
+  assert.match(status, /private_key_published: false/u);`,
+);
 
 const basePackage = execFileSync(
   "git",
