@@ -44,17 +44,33 @@ replaceExact(
 {
   const path = "apps/api/src/staging-asymmetric-token.ts";
   const source = readFileSync(path, "utf8");
-  const formatted = `async function importPublicKey(
-  publicJwk: RsaPublicJwk,
-  error: () => PlatformError,
-): Promise<CryptoKey> {`;
-  if (!source.includes("async function importPublicKey(\n")) {
-    const pattern = /async function importPublicKey\([^\n]+\): Promise<CryptoKey> \{/gu;
-    const matches = [...source.matchAll(pattern)];
-    if (matches.length !== 1) {
-      throw new Error(`${path}: expected one single-line importPublicKey signature, found ${matches.length}`);
+  const lines = source.split("\n");
+  const indexes = lines
+    .map((line, index) => line.includes("async function importPublicKey") ? index : -1)
+    .filter((index) => index >= 0);
+  if (indexes.length !== 1) {
+    throw new Error(`${path}: expected one importPublicKey declaration, found ${indexes.length}`);
+  }
+  const index = indexes[0];
+  const line = lines[index];
+  if (line.trim() !== "async function importPublicKey(") {
+    const required = [
+      "publicJwk: RsaPublicJwk",
+      "error: () => PlatformError",
+      "Promise<CryptoKey>",
+    ];
+    if (!required.every((value) => line.includes(value)) || !line.trim().endsWith("{")) {
+      throw new Error(`${path}: importPublicKey declaration shape is invalid`);
     }
-    writeFileSync(path, source.replace(pattern, formatted));
+    lines.splice(
+      index,
+      1,
+      "async function importPublicKey(",
+      "  publicJwk: RsaPublicJwk,",
+      "  error: () => PlatformError,",
+      "): Promise<CryptoKey> {",
+    );
+    writeFileSync(path, lines.join("\n"));
   }
 }
 
