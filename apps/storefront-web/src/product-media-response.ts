@@ -83,12 +83,11 @@ export async function enrichStorefrontProductMedia(
   }
 
   try {
+    const storefrontTransport = transport(bindings.STOREFRONT_API);
     const manifest = await requestStorefrontPublicMedia(
       {
         baseUrl: bindings.STOREFRONT_API_BASE_URL,
-        ...(transport(bindings.STOREFRONT_API)
-          ? { transport: transport(bindings.STOREFRONT_API) }
-          : {}),
+        ...(storefrontTransport ? { transport: storefrontTransport } : {}),
         timeoutMs: 1_500,
       },
       normalizeStorefrontHostname(url.hostname),
