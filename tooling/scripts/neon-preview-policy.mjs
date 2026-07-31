@@ -12,6 +12,7 @@ const persistentStagingBranch = "ops/persistent-admin-pos-staging-v1";
 const dedicatedStagingImplementationBranches = new Set([
   "agent/asymmetric-internal-token-jwks",
   "agent/internal-token-kms-signer-boundary",
+  "agent/internal-token-provider-audit-policy",
 ]);
 const usesDedicatedStagingNeon =
   branch === persistentStagingBranch ||
