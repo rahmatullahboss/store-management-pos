@@ -7,10 +7,15 @@ on:
       - ops/persistent-admin-pos-staging-v1
     paths:
       - "tooling/scripts/internal-token-production-launch-admission.mjs"
+      - "tooling/scripts/internal-token-production-launch-revocation.mjs"
       - "tooling/scripts/check-production-launch-admission.mjs"
+      - "tests/helpers/production-launch-governance-fixtures.mjs"
       - "tests/unit/internal-token-production-launch-admission*.test.mjs"
+      - "tests/unit/internal-token-production-launch-revocation*.test.mjs"
       - "tests/architecture/production-launch-admission.test.mjs"
+      - "tests/architecture/production-launch-revocation.test.mjs"
       - "docs/architecture/production-launch-admission.md"
+      - "docs/architecture/production-launch-revocation.md"
       - "package.json"
       - ".github/workflows/production-launch-admission.yml"
   push:
@@ -19,10 +24,15 @@ on:
       - ops/persistent-admin-pos-staging-v1
     paths:
       - "tooling/scripts/internal-token-production-launch-admission.mjs"
+      - "tooling/scripts/internal-token-production-launch-revocation.mjs"
       - "tooling/scripts/check-production-launch-admission.mjs"
+      - "tests/helpers/production-launch-governance-fixtures.mjs"
       - "tests/unit/internal-token-production-launch-admission*.test.mjs"
+      - "tests/unit/internal-token-production-launch-revocation*.test.mjs"
       - "tests/architecture/production-launch-admission.test.mjs"
+      - "tests/architecture/production-launch-revocation.test.mjs"
       - "docs/architecture/production-launch-admission.md"
+      - "docs/architecture/production-launch-revocation.md"
       - "package.json"
       - ".github/workflows/production-launch-admission.yml"
 
