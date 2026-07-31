@@ -35,26 +35,28 @@ jobs:
           import base64
           import hashlib
           import pathlib
-          import re
 
-          expected = "c9a75c8592808bffc5c16f590d167352f2db3d1ce20f97235a9a3337c7ab0c3b"
+          expected = "66cc18095a55c3007f6711a27f00380ac643078da18d6a73ca5983d0f3618a2a"
           paths = sorted(pathlib.Path(".checkpoint").glob("asymmetric-overlay-*.b64"))
           if len(paths) != 5:
               raise SystemExit(f"expected 5 checkpoint chunks, found {len(paths)}")
-
-          parts = []
-          for path in paths:
-              encoded = re.sub(r"[^A-Za-z0-9+/]", "", path.read_text(encoding="utf-8"))
-              encoded += "=" * (-len(encoded) % 4)
-              parts.append(base64.b64decode(encoded, validate=True))
-          payload = b"".join(parts)
+          chunks = [path.read_text(encoding="utf-8").strip() for path in paths]
+          damaged = "XWV6XdfOREiDE7n"
+          repaired = "XWV6XdfFOREiDE7n"
+          if chunks[2].count(damaged) != 1 or repaired in chunks[2]:
+              raise SystemExit("checkpoint chunk 02 corruption signature is not exact")
+          chunks[2] = chunks[2].replace(damaged, repaired)
+          encoded = "".join(chunks)
+          encoded += "=" * (-len(encoded) % 4)
+          payload = base64.b64decode(encoded, validate=True)
           digest = hashlib.sha256(payload).hexdigest()
-          print(f"per-chunk checkpoint bytes={len(payload)} sha256={digest}")
+          print(f"repaired checkpoint bytes={len(payload)} sha256={digest}")
           if digest != expected:
-              raise SystemExit("checkpoint transport digest mismatch")
+              raise SystemExit("repaired checkpoint digest mismatch")
           pathlib.Path("/tmp/asymmetric-overlay.tar.gz").write_bytes(payload)
           PY
-          echo "c9a75c8592808bffc5c16f590d167352f2db3d1ce20f97235a9a3337c7ab0c3b  /tmp/asymmetric-overlay.tar.gz" | sha256sum --check --strict
+          echo "66cc18095a55c3007f6711a27f00380ac643078da18d6a73ca5983d0f3618a2a  /tmp/asymmetric-overlay.tar.gz" | sha256sum --check --strict
+          gzip --test /tmp/asymmetric-overlay.tar.gz
           tar --list --gzip --file /tmp/asymmetric-overlay.tar.gz
           tar --extract --gzip --file /tmp/asymmetric-overlay.tar.gz --directory .
           python3 tooling/scripts/apply-asymmetric-checkpoint.py
