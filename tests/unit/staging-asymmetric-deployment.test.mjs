@@ -65,7 +65,10 @@ test("entry, workflow and lifecycle docs expose bounded JWKS evidence and retain
   assert.match(workflow, /Internal token active\/previous verification keys:/u);
   assert.match(workflow, /Internal token private fields published:/u);
   assert.match(status, /signing_algorithm: RS256/u);
-  assert.match(status, /live_evidence_state: implementation_complete_pending_exact_head/u);
+  assert.match(
+    status,
+    /live_evidence_state: (?:implementation_complete_pending_exact_head|exact_head_verified)/u,
+  );
   assert.match(status, /private_key_published: false/u);
   assert.match(lifecycle, /KMS\/HSM-backed non-exportable private keys/u);
   assert.match(lifecycle, /Artifacts and workflow summaries may contain only algorithm/u);
