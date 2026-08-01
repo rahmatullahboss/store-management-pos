@@ -36,8 +36,12 @@ function normalizeBaseUrl(value: string): URL {
       500,
     );
   }
-  url.pathname = url.pathname === "/" ? "" : url.pathname.replace(/\/$/u, "");
   return url;
+}
+
+function appendBasePath(target: URL, pathname: string): void {
+  const basePath = target.pathname.replace(/\/+$/u, "");
+  target.pathname = `${basePath}${pathname}`;
 }
 
 function fetchTransport(): StorefrontTransport {
@@ -55,7 +59,7 @@ export async function requestStorefrontPublicCacheGenerations(
 ): Promise<StorefrontPublicCacheGenerationBundleV1> {
   const target = normalizeBaseUrl(configuration.baseUrl);
   const normalizedHostname = normalizeStorefrontHostname(hostname);
-  target.pathname = `${target.pathname}/v1/storefront/cache-generations`;
+  appendBasePath(target, "/v1/storefront/cache-generations");
   target.search = "";
   target.hash = "";
   target.searchParams.set("hostname", normalizedHostname);
