@@ -18,6 +18,7 @@ function intent(overrides = {}) {
       postalCode: "1205",
       city: "Dhaka",
     },
+    quoteAuthorityToken: "quote:authority:v4",
     countryPolicyRevision: "country-policy:v3",
     shippingOptionId: "shipping:delivery:1",
     shippingOptionVersion: "shipping-option:v7",
@@ -37,6 +38,7 @@ test("checkout submission intent carries buyer choices and authority revisions o
   assert.equal(parsed.cartRevision, "9");
   assert.equal(parsed.destination.countryCode, "BD");
   assert.equal(parsed.destination.regionCode, "DHAKA");
+  assert.equal(parsed.quoteAuthorityToken, "quote:authority:v4");
   assert.equal(parsed.shippingOptionId, "shipping:delivery:1");
   assert.equal(parsed.paymentCapabilityId, "payment:card:1");
   assert.equal(parsed.paymentMethodReference, "pm_checkout_opaque_123");
@@ -67,6 +69,10 @@ test("checkout submission intent requires stable idempotency and revision eviden
   assert.throws(
     () => parseStorefrontCheckoutSubmissionIntentV1(intent({ quoteRevision: "4.5" })),
     /non-negative integer string/u,
+  );
+  assert.throws(
+    () => parseStorefrontCheckoutSubmissionIntentV1(intent({ quoteAuthorityToken: "" })),
+    /quoteAuthorityToken is invalid/u,
   );
   assert.throws(
     () => parseStorefrontCheckoutSubmissionIntentV1(intent({ shippingRevision: "" })),
