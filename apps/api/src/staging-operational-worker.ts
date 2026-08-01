@@ -17,12 +17,15 @@ import type { StagingOperationalData } from "./staging-operational-data.js";
 import { loadReleaseCandidateOperationalData } from "./staging-operational-release-data.js";
 import {
   resolveStagingReadContext,
+  type StagingReadContext,
   type StagingReadContextEnvironment,
 } from "./staging-read-context.js";
 import {
   renderStagingCatalog,
   renderStagingDashboard,
 } from "./staging-operational-ui.js";
+
+export const STAGING_POS_PERMISSION = "pos.checkout.read";
 
 export interface OperationalStagingEnvironment
   extends StagingReadContextEnvironment {
@@ -69,8 +72,8 @@ function authenticationRedirect(request: Request): Response {
   });
 }
 
-function releaseNotice(data: StagingOperationalData, version: string): string {
-  return `<section data-staging-notice role="status" style="margin:0 0 1rem;padding:.85rem 1rem;background:#fff0c7;color:#4c3100;border-radius:14px"><strong>Persistent staging · MFA-gated reservation release candidate · synthetic data</strong><span style="display:block;margin-top:.25rem">Signed in as <strong>${escapeHtml(data.context.user.name)}</strong> · ${escapeHtml(data.context.role)} · ${data.context.permissions.length} database-resolved read permissions</span><span style="display:block;margin-top:.2rem">Operational reads are live. Reservation create/release is the only enabled sensitive command and requires current password + TOTP for every action.</span><nav aria-label="Controlled staging actions" style="display:flex;gap:.75rem;flex-wrap:wrap;margin-top:.6rem"><a href="/auth/mfa" style="color:inherit;font-weight:800">MFA settings</a><a href="/admin/inventory/reservations" style="color:inherit;font-weight:800">Controlled reservations</a></nav><form action="/auth/sign-out" method="post" style="margin-top:.6rem"><button type="submit" style="min-height:40px;border:1px solid currentColor;background:transparent;color:inherit;padding:.4rem .75rem;font:800 .86rem system-ui;cursor:pointer">Sign out</button></form><small style="display:block;margin-top:.4rem">Payments, stock postings, transfers, accounting and banking remain disabled · build ${escapeHtml(version)}</small></section>`;
+function releaseNotice(context: StagingReadContext, version: string): string {
+  return `<section data-staging-notice role="status" style="margin:0 0 1rem;padding:.85rem 1rem;background:#fff0c7;color:#4c3100;border-radius:14px"><strong>Persistent staging · MFA-gated reservation release candidate · synthetic data</strong><span style="display:block;margin-top:.25rem">Signed in as <strong>${escapeHtml(context.user.name)}</strong> · ${escapeHtml(context.role)} · ${context.permissions.length} database-resolved permissions</span><span style="display:block;margin-top:.2rem">Operational reads are live. Reservation create/release is the only enabled sensitive command and requires current password + TOTP for every action.</span><nav aria-label="Controlled staging actions" style="display:flex;gap:.75rem;flex-wrap:wrap;margin-top:.6rem"><a href="/auth/mfa" style="color:inherit;font-weight:800">MFA settings</a><a href="/admin/inventory/reservations" style="color:inherit;font-weight:800">Controlled reservations</a></nav><form action="/auth/sign-out" method="post" style="margin-top:.6rem"><button type="submit" style="min-height:40px;border:1px solid currentColor;background:transparent;color:inherit;padding:.4rem .75rem;font:800 .86rem system-ui;cursor:pointer">Sign out</button></form><small style="display:block;margin-top:.4rem">Payments, stock postings, transfers, accounting and banking remain disabled · build ${escapeHtml(version)}</small></section>`;
 }
 
 function addNotice(html: string, notice: string): string {
@@ -102,12 +105,12 @@ function normalizeAdminLandmarks(html: string): string {
 
 function adminInput(
   localPath: string,
-  data: StagingOperationalData,
+  context: StagingReadContext,
 ): AdminShellInput {
   return {
-    displayName: data.context.user.name,
-    tenantName: data.context.tenant.name,
-    permissions: new Set(data.context.permissions),
+    displayName: context.user.name,
+    tenantName: context.tenant.name,
+    permissions: new Set(context.permissions),
     currentPath: localPath,
     content: "",
     direction: "ltr",
@@ -119,7 +122,28 @@ function adminInput(
 }
 
 function permissionDeniedContent(localPath: string): string {
-  return `<section data-permission-denied role="alert"><p class="fixture-notice"><strong>Authorization boundary</strong><span>Database-resolved role permissions are enforced before route rendering.</span></p><div class="page-heading"><div><h1>Access denied</h1><p>Your current role does not grant access to <code>${escapeHtml(localPath)}</code>. No business data for this route was rendered and no command was executed.</p></div></div></section>`;
+  return `<section data-permission-denied role="alert"><p class="fixture-notice"><strong>Authorization boundary</strong><span>Database-resolved role permissions are enforced before route rendering.</span></p><div class="page-heading"><div><h1>Access denied</h1><p>Your current role does not grant access to <code>${escapeHtml(localPath)}</code>. No business data for this route was loaded or rendered and no command was executed.</p></div></div></section>`;
+}
+
+function renderPermissionDeniedAdminHtml(
+  pathname: string,
+  context: StagingReadContext,
+  version: string,
+): string {
+  const localPath = pathname.slice("/admin".length) || "/";
+  const html = renderAdminShell({
+    ...adminInput(localPath, context),
+    content: permissionDeniedContent(localPath),
+  });
+  const accessible = hardenAdminDocumentAccessibility(normalizeAdminLandmarks(html));
+  return prefixAdminLinks(addNotice(accessible, releaseNotice(context, version)));
+}
+
+function renderPermissionDeniedPosHtml(
+  context: StagingReadContext,
+  version: string,
+): string {
+  return `<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>POS access denied</title></head><body><main data-permission-denied role="alert"><h1>Access denied</h1><p>Signed in as <strong>${escapeHtml(context.user.name)}</strong> · ${escapeHtml(context.role)}.</p><p>Your current role does not grant <code>${STAGING_POS_PERMISSION}</code>. POS business data was not loaded or rendered and no command was executed.</p><p><a href="/admin">Return to Admin</a></p><small>Persistent staging · build ${escapeHtml(version)}</small></main></body></html>`;
 }
 
 export function renderOperationalAdminHtml(
@@ -128,7 +152,7 @@ export function renderOperationalAdminHtml(
   version: string,
 ): { readonly html: string; readonly status: number } {
   const localPath = pathname.slice("/admin".length) || "/";
-  const base = adminInput(localPath, data);
+  const base = adminInput(localPath, data.context);
   let html: string;
   let status = 200;
   const requiredPermission = requiredPermissionForStagingAdminPath(localPath);
@@ -170,7 +194,7 @@ export function renderOperationalAdminHtml(
   }
   const accessible = hardenAdminDocumentAccessibility(normalizeAdminLandmarks(html));
   return {
-    html: prefixAdminLinks(addNotice(accessible, releaseNotice(data, version))),
+    html: prefixAdminLinks(addNotice(accessible, releaseNotice(data.context, version))),
     status,
   };
 }
@@ -196,8 +220,28 @@ export async function handleOperationalStagingRequest(
   }
   const context = await resolveStagingReadContext(request, env);
   if (!context) return authenticationRedirect(request);
-  const data = await loadReleaseCandidateOperationalData(env.DATABASE_URL, context);
   const version = env.STAGING_GIT_SHA?.slice(0, 12) || "local";
+
+  if (admin) {
+    const localPath = url.pathname.slice("/admin".length) || "/";
+    const requiredPermission = requiredPermissionForStagingAdminPath(localPath);
+    if (requiredPermission && !context.permissions.includes(requiredPermission)) {
+      return htmlResponse(
+        request,
+        renderPermissionDeniedAdminHtml(url.pathname, context, version),
+        403,
+      );
+    }
+  }
+  if (pos && !context.permissions.includes(STAGING_POS_PERMISSION)) {
+    return htmlResponse(
+      request,
+      renderPermissionDeniedPosHtml(context, version),
+      403,
+    );
+  }
+
+  const data = await loadReleaseCandidateOperationalData(env.DATABASE_URL, context);
   if (pos) return htmlResponse(request, posHtml(data, version));
   const rendered = renderOperationalAdminHtml(url.pathname, data, version);
   return htmlResponse(request, rendered.html, rendered.status);
