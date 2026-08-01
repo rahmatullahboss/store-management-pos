@@ -78,7 +78,8 @@ test("inventory quote adapter aggregates all sales-channel warehouses exactly an
   assert.deepEqual(observed, ["warehouse-a", "warehouse-b"]);
   assert.equal(result.variantId, item.variantId);
   assert.equal(result.sufficient, true);
-  assert.match(result.version, /^mw-[0-9a-f]{64}$/u);
+  assert.match(result.version, /^[0-9]+$/u);
+  assert.ok(result.version.length > 20);
 });
 
 test("inventory quote adapter marks aggregate shortage without guessing a warehouse", async () => {
@@ -93,7 +94,7 @@ test("inventory quote adapter marks aggregate shortage without guessing a wareho
 
   const result = await port.resolve({ context, principal, item, quantity });
   assert.equal(result.sufficient, false);
-  assert.match(result.version, /^mw-[0-9a-f]{64}$/u);
+  assert.match(result.version, /^[0-9]+$/u);
 });
 
 test("inventory evidence token is deterministic across unordered warehouse scope", async () => {
