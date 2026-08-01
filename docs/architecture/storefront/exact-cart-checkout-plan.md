@@ -4,7 +4,7 @@ Status: **active**
 
 Checkpoint: `H4`
 
-Active slices: `H4-QUOTE-02` and contract-first `H4-CHECKOUT-03`
+Active slices: `H4-QUOTE-02`, `H4-CHECKOUT-03`, and contract/preflight `H4-SUBMIT-04`
 
 ## Objective
 
@@ -25,16 +25,18 @@ MOD-H must not create a second pricing engine, tax engine, reservation ledger, o
 
 Status: **complete and verified**
 
-1. Persist only a versioned cart draft containing product ID, variant ID, exact quantity and bounded buyer inputs such as coupon codes and destination country.
-2. Explicitly reject browser payloads that attempt to provide price, discount, tax, total, availability, stock, shipping amount or payment facts.
-3. Require an idempotency key and cart revision on quote requests.
-4. Return a versioned quote envelope scoped to the resolved storefront host context.
-5. Project MOD-C quote identity/revision/expiry and exact integer-minor line/totals without recomputing authority in the browser.
-6. Include immutable authority evidence: price-list revision, publication generation, MOD-A calculation IDs and MOD-B inventory versions.
-7. Represent revalidation outcomes explicitly as `ready`, `changed` or `unavailable`; malformed or stale quote responses fail closed.
-8. Parser/boundary/client tests cover exact quantity, duplicate lines, forbidden commercial fields, malformed money, currency mismatch, revision/expiry and unavailable-line consistency.
+Completed:
 
-Exit met: a browser cannot smuggle authoritative commercial values into the quote request, and a malformed/stale server quote cannot become a place-order input.
+1. Added `storefront-cart-draft.v1`, an authority-free buyer cart contract containing only product ID, variant ID, exact quantity, coupon codes, destination country, revision and update time.
+2. Added storefront-scoped browser cart persistence with monotonic revision, a 64 KiB bound, explicit corrupt/oversized-storage recovery and idempotent missing-line removal.
+3. Cart draft schemas strictly reject price, discount, tax, total, availability, stock, shipping amount, payment capability and other unsupported authority fields.
+4. Added deterministic cart-draft → `storefront-cart-quote-request.v1` projection. Empty carts and malformed/local commercial injection fail before any authority call.
+5. Quote requests require an idempotency key and cart revision and accept only buyer intent.
+6. Versioned quote envelopes remain scoped to resolved storefront host context and project MOD-C quote identity/revision/expiry and exact integer-minor line/totals without recomputing authority in the browser.
+7. Immutable authority evidence includes price-list revision, publication generation, MOD-A calculation IDs and MOD-B inventory versions.
+8. Revalidation outcomes are explicit `ready`, `changed` or `unavailable`; malformed or stale quote responses fail closed.
+
+Exit met: browser persistence contains buyer intent only, corrupted local state is recoverable without being trusted, and no local commercial value can become quote authority.
 
 ## H4-QUOTE-02 — authoritative quote adapter
 
@@ -64,43 +66,52 @@ Completed:
 
 1. `storefront-checkout-capability-request.v1` accepts quote ID/revision, cart revision, buyer destination and opaque selected shipping/payment capability IDs only.
 2. Browser shipping amount, payment amount, tax and total fields are rejected.
-3. `storefront-checkout-capability-envelope.v1` carries exact versioned shipping options, safe payment capability references, quote expiry and authority revisions.
+3. `storefront-checkout-capability-envelope.v1` carries exact versioned shipping options, safe payment capability references, quote expiry and authority revisions including `quoteAuthorityToken`, country policy, shipping and payment revisions.
 4. Capability outcomes are explicit `ready`, `changed` or `unavailable`; no fallback choice is invented.
 5. Host/bootstrap scope, quote ID/revision, selected option eligibility and quote/shipping/payment expiry are reconciled before ready state is accepted.
 6. Bounded no-store API handler and typed HTTPS client exist but are intentionally unregistered in production routing.
 
 Remaining before capability route activation:
 
-1. Resolve effective typed country/address/contact requirements through MOD-F; do not infer required buyer fields from generic country-pack data.
+1. Resolve effective typed country/address/contact requirements through MOD-F. See Issue #100; MOD-H will not infer required buyer fields from generic country-pack data.
 2. Obtain versioned pre-order fulfillment/shipping options and exact amounts from MOD-C. See Issue #97.
 3. Obtain side-effect-free public payment capability eligibility from MOD-E without exposing provider secrets or creating an intent merely for discovery. See Issue #98.
-4. Revalidate quote expiry/revision, MOD-A price/tax and MOD-B stock immediately before submission.
-5. Add canonical-adapter integration and recovery UI evidence for capability removal/version change.
+4. Revalidate quote price/tax and stock immediately before side effects through the final canonical adapters.
+5. Add canonical-adapter integration and buyer recovery UI evidence for capability removal/version change.
 
 ## H4-SUBMIT-04 — idempotent order and payment submission
 
-Status: **blocked by final H4-QUOTE-02 and H4-CHECKOUT-03 owning-module capabilities**
+Status: **contract, freshness preflight and deterministic request hashing complete; side effects blocked by Issues #97, #98 and #100**
 
-1. Accept only the current quote ID/revision, capability revisions, buyer choices and a stable idempotency key; do not accept browser totals.
-2. Revalidate price/tax, stock, shipping, country policy and payment capability immediately before side effects.
-3. Convert/create the order through MOD-C so inventory reservation remains MOD-B-owned through MOD-C orchestration.
-4. Create payment intent through MOD-E using the authoritative MOD-C order reference and exact amount.
-5. Treat provider/network ambiguity as `unknown` until reconciled; never assume failure and retry side effects blindly.
-6. Ensure retries/concurrency cannot duplicate order, reservation, payment or ledger effects.
-7. Return confirmation/receipt state only from canonical order/payment evidence.
+Completed safely before side effects:
+
+1. Added `storefront-checkout-submission-intent.v1`, accepting only quote/cart revisions, stable idempotency key, buyer destination, opaque shipping/payment selections, exact capability versions/revisions and optional opaque payment-method reference.
+2. Submission intent strictly rejects browser totals, tax, payment amount, provider-account ID, warehouse ID and unsupported infrastructure/commercial authority.
+3. Submission preflight requires the latest capability state to be `ready` and exact-matches quote ID/revision, `quoteAuthorityToken`, country-policy revision, shipping revision, payment revision and selected option versions.
+4. Quote, selected shipping option and selected payment capability expiry are checked before any side-effect layer can run.
+5. Added deterministic SHA-256 submission request hashing over the normalized strict intent. Key ordering does not change the hash; changing quote/shipping/payment authority evidence does.
+6. No MOD-C order creation/conversion, MOD-B reservation, MOD-E payment intent or accounting side effect is wired from the storefront yet.
+
+Remaining after owning-module capabilities are concrete:
+
+1. Re-resolve the final quote/price-tax, stock, country policy, shipping and payment capability immediately before side effects.
+2. Convert/create the order through MOD-C so inventory reservation remains MOD-B-owned through MOD-C orchestration.
+3. Create payment intent through MOD-E using the authoritative MOD-C order reference and exact amount only.
+4. Treat provider/network ambiguity as `unknown` until reconciled; never assume failure and retry side effects blindly.
+5. Prove retries/concurrency cannot duplicate order, reservation, payment or ledger effects.
+6. Return confirmation/receipt state only from canonical MOD-C/MOD-E evidence.
 
 ## Verified checkpoint evidence
 
-Exact code head `400cfb00e78db334c903a298bc560f05c31ee526`, Storefront CI run `30709204562`:
+Exact code head `42c92d70ba744980c61255d2839778800cb89885`, Storefront CI run `30709922779`:
 
-- format, lint, boundaries, TypeScript, build, database validation and security gates: passed;
-- repository tests: **549 / 549 passed**;
-- Astro check: **23 files, 0 errors, 0 warnings, 0 hints**;
-- PostgreSQL 17 rehearsal: passed;
+- root format, lint, module boundaries, TypeScript, database validation, build, tests and security gates: passed;
+- PostgreSQL 17 storefront rehearsal: passed;
 - buyer/admin browser and accessibility evidence: passed;
 - Cloudflare preview deploy, runtime metrics and cleanup: passed;
-- non-destructive Neon recovery: passed;
-- dependency audit: **0 vulnerabilities**.
+- non-destructive Neon recovery: passed after targeted rerun of the concurrency-cancelled job.
+
+The previous fully counted H4 baseline at `400cfb00e78db334c903a298bc560f05c31ee526` passed 549/549 repository tests; the later exact head above contains the additional submit/idempotency/cart-state suites and its complete root test gate passed. This document does not infer a new numeric total without a directly surfaced aggregate count.
 
 ## Verification gates for remaining H4 work
 
@@ -111,4 +122,4 @@ Exact code head `400cfb00e78db334c903a298bc560f05c31ee526`, Storefront CI run `3
 - Browser evidence for desktop/mobile, Bengali low-bandwidth, Arabic RTL, Japanese/CJK, keyboard, 200% text and reduced motion.
 - Cloudflare preview/runtime/cleanup and non-destructive Neon recovery.
 
-PR #48 remains draft until H4–H7 gates complete. Public quote and checkout mutation routes remain fail closed until every owning-module capability above is concrete and verified.
+PR #48 remains draft until H4–H7 gates complete. Public quote, checkout capability and checkout submission mutation routes remain fail closed until every owning-module capability above is concrete and verified.
