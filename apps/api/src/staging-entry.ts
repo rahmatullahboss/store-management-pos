@@ -152,7 +152,7 @@ export default {
                 env.STAGING_AUTH_REQUIRED === "1"
                   ? "custom-auth-required"
                   : "not-required",
-              authorization: "database-resolved-read-plus-mfa-step-up",
+              authorization: "database-resolved-rbac-plus-mfa-step-up",
               mfa: "encrypted-totp-current-password-step-up",
               accountRecovery: "hashed-single-use-token-lifecycle",
               productionEmailDelivery: false,
