@@ -15,7 +15,7 @@ const context = {
     name: "Synthetic Beta Retail",
   },
   membershipId: "018f0000-0000-7000-8000-000000009003",
-  role: "staging-read-only",
+  role: "synthetic-store-manager",
   scope: {
     legalEntityId: "018f0000-0000-7000-8000-000000000202",
     storeId: "018f0000-0000-7000-8000-000000000302",
@@ -25,8 +25,8 @@ const context = {
   permissions: [
     "catalog.product.read",
     "inventory.stock.read",
-    "procurement.purchase_order.read",
-    "sales.order.read",
+    "pricing.discount.approve",
+    "pricing.promotion.manage",
   ],
 };
 
@@ -48,14 +48,14 @@ async function request(path, init, resolver = async () => context) {
   );
 }
 
-test("read context requires the opaque custom session cookie", async () => {
+test("RBAC context requires the opaque custom session cookie", async () => {
   const response = await request("/auth/context");
   assert.equal(response.status, 401);
   const body = await response.json();
   assert.equal(body.error.code, "AUTHENTICATION_REQUIRED");
 });
 
-test("read context returns only database-resolved identity, scope and permissions", async () => {
+test("RBAC context returns database-resolved identity, role, scope and assigned permissions", async () => {
   let observedHash = "";
   const response = await request(
     "/auth/context",
@@ -69,23 +69,15 @@ test("read context returns only database-resolved identity, scope and permission
   assert.match(observedHash, /^[A-Za-z0-9_-]{43}$/u);
   const body = await response.json();
   assert.equal(body.authenticated, true);
-  assert.equal(body.authorizationMode, "database-resolved-read-only");
-  assert.equal(body.context.role, "staging-read-only");
+  assert.equal(body.authorizationMode, "database-resolved-rbac");
+  assert.equal(body.context.role, "synthetic-store-manager");
   assert.equal(body.context.scope.storeId, context.scope.storeId);
   assert.deepEqual(body.context.permissions, context.permissions);
-  assert.equal(
-    body.context.permissions.some(
-      (permission) =>
-        permission.includes("write") ||
-        permission.includes("manage") ||
-        permission.includes("approve") ||
-        permission.includes("execute"),
-    ),
-    false,
-  );
+  assert.ok(body.context.permissions.includes("pricing.discount.approve"));
+  assert.ok(body.context.permissions.includes("pricing.promotion.manage"));
 });
 
-test("missing active role context fails closed", async () => {
+test("missing or ambiguous active role context fails closed", async () => {
   const response = await request(
     "/auth/context",
     { headers: { Cookie: `ozzyl_staging_session=${"a".repeat(43)}` } },
@@ -96,7 +88,7 @@ test("missing active role context fails closed", async () => {
   assert.equal(body.error.code, "PERMISSION_DENIED");
 });
 
-test("read context is GET and HEAD only", async () => {
+test("RBAC context is GET and HEAD only", async () => {
   const head = await request("/auth/context", {
     method: "HEAD",
     headers: { Cookie: `ozzyl_staging_session=${"a".repeat(43)}` },
@@ -109,7 +101,7 @@ test("read context is GET and HEAD only", async () => {
   assert.equal(post.headers.get("allow"), "GET, HEAD");
 });
 
-test("persistent status advertises MFA-gated controlled reservations and bounded recovery", async () => {
+test("persistent status advertises database RBAC, MFA-gated controlled reservations and bounded recovery", async () => {
   const response = await request("/staging/status");
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), {
@@ -120,7 +112,7 @@ test("persistent status advertises MFA-gated controlled reservations and bounded
     browserMode: "controlled-reservation-release-candidate",
     dataMode: "deterministic-synthetic-module-records",
     authentication: "custom-auth-required",
-    authorization: "database-resolved-read-plus-mfa-step-up",
+    authorization: "database-resolved-rbac-plus-mfa-step-up",
     mfa: "encrypted-totp-current-password-step-up",
     accountRecovery: "hashed-single-use-token-lifecycle",
     productionEmailDelivery: false,
