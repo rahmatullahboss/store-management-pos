@@ -1,5 +1,5 @@
 import type { RequestContext } from "../../../packages/foundation/src/context.js";
-import type { QuantityV1, MoneyV1 } from "../../../packages/contracts/src/v1/common.js";
+import type { MoneyV1, QuantityV1 } from "../../../packages/contracts/src/v1/common.js";
 import type {
   CatalogItemReferenceV1,
   CustomerReferenceV1,
@@ -18,8 +18,8 @@ import {
 import type {
   StorefrontCartDraftLineV1,
   StorefrontCartQuoteEnvelopeV1,
-  StorefrontCartQuoteRequestV1,
   StorefrontCartQuoteInventoryEvidenceV1,
+  StorefrontCartQuoteRequestV1,
 } from "../../../packages/storefront-contracts/src/cart-checkout.js";
 import type { StorefrontCartQuoteAuthorityPort } from "./cart-checkout.js";
 
@@ -277,7 +277,11 @@ function taxTotal(
     }
     total += BigInt(money.minor);
   }
-  return Object.freeze({ currency: context.currency, minor: total.toString(), scale });
+  return Object.freeze({
+    currency: context.currency,
+    minor: total.toString(),
+    scale,
+  });
 }
 
 function projectLine(
@@ -296,12 +300,6 @@ function projectLine(
       "Canonical sales quote contains a mismatched price-tax snapshot.",
     );
   }
-  const subtotal = addMoney(
-    snapshot.taxableBase,
-    snapshot.discountTotal,
-    context,
-    "quoteLine.subtotal",
-  );
   return Object.freeze({
     lineId: line.id,
     productId: line.item.itemId,
@@ -312,7 +310,12 @@ function projectLine(
       context,
       "quoteLine.unitPrice",
     ),
-    subtotal,
+    subtotal: addMoney(
+      snapshot.taxableBase,
+      snapshot.discountTotal,
+      context,
+      "quoteLine.subtotal",
+    ),
     discount: requireMoney(snapshot.discountTotal, context, "quoteLine.discount"),
     tax: taxTotal(snapshot, context),
     total: requireMoney(snapshot.grossTotal, context, "quoteLine.total"),
@@ -361,7 +364,9 @@ function validateSalesQuote(
 function quoteExpiry(now: string, ttlSeconds: number): string {
   const parsed = Date.parse(now);
   if (!Number.isFinite(parsed)) {
-    throw new StorefrontContractError("Storefront quote clock returned an invalid timestamp.");
+    throw new StorefrontContractError(
+      "Storefront quote clock returned an invalid timestamp.",
+    );
   }
   return new Date(parsed + ttlSeconds * 1_000).toISOString();
 }
@@ -387,7 +392,12 @@ export function createStorefrontAuthoritativeQuotePort(
   }
 
   return Object.freeze({
-    async quote({ context, request }): Promise<StorefrontCartQuoteEnvelopeV1> {
+    async quote(
+      { context, request }: {
+        readonly context: StorefrontHostContextV1;
+        readonly request: StorefrontCartQuoteRequestV1;
+      },
+    ): Promise<StorefrontCartQuoteEnvelopeV1> {
       const principal = requireTrustedPrincipal(
         await dependencies.principals.resolve({
           context,
@@ -424,13 +434,15 @@ export function createStorefrontAuthoritativeQuotePort(
             quantity: requestedQuantity,
           }),
         ]);
-        resolved.push(Object.freeze({
-          draft,
-          item,
-          quantity: requestedQuantity,
-          commercial: requireCommercialSeed(commercial, context),
-          inventory: requireInventoryEvidence(inventory, draft),
-        }));
+        resolved.push(
+          Object.freeze({
+            draft,
+            item,
+            quantity: requestedQuantity,
+            commercial: requireCommercialSeed(commercial, context),
+            inventory: requireInventoryEvidence(inventory, draft),
+          }),
+        );
       }
 
       const expiresAt = quoteExpiry(now(), ttlSeconds);
@@ -441,12 +453,14 @@ export function createStorefrontAuthoritativeQuotePort(
         currency: context.currency,
         expiresAt,
         lines: Object.freeze(
-          resolved.map((line) => Object.freeze({
-            item: line.item,
-            quantity: line.quantity,
-            unitPriceMinor: line.commercial.unitPriceMinor,
-            taxRateBasisPoints: line.commercial.taxRateBasisPoints,
-          })),
+          resolved.map((line) =>
+            Object.freeze({
+              item: line.item,
+              quantity: line.quantity,
+              unitPriceMinor: line.commercial.unitPriceMinor,
+              taxRateBasisPoints: line.commercial.taxRateBasisPoints,
+            }),
+          ),
         ),
       });
       validateSalesQuote(salesQuote, context, principal, resolved);
@@ -457,10 +471,9 @@ export function createStorefrontAuthoritativeQuotePort(
           principal,
           shippingOptionId: request.shippingOptionId,
           lines: Object.freeze(
-            resolved.map((line) => Object.freeze({
-              item: line.item,
-              quantity: line.quantity,
-            })),
+            resolved.map((line) =>
+              Object.freeze({ item: line.item, quantity: line.quantity }),
+            ),
           ),
         }),
         context,
@@ -477,10 +490,12 @@ export function createStorefrontAuthoritativeQuotePort(
       );
       const inventoryVersions: readonly StorefrontCartQuoteInventoryEvidenceV1[] =
         Object.freeze(
-          resolved.map((line) => Object.freeze({
-            variantId: line.inventory.variantId,
-            version: line.inventory.version,
-          })),
+          resolved.map((line) =>
+            Object.freeze({
+              variantId: line.inventory.variantId,
+              version: line.inventory.version,
+            }),
+          ),
         );
       const unavailable = new Set(
         resolved
@@ -489,7 +504,9 @@ export function createStorefrontAuthoritativeQuotePort(
       );
       const unavailableLineIds = Object.freeze(
         salesQuote.lines
-          .filter((line) => unavailable.has(`${line.item.itemId}:${line.item.variantId}`))
+          .filter((line) =>
+            unavailable.has(`${line.item.itemId}:${line.item.variantId}`),
+          )
           .map((line) => line.id),
       );
       const discount = documentMoney(
@@ -502,13 +519,13 @@ export function createStorefrontAuthoritativeQuotePort(
         salesQuote.total.currency,
         salesQuote.total.scale,
       );
-      const subtotal = addMoney(net, discount, context, "quote.subtotal");
       const gross = documentMoney(
         salesQuote.total.grossMinor,
         salesQuote.total.currency,
         salesQuote.total.scale,
       );
-      const total = Object.freeze({
+      const subtotal = addMoney(net, discount, context, "quote.subtotal");
+      const total: StorefrontMoneyV1 = Object.freeze({
         currency: context.currency,
         minor: (BigInt(gross.amountMinor) + BigInt(shipping.minor)).toString(),
         scale: salesQuote.total.scale,
