@@ -47,10 +47,11 @@ function bypass(response: Response, reason: string): Response {
 }
 
 async function resourceToken(url: URL): Promise<string> {
-  if (!url.search) return url.pathname;
+  const pathname = url.pathname.replace(/^\/+|\/+$/gu, "") || "root";
+  if (!url.search) return pathname;
   const sorted = new URLSearchParams(url.searchParams);
   sorted.sort();
-  return `${url.pathname}/query-${(await sha256(sorted.toString())).slice(0, 24)}`;
+  return `${pathname}/query-${(await sha256(sorted.toString())).slice(0, 24)}`;
 }
 
 export async function bindStorefrontPublicCacheGeneration(
