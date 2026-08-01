@@ -97,7 +97,7 @@ function rowToContext(row: ContextRow): StagingReadContext {
   if (permissions.length === 0) {
     throw new PlatformError(
       "PERMISSION_DENIED",
-      "No staging read permissions are assigned",
+      "No staging permissions are assigned",
       403,
     );
   }
@@ -189,13 +189,13 @@ export async function handleStagingReadContext(
     if (!context) {
       throw new PlatformError(
         "PERMISSION_DENIED",
-        "Active read-only staging membership is required",
+        "Active unambiguous staging role assignment is required",
         403,
       );
     }
     const body = JSON.stringify({
       authenticated: true,
-      authorizationMode: "database-resolved-read-only",
+      authorizationMode: "database-resolved-rbac",
       context,
     });
     return new Response(request.method === "HEAD" ? null : body, {
