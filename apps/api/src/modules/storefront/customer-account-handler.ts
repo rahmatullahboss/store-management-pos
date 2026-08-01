@@ -190,11 +190,10 @@ export async function handleStorefrontCustomerAccountRequest(
         message.includes("path is invalid") ||
         message.includes("ID must be a UUID") ||
         message.includes("hostname");
-      return errorResponse(
-        malformed ? "INVALID_ACCOUNT_REQUEST" : "ACCOUNT_ACCESS_DENIED",
-        malformed ? 400 : 403,
-        message,
-      );
+      if (malformed) {
+        return errorResponse("INVALID_ACCOUNT_REQUEST", 400, message);
+      }
+      return errorResponse("ACCOUNT_ACCESS_DENIED", 403);
     }
     throw error;
   }
