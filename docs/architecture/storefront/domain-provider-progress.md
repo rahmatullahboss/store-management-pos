@@ -2,11 +2,11 @@
 
 Status: **active, provider-blocked**
 
-Current slice: `H6-PROVIDER-TRUST-01`
+Completed slices: `H6-PROVIDER-TRUST-01`, `H6-DOMAIN-READ-02`
 
-Latest fully verified implementation head: `1e56068eb924876754a97afa58935a4b92aa4157`
+Latest fully verified implementation head: `f0ed777350cc67145381ec02911ea53e9ab72c4d`
 
-Storefront CI: `30723743976`
+Storefront CI: `30723955210`
 
 ## Objective
 
@@ -44,7 +44,7 @@ This is not an acceptable ownership/certificate trust boundary.
 ## H6-PROVIDER-TRUST-01 — complete and verified
 
 - Domain registration remains available through the tenant/admin API.
-- External merchant/admin provider-observation endpoints now fail closed before command execution:
+- External merchant/admin provider-observation endpoints fail closed before command execution:
   - `POST /v1/storefront/domains/:id/verifications`
   - `POST /v1/storefront/domains/:id/transition`
 - Both return HTTP `503` with `{ "error": { "code": "DOMAIN_PROVIDER_CONTROL_UNAVAILABLE" } }`.
@@ -53,16 +53,57 @@ This is not an acceptable ownership/certificate trust boundary.
 - Existing internal MOD-H command/state-machine code remains available for a future trusted provider adapter; the security fix does not delete domain lifecycle capabilities.
 - Unit tests prove domain registration still executes while forged provider verification/transition requests return 503 and leave the command call count unchanged.
 
-## Verified evidence
+This slice was fully verified at exact head `1e56068eb924876754a97afa58935a4b92aa4157`, Storefront CI `30723743976`.
 
-Exact head `1e56068eb924876754a97afa58935a4b92aa4157`, Storefront CI `30723743976`:
+## H6-DOMAIN-READ-02 — complete and verified
+
+Added a strict provider-independent read-only lifecycle projection in `modules/storefront/src/domain-lifecycle.ts`.
+
+The input snapshot contains only local buyer/admin-safe domain facts:
+
+- domain/storefront identity;
+- normalized hostname and domain kind;
+- local domain status;
+- local certificate status;
+- local verification status;
+- canonical flag;
+- update timestamp.
+
+The parser rejects unsupported fields, including provider hostname IDs, provider references, challenge values/hashes and provider failure detail. Those values therefore cannot accidentally become part of the merchant/admin lifecycle view contract.
+
+The projection derives only read-only local phases:
+
+- `setup_pending`;
+- `ownership_pending`;
+- `certificate_pending`;
+- `active`;
+- `attention`;
+- `suspended`;
+- `removing`;
+- `removed`.
+
+An `active` phase requires all three local facts at once: domain status `active`, verification `verified`, and certificate `active`. Any missing/stale fact prevents active presentation.
+
+Provider availability may change guidance only (`review_configuration`, `wait_for_provider`, `contact_support`, `none`); it cannot change domain/verification/certificate facts. No `mark verified`, activation, provider-ID or certificate mutation action exists in the lifecycle view.
+
+Unit tests cover:
+
+- strict provider/challenge/failure-field rejection;
+- lifecycle phase derivation;
+- active-state conjunction;
+- provider-unavailable guidance;
+- absence of activation/provider-authority fields in the output.
+
+## Latest verified evidence
+
+Exact head `f0ed777350cc67145381ec02911ea53e9ab72c4d`, Storefront CI `30723955210`:
 
 - root format, lint, boundaries, TypeScript, database validation, complete test gate and security/dependency gates: **passed**;
 - Astro Cloudflare build: **passed**;
 - PostgreSQL 17 storefront migration/command rehearsal: **passed**;
 - buyer/recovery/order-tracking/admin browser and accessibility evidence: **passed**;
 - Cloudflare preview deploy, runtime metrics and cleanup: **passed**;
-- non-destructive Neon recovery: **passed**.
+- Neon recovery initially concurrency-cancelled, then the exact cancelled job was targeted-rerun and the non-destructive recovery drill **passed**.
 
 ## Provider blocker
 
@@ -87,10 +128,11 @@ Until Issue #104 has a concrete trusted provider adapter:
 
 - merchant/admin can register a domain intent but cannot assert it verified;
 - merchant/admin cannot assert certificate activation or provider identifiers;
+- merchant/admin-facing lifecycle projection is read-only and provider-secret-free;
 - local public host resolution continues to require active + certificate-active state;
 - no custom domain can be safely advanced to production-active through the external tenant API;
 - provider mutation endpoints remain fail closed with 503.
 
-## Next safe H6 slice
+## Next safe work
 
-Build a provider-independent, read-only domain lifecycle/status projection for merchant/admin UX. It may explain local states such as verification pending, certificate pending, failed and suspended, but it must not expose provider secrets or add any action capable of asserting provider verification/certificate facts.
+Continue H7 blocker-independent hardening while Issue #104 is open: abuse/rate-limit coverage, multi-tenant/hostname cache isolation, observability/runbook evidence and final handoff preparation. Provider lifecycle mutation remains blocked until the trusted MOD-G/shared adapter exists.
