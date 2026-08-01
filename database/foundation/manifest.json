@@ -106,6 +106,11 @@
       "id": "FND-0021",
       "file": "FND-0021-internal-token-production-attestation-receipt-jsonb-shape-fix.sql",
       "sha256": "75315123c624faeb667d8deb3de7c34fc9f4a656c77228a98bc03446c5954925"
+    },
+    {
+      "id": "FND-0022",
+      "file": "FND-0022-internal-token-production-attestation-receipt-count-cast-fix.sql",
+      "sha256": "be7401fb8f3aa0164aea432cf81902f7abbf01f64dfc2cffa68af415cf976064"
     }
   ]
 }
