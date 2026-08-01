@@ -69,7 +69,8 @@ test("RBAC context returns database-resolved identity, role, scope and assigned 
   assert.match(observedHash, /^[A-Za-z0-9_-]{43}$/u);
   const body = await response.json();
   assert.equal(body.authenticated, true);
-  assert.equal(body.authorizationMode, "database-resolved-rbac");
+  assert.equal(body.authorizationMode, "database-resolved-read-only");
+  assert.equal(body.roleResolution, "single-scoped-database-role");
   assert.equal(body.context.role, "synthetic-store-manager");
   assert.equal(body.context.scope.storeId, context.scope.storeId);
   assert.deepEqual(body.context.permissions, context.permissions);
