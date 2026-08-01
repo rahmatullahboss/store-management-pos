@@ -7,11 +7,14 @@ import {
 } from "./staging-attestation-receipt-postgres-evidence.mjs";
 
 const root = fileURLToPath(new URL("../..", import.meta.url));
+const stagingArtifactDirectory = path.join(root, "artifacts", "staging");
 const artifactPath = path.join(
-  root,
-  "artifacts",
-  "staging",
+  stagingArtifactDirectory,
   "attestation-receipt-postgres.json",
+);
+const catalogArtifactPath = path.join(
+  stagingArtifactDirectory,
+  "metadata-size-catalog.json",
 );
 const projectId = "morning-flower-46531465";
 const branchId = "br-empty-sound-afkx5vkj";
@@ -52,12 +55,10 @@ async function inspectMetadataSizeCatalog(connectionString) {
         AND function_namespace.nspname = 'platform'
         AND trigger_function.proname = 'enforce_metadata_size_limit'
       ORDER BY table_identity, definition`);
-    console.log(
-      `metadata size compatibility catalog ${JSON.stringify({
-        functions: functions.rows,
-        triggers: triggers.rows,
-      })}`,
-    );
+    return Object.freeze({
+      functions: Object.freeze(functions.rows),
+      triggers: Object.freeze(triggers.rows),
+    });
   } finally {
     await client.end();
   }
@@ -78,12 +79,20 @@ if (!response.ok || typeof body?.uri !== "string") {
   );
 }
 
-await inspectMetadataSizeCatalog(body.uri);
+await mkdir(stagingArtifactDirectory, { recursive: true });
+const catalog = await inspectMetadataSizeCatalog(body.uri);
+await writeFile(
+  catalogArtifactPath,
+  `${JSON.stringify(catalog, null, 2)}\n`,
+  "utf8",
+);
+console.log(
+  `metadata size compatibility catalog captured (${catalog.functions.length} functions, ${catalog.triggers.length} triggers)`,
+);
 const report = await runProductionAttestationReceiptPostgresEvidence({
   connectionString: body.uri,
   runId: GITHUB_RUN_ID,
 });
-await mkdir(path.dirname(artifactPath), { recursive: true });
 await writeFile(artifactPath, `${JSON.stringify(report, null, 2)}\n`, "utf8");
 console.log(
   `production attestation receipt Postgres evidence ${report.status}; transaction rollback verified`,
