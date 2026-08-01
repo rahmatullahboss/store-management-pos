@@ -2,19 +2,19 @@
 
 Status: **active, contract-first**
 
-Current slice: `H5-ACCOUNT-01`
+Completed slices: `H5-ACCOUNT-01`, `H5-TRACKING-02`
 
-Latest fully verified implementation head: `d86cd8e8c55a7e51dda8099c428c2e17adc4c277`
+Latest fully verified implementation head: `5d7e8bfb4958d7ab53d2abb50192cefde6a8aba2`
 
-Storefront CI: `30722815560`
+Storefront CI: `30723253734`
 
 ## Objective
 
-Provide buyer-owned profile and order read experiences without allowing browser-selected customer identity, cross-storefront order disclosure, public caching of private data, or leakage of operational/payment/inventory authority.
+Provide buyer-owned profile, order history/detail and status presentation without allowing browser-selected customer identity, cross-storefront order disclosure, public caching of private data, or leakage/invention of operational, payment, inventory, carrier or return authority.
 
 H5 is progressing only through blocker-independent read/presentation work while H4 mutation authority remains fail closed.
 
-## Completed safely
+## H5-ACCOUNT-01 — complete and verified
 
 ### Private account contracts
 
@@ -60,20 +60,39 @@ H5 is progressing only through blocker-independent read/presentation work while 
 - History pagination is bounded; malformed requests are 400, authentication absence is 401, ownership/permission denial is 403, and unknown order is 404.
 - Unit tests statically assert that account paths/handler remain absent from runtime router registration.
 
-## Verified evidence
+H5-ACCOUNT-01 was fully verified at exact head `d86cd8e8c55a7e51dda8099c428c2e17adc4c277`, Storefront CI `30722815560`.
 
-Exact head `d86cd8e8c55a7e51dda8099c428c2e17adc4c277`, Storefront CI `30722815560`:
+## H5-TRACKING-02 — complete and verified
+
+- Added a read-only `StorefrontOrderTrackingViewV1` derived solely from strict `StorefrontOrderDetailV1` buyer-safe facts.
+- Presentation state is derived only from canonical order/payment/fulfillment/return statuses: `pending`, `in_progress`, `attention`, `complete`, `cancelled`, `returned`, or `refunded`.
+- No synthetic shipment timeline, carrier event, tracking URL, estimated delivery date, refund/return mutation or fulfillment authority is invented.
+- Exact money and quantity display is derived from integer strings without converting financial values through binary floating point, including values beyond JavaScript safe-integer range.
+- Added a server-rendered accessible order-status component with fully externalized English, Bengali, Arabic/RTL and Japanese/CJK state/status/method labels.
+- Added a synthetic evidence-only route gated behind `STOREFRONT_EVIDENCE_MODE`; it contains no customer or production data.
+- Added a process-group-bounded browser evidence runner covering English mobile, Bengali bounded-3G, Arabic RTL and Japanese/CJK.
+- Tracking evidence checks Axe WCAG 2 A/AA/2.1 AA, locale/direction, exact state translation, exact large-money rendering, no raw internal enum leakage, no internal authority/provider/storage/staff leakage, no upstream branding, clipping/overflow, keyboard skip-link, reduced motion and 200% text scaling.
+- Storefront CI now treats order-tracking browser evidence as an additive buyer gate without weakening existing catalog/recovery/admin evidence.
+
+## Latest verified evidence
+
+Exact head `5d7e8bfb4958d7ab53d2abb50192cefde6a8aba2`, Storefront CI `30723253734`:
 
 - root format, lint, module boundaries, TypeScript, database validation, full test gate and security/dependency gates: **passed**;
-- Astro Cloudflare build: **passed**;
+- Astro Cloudflare build/check: **27 files, 0 errors, 0 warnings, 0 hints**;
 - PostgreSQL 17 storefront rehearsal: **passed**;
-- buyer/admin browser and accessibility baseline: **passed**;
+- existing buyer browser/accessibility evidence: **5/5** across 4 locales with Bengali low-bandwidth coverage;
+- checkout recovery browser/accessibility evidence: **4/4**;
+- order tracking browser/accessibility evidence: **4/4** across English, Bengali bounded-3G, Arabic RTL and Japanese/CJK; the runner requires zero Axe violations for a passing scenario;
+- admin browser/accessibility evidence: **4/4**;
 - Cloudflare preview deploy, runtime metrics and cleanup: **passed**;
 - non-destructive Neon recovery: **passed**.
 
+The Storefront evidence artifact for this run contains the order-tracking context, screenshots and machine-readable report in `docs/architecture/storefront/order-tracking-design-evidence/`.
+
 ## Deliberately not exposed yet
 
-No private customer account/order API route is registered in production. No storefront account page is connected to live private data yet.
+No private customer account/order API route is registered in production. No live storefront account/order tracking page is connected to private canonical customer data yet.
 
 Route activation requires the owning-module capabilities tracked in Issue #101:
 
@@ -89,6 +108,8 @@ MOD-H will not substitute browser `customerId`, actor ID, `externalSource`, repo
 - Issue #100 — typed MOD-F checkout country/address/contact policy.
 - Issue #101 — H5 trusted customer binding and storefront-scoped MOD-C order reads.
 
-## Next safe H5 slice
+## Next safe H5 hardening
 
-`H5-TRACKING-02`: build a read-only order-status/tracking view model and accessible multilingual evidence UI from `StorefrontOrderDetailV1` only. Do not invent carrier events, provider tracking URLs, refund/return mutations or fulfillment authority that is not present in the canonical buyer-safe contract.
+1. Keep 403 account-access responses generic so ownership/scope mismatch details cannot be reflected to an untrusted buyer.
+2. Keep order-history pagination cursor opaque to MOD-H rather than assuming an owning-module UUID cursor format.
+3. Continue to keep all live account/order routes unregistered until Issue #101 has concrete owning-module adapters and exact integration evidence.
