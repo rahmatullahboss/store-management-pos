@@ -6,6 +6,7 @@ import {
   finalizeCustomAuthRelationEvidenceSource,
   normalizeCustomAuthRelationEvidenceSource,
 } from "./staging-custom-auth-source-contract.mjs";
+import { addGuidedWalkthroughBrowserEvidence } from "./staging-guided-walkthrough-evidence-patch.mjs";
 import { addMainWebProbeCoverage } from "./staging-main-web-probe-patch.mjs";
 import { generateStagingTokenKeyset } from "./staging-token-keyset.mjs";
 
@@ -13,9 +14,11 @@ const root = fileURLToPath(new URL("../..", import.meta.url));
 const deployPath = path.join(root, "tooling", "scripts", "deploy-custom-auth-staging.mjs");
 const originalDeploy = await readFile(deployPath, "utf8");
 const normalizedDeploy = normalizeCustomAuthRelationEvidenceSource(originalDeploy);
-const patchedDeploy = addMainWebProbeCoverage(finalizeCustomAuthRelationEvidenceSource(
+const customAuthDeploy = finalizeCustomAuthRelationEvidenceSource(
   buildCustomAuthStagingDeploy(normalizedDeploy),
-));
+);
+const walkthroughAwareDeploy = addGuidedWalkthroughBrowserEvidence(customAuthDeploy);
+const patchedDeploy = addMainWebProbeCoverage(walkthroughAwareDeploy);
 const generatedInternalTokenKeyset = await generateStagingTokenKeyset();
 
 process.env.STAGING_INTERNAL_TOKEN_SECRET = generatedInternalTokenKeyset.serialized;
