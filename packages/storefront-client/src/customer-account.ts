@@ -89,7 +89,7 @@ async function requestJson<T>(input: {
   readonly configuration: StorefrontCustomerAccountClientConfiguration;
   readonly hostname: string;
   readonly pathname: string;
-  readonly signal?: AbortSignal;
+  readonly signal?: AbortSignal | undefined;
   readonly parse: (value: unknown) => T;
   readonly failureMessage: string;
 }): Promise<T> {
