@@ -12,6 +12,7 @@ export interface StorefrontCheckoutSubmissionIntentV1 {
   readonly cartRevision: string;
   readonly idempotencyKey: string;
   readonly destination: StorefrontCheckoutDestinationV1 | null;
+  readonly quoteAuthorityToken: string;
   readonly countryPolicyRevision: string;
   readonly shippingOptionId: string;
   readonly shippingOptionVersion: string;
@@ -35,6 +36,7 @@ const REQUEST_KEYS = new Set([
   "cartRevision",
   "idempotencyKey",
   "destination",
+  "quoteAuthorityToken",
   "countryPolicyRevision",
   "shippingOptionId",
   "shippingOptionVersion",
@@ -200,6 +202,10 @@ export function parseStorefrontCheckoutSubmissionIntentV1(
       8,
     ),
     destination: parseDestination(source.destination),
+    quoteAuthorityToken: token(
+      source.quoteAuthorityToken,
+      "checkoutSubmission.quoteAuthorityToken",
+    ),
     countryPolicyRevision: token(
       source.countryPolicyRevision,
       "checkoutSubmission.countryPolicyRevision",
