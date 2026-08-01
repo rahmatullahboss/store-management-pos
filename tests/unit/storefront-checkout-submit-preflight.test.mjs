@@ -28,6 +28,7 @@ function intent(overrides = {}) {
     cartRevision: "9",
     idempotencyKey: "checkout-submit:001",
     destination: { countryCode: "GB", regionCode: null, postalCode: null, city: null },
+    quoteAuthorityToken: "quote:authority:v4",
     countryPolicyRevision: "country-policy:v3",
     shippingOptionId: "shipping:delivery:1",
     shippingOptionVersion: "shipping-option:v7",
@@ -86,6 +87,7 @@ test("checkout submission preflight returns only current canonical selections", 
   const result = preflightStorefrontCheckoutSubmission(intent(), capabilities(), now);
 
   assert.equal(result.intent.quoteId, quoteId);
+  assert.equal(result.intent.quoteAuthorityToken, "quote:authority:v4");
   assert.equal(result.shippingOption.optionId, "shipping:delivery:1");
   assert.equal(result.shippingOption.amount.minor, "500");
   assert.equal(result.paymentCapability.capabilityId, "payment:card:1");
@@ -117,6 +119,10 @@ test("checkout submission preflight rejects stale quote and authority revisions"
   assert.throws(
     () => preflightStorefrontCheckoutSubmission(intent({ quoteRevision: "3" }), capabilities(), now),
     /quote revision is stale/u,
+  );
+  assert.throws(
+    () => preflightStorefrontCheckoutSubmission(intent({ quoteAuthorityToken: "quote:authority:v3" }), capabilities(), now),
+    /Quote authority token changed/u,
   );
   assert.throws(
     () => preflightStorefrontCheckoutSubmission(intent({ countryPolicyRevision: "country-policy:v2" }), capabilities(), now),
