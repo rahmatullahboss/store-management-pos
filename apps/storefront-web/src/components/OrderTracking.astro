@@ -32,6 +32,37 @@ const copy = {
       returned: "Returned",
       refunded: "Refunded",
     },
+    orderStatuses: {
+      draft: "Draft",
+      confirmed: "Confirmed",
+      on_hold: "On hold",
+      cancelled: "Cancelled",
+      completed: "Completed",
+    },
+    paymentStatuses: {
+      unpaid: "Unpaid",
+      partially_paid: "Partially paid",
+      paid: "Paid",
+      partially_refunded: "Partially refunded",
+      refunded: "Refunded",
+    },
+    fulfillmentStatuses: {
+      unfulfilled: "Unfulfilled",
+      partially_fulfilled: "Partially fulfilled",
+      fulfilled: "Fulfilled",
+      cancelled: "Cancelled",
+    },
+    returnStatuses: {
+      not_returned: "Not returned",
+      partially_returned: "Partially returned",
+      returned: "Returned",
+    },
+    fulfillmentMethods: {
+      pickup: "Pickup",
+      local_delivery: "Local delivery",
+      ship_from_store: "Ship from store",
+      split: "Split fulfilment",
+    },
   },
   "bn-BD": {
     eyebrow: "অর্ডারের অবস্থা",
@@ -55,6 +86,37 @@ const copy = {
       cancelled: "বাতিল",
       returned: "ফেরত হয়েছে",
       refunded: "রিফান্ড হয়েছে",
+    },
+    orderStatuses: {
+      draft: "খসড়া",
+      confirmed: "নিশ্চিত",
+      on_hold: "হোল্ডে আছে",
+      cancelled: "বাতিল",
+      completed: "সম্পন্ন",
+    },
+    paymentStatuses: {
+      unpaid: "অপরিশোধিত",
+      partially_paid: "আংশিক পরিশোধিত",
+      paid: "পরিশোধিত",
+      partially_refunded: "আংশিক রিফান্ড",
+      refunded: "রিফান্ড হয়েছে",
+    },
+    fulfillmentStatuses: {
+      unfulfilled: "ফুলফিল হয়নি",
+      partially_fulfilled: "আংশিক ফুলফিল হয়েছে",
+      fulfilled: "ফুলফিল হয়েছে",
+      cancelled: "বাতিল",
+    },
+    returnStatuses: {
+      not_returned: "রিটার্ন হয়নি",
+      partially_returned: "আংশিক রিটার্ন",
+      returned: "রিটার্ন হয়েছে",
+    },
+    fulfillmentMethods: {
+      pickup: "পিকআপ",
+      local_delivery: "লোকাল ডেলিভারি",
+      ship_from_store: "স্টোর থেকে শিপিং",
+      split: "বিভক্ত ফুলফিলমেন্ট",
     },
   },
   ar: {
@@ -80,6 +142,37 @@ const copy = {
       returned: "تم الإرجاع",
       refunded: "تم رد المبلغ",
     },
+    orderStatuses: {
+      draft: "مسودة",
+      confirmed: "مؤكد",
+      on_hold: "معلق",
+      cancelled: "ملغي",
+      completed: "مكتمل",
+    },
+    paymentStatuses: {
+      unpaid: "غير مدفوع",
+      partially_paid: "مدفوع جزئياً",
+      paid: "مدفوع",
+      partially_refunded: "مسترد جزئياً",
+      refunded: "مسترد",
+    },
+    fulfillmentStatuses: {
+      unfulfilled: "غير منفذ",
+      partially_fulfilled: "منفذ جزئياً",
+      fulfilled: "منفذ",
+      cancelled: "ملغي",
+    },
+    returnStatuses: {
+      not_returned: "غير مرتجع",
+      partially_returned: "مرتجع جزئياً",
+      returned: "مرتجع",
+    },
+    fulfillmentMethods: {
+      pickup: "استلام",
+      local_delivery: "توصيل محلي",
+      ship_from_store: "شحن من المتجر",
+      split: "تنفيذ مقسم",
+    },
   },
   "ja-JP": {
     eyebrow: "注文状況",
@@ -104,10 +197,39 @@ const copy = {
       returned: "返品済み",
       refunded: "返金済み",
     },
+    orderStatuses: {
+      draft: "下書き",
+      confirmed: "確認済み",
+      on_hold: "保留",
+      cancelled: "キャンセル済み",
+      completed: "完了",
+    },
+    paymentStatuses: {
+      unpaid: "未払い",
+      partially_paid: "一部支払い済み",
+      paid: "支払い済み",
+      partially_refunded: "一部返金済み",
+      refunded: "返金済み",
+    },
+    fulfillmentStatuses: {
+      unfulfilled: "未処理",
+      partially_fulfilled: "一部処理済み",
+      fulfilled: "処理済み",
+      cancelled: "キャンセル済み",
+    },
+    returnStatuses: {
+      not_returned: "返品なし",
+      partially_returned: "一部返品済み",
+      returned: "返品済み",
+    },
+    fulfillmentMethods: {
+      pickup: "店頭受取",
+      local_delivery: "地域配送",
+      ship_from_store: "店舗から発送",
+      split: "分割フルフィルメント",
+    },
   },
 }[locale];
-
-const humanize = (value: string) => value.replaceAll("_", " ");
 ---
 
 <section class="order-tracking" aria-labelledby="order-tracking-title" data-tracking-state={tracking.state}>
@@ -131,23 +253,23 @@ const humanize = (value: string) => value.replaceAll("_", " ");
   <dl class="order-tracking__facts">
     <div>
       <dt>{copy.order}</dt>
-      <dd data-order-status={tracking.orderStatus}>{humanize(tracking.orderStatus)}</dd>
+      <dd data-order-status={tracking.orderStatus}>{copy.orderStatuses[tracking.orderStatus]}</dd>
     </div>
     <div>
       <dt>{copy.payment}</dt>
-      <dd data-payment-status={tracking.paymentStatus}>{humanize(tracking.paymentStatus)}</dd>
+      <dd data-payment-status={tracking.paymentStatus}>{copy.paymentStatuses[tracking.paymentStatus]}</dd>
     </div>
     <div>
       <dt>{copy.fulfillment}</dt>
-      <dd data-fulfillment-status={tracking.fulfillmentStatus}>{humanize(tracking.fulfillmentStatus)}</dd>
+      <dd data-fulfillment-status={tracking.fulfillmentStatus}>{copy.fulfillmentStatuses[tracking.fulfillmentStatus]}</dd>
     </div>
     <div>
       <dt>{copy.returns}</dt>
-      <dd data-return-status={tracking.returnStatus}>{humanize(tracking.returnStatus)}</dd>
+      <dd data-return-status={tracking.returnStatus}>{copy.returnStatuses[tracking.returnStatus]}</dd>
     </div>
     <div>
       <dt>{copy.method}</dt>
-      <dd data-fulfillment-method={tracking.fulfillmentMethod}>{humanize(tracking.fulfillmentMethod)}</dd>
+      <dd data-fulfillment-method={tracking.fulfillmentMethod}>{copy.fulfillmentMethods[tracking.fulfillmentMethod]}</dd>
     </div>
   </dl>
 
@@ -276,7 +398,6 @@ const humanize = (value: string) => value.replaceAll("_", " ");
   .order-tracking__facts dd {
     margin: 0;
     font-weight: 750;
-    text-transform: capitalize;
   }
   .order-tracking__items {
     display: grid;
