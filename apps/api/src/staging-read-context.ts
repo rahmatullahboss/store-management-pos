@@ -195,7 +195,8 @@ export async function handleStagingReadContext(
     }
     const body = JSON.stringify({
       authenticated: true,
-      authorizationMode: "database-resolved-rbac",
+      authorizationMode: "database-resolved-read-only",
+      roleResolution: "single-scoped-database-role",
       context,
     });
     return new Response(request.method === "HEAD" ? null : body, {
