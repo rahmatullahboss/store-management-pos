@@ -8,6 +8,7 @@ import {
 } from "../../admin-web/src/app-shell/index.js";
 import { renderRegisterWorkspace } from "../../pos-web/src/modules/register/surface.js";
 import { hardenAdminDocumentAccessibility } from "./staging-admin-accessibility.js";
+import { requiredPermissionForStagingAdminPath } from "./staging-admin-route-authorization.js";
 import {
   renderAdminNotFoundPage,
   renderConnectedAdminPage,
@@ -117,7 +118,11 @@ function adminInput(
   };
 }
 
-function adminHtml(
+function permissionDeniedContent(localPath: string): string {
+  return `<section data-permission-denied role="alert"><p class="fixture-notice"><strong>Authorization boundary</strong><span>Database-resolved role permissions are enforced before route rendering.</span></p><div class="page-heading"><div><h1>Access denied</h1><p>Your current role does not grant access to <code>${escapeHtml(localPath)}</code>. No business data for this route was rendered and no command was executed.</p></div></div></section>`;
+}
+
+export function renderOperationalAdminHtml(
   pathname: string,
   data: StagingOperationalData,
   version: string,
@@ -126,7 +131,15 @@ function adminHtml(
   const base = adminInput(localPath, data);
   let html: string;
   let status = 200;
-  if (localPath === "/" || localPath === "") {
+  const requiredPermission = requiredPermissionForStagingAdminPath(localPath);
+  if (requiredPermission && !data.context.permissions.includes(requiredPermission)) {
+    html = renderAdminShell({
+      ...base,
+      currentPath: localPath,
+      content: permissionDeniedContent(localPath),
+    });
+    status = 403;
+  } else if (localPath === "/" || localPath === "") {
     html = renderAdminShell({
       ...base,
       currentPath: "/",
@@ -186,6 +199,6 @@ export async function handleOperationalStagingRequest(
   const data = await loadReleaseCandidateOperationalData(env.DATABASE_URL, context);
   const version = env.STAGING_GIT_SHA?.slice(0, 12) || "local";
   if (pos) return htmlResponse(request, posHtml(data, version));
-  const rendered = adminHtml(url.pathname, data, version);
+  const rendered = renderOperationalAdminHtml(url.pathname, data, version);
   return htmlResponse(request, rendered.html, rendered.status);
 }
