@@ -217,6 +217,26 @@ test("private order history is bounded and order detail not-found does not expos
   assertPrivateHeaders(detailResponse);
 });
 
+test("private access denial never reflects ownership or scope mismatch details", async () => {
+  const mismatchedCustomerId = "018f0000-0000-4000-8000-000000000499";
+  const url = new URL(`https://${hostname}/v1/storefront/account?hostname=${hostname}`);
+  const response = await handleStorefrontCustomerAccountRequest(
+    dependencies({
+      customerService: {
+        async get() {
+          return { ...customer(), id: mismatchedCustomerId };
+        },
+      },
+    }),
+    new Request(url, { headers: { Cookie: "session=opaque" } }),
+    url,
+  );
+
+  assert.equal(response.status, 403);
+  assert.deepEqual(await body(response), { error: { code: "ACCOUNT_ACCESS_DENIED" } });
+  assertPrivateHeaders(response);
+});
+
 test("private account handler is GET-only and remains unregistered from storefront runtime routers", async () => {
   const url = new URL(`https://${hostname}/v1/storefront/account?hostname=${hostname}`);
   const response = await handleStorefrontCustomerAccountRequest(
