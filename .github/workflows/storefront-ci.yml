@@ -17,6 +17,7 @@ on:
       - "tooling/scripts/storefront-design-evidence.mjs"
       - "tooling/scripts/storefront-design-evidence-runner.mjs"
       - "tooling/scripts/storefront-checkout-recovery-design-evidence.mjs"
+      - "tooling/scripts/storefront-checkout-recovery-design-evidence-runner.mjs"
       - "tooling/scripts/storefront-admin-design-evidence.mjs"
       - "tooling/scripts/storefront-public-content-design-evidence.mjs"
       - "tooling/scripts/storefront-public-catalog-design-evidence.mjs"
@@ -46,6 +47,7 @@ on:
       - "tooling/scripts/storefront-design-evidence.mjs"
       - "tooling/scripts/storefront-design-evidence-runner.mjs"
       - "tooling/scripts/storefront-checkout-recovery-design-evidence.mjs"
+      - "tooling/scripts/storefront-checkout-recovery-design-evidence-runner.mjs"
       - "tooling/scripts/storefront-admin-design-evidence.mjs"
       - "tooling/scripts/storefront-public-content-design-evidence.mjs"
       - "tooling/scripts/storefront-public-catalog-design-evidence.mjs"
@@ -165,7 +167,7 @@ jobs:
       - name: Run buyer browser and accessibility evidence
         run: |
           npm run storefront:design:verify
-          node tooling/scripts/storefront-checkout-recovery-design-evidence.mjs
+          node tooling/scripts/storefront-checkout-recovery-design-evidence-runner.mjs
       - name: Run admin browser and accessibility evidence
         run: |
           npm run build
