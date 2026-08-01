@@ -111,6 +111,11 @@
       "id": "FND-0022",
       "file": "FND-0022-internal-token-production-attestation-receipt-count-cast-fix.sql",
       "sha256": "be7401fb8f3aa0164aea432cf81902f7abbf01f64dfc2cffa68af415cf976064"
+    },
+    {
+      "id": "FND-0023",
+      "file": "FND-0023-custom-auth-generic-rbac-context.sql",
+      "sha256": "50118bbf24c1cf6b3a974cea720e5f11f67581f32cb856edbb8a62ab636978c6"
     }
   ]
 }
