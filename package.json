@@ -15,7 +15,7 @@
     "test:unit": "npm run build && node --test tests/unit/*.test.mjs",
     "test:architecture": "node --test tests/architecture/*.test.mjs",
     "test:integration": "node --test tests/integration/*.test.mjs",
-    "test:e2e:main-web": "npm run build && node tooling/scripts/main-web-e2e.mjs",
+    "test:e2e:main-web": "npm run build && node tooling/scripts/main-web-e2e-v2.mjs",
     "check:boundaries": "node tooling/scripts/check-boundaries.mjs",
     "check:secrets": "node tooling/scripts/check-secrets.mjs",
     "check:licenses": "node tooling/scripts/check-licenses.mjs",
