@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 import { discoverMigrationManifests } from "../../tooling/scripts/migration-manifests.mjs";
 
 const manifestUrl = new URL("../../database/modules/localization/manifest.json", import.meta.url);
@@ -31,7 +32,7 @@ test("MOD-F migration manifest is deterministic and ordered after integrated MOD
     assert.match(migration.sql, new RegExp(`VALUES \\('${migration.id}'`, "u"));
   }
 
-  const registry = await discoverMigrationManifests(new URL("../..", import.meta.url).pathname);
+  const registry = await discoverMigrationManifests(fileURLToPath(new URL("../..", import.meta.url)));
   const modules = registry.map(({ module }) => module);
   assert.ok(modules.indexOf("MOD-D-CASH") < modules.indexOf("MOD-F-LOCALIZATION"));
 });

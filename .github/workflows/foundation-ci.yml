@@ -105,6 +105,34 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npm run build
       - run: npm run ci:neon-recovery
+      - name: Summarize Neon recovery evidence
+        if: always()
+        run: |
+          node --input-type=module <<'NODE'
+          import { appendFileSync, existsSync, readFileSync } from 'node:fs';
+          const reportPath = 'artifacts/foundation/neon-recovery-report.json';
+          if (!existsSync(reportPath)) {
+            appendFileSync(process.env.GITHUB_STEP_SUMMARY, '## Neon full-registry recovery\n\n- Recovery status: evidence unavailable\n');
+            process.exit(0);
+          }
+          const report = JSON.parse(readFileSync(reportPath, 'utf8'));
+          const lines = [
+            '## Neon full-registry recovery',
+            '',
+            `- Recovery status: ${report.status ?? 'not available'}`,
+            `- Migration manifests: ${report.manifestCount ?? 'not available'}`,
+            `- Registered migrations: ${report.migrationCount ?? 'not available'}`,
+            `- Modules: ${Array.isArray(report.moduleIds) ? report.moduleIds.length : 'not available'}`,
+            `- Exact checkpoint restore: ${report.exactCheckpointRestore === true ? 'yes' : 'no'}`,
+            `- Marker reconciled: ${report.markerReconciled === true ? 'yes' : 'no'}`,
+            `- Restore ready ms: ${report.restoreReadyMs ?? 'not available'}`,
+            `- Reconciliation ms: ${report.reconciliationMs ?? 'not available'}`,
+            `- Total recovery ms: ${report.totalRecoveryMs ?? 'not available'}`,
+            `- Cleanup deleted: ${report.cleanupDeleted === true ? 'yes' : 'no'}`,
+            '',
+          ];
+          appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join('\n')}\n`);
+          NODE
       - name: Upload Neon recovery evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

@@ -28,9 +28,9 @@
     {
       "type": "library",
       "name": "axe-core",
-      "version": "4.10.3",
+      "version": "4.12.1",
       "scope": "excluded",
-      "purl": "pkg:npm/axe-core@4.10.3",
+      "purl": "pkg:npm/axe-core@4.12.1",
       "licenses": [
         {
           "license": {
@@ -42,9 +42,9 @@
     {
       "type": "library",
       "name": "puppeteer-core",
-      "version": "24.16.0",
+      "version": "25.4.0",
       "scope": "excluded",
-      "purl": "pkg:npm/puppeteer-core@24.16.0",
+      "purl": "pkg:npm/puppeteer-core@25.4.0",
       "licenses": [
         {
           "license": {
@@ -56,9 +56,9 @@
     {
       "type": "library",
       "name": "typescript",
-      "version": "5.8.3",
+      "version": "7.0.2",
       "scope": "excluded",
-      "purl": "pkg:npm/typescript@5.8.3",
+      "purl": "pkg:npm/typescript@7.0.2",
       "licenses": [
         {
           "license": {
