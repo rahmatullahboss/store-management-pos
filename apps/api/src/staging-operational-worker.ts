@@ -84,6 +84,20 @@ function prefixAdminLinks(html: string): string {
     .replaceAll('href="/admin/admin/', 'href="/admin/');
 }
 
+function normalizeEmbeddedMain(html: string, rootClass: string): string {
+  const opening = `<main class="${rootClass}"`;
+  const openingIndex = html.indexOf(opening);
+  if (openingIndex < 0) return html;
+  const closingIndex = html.indexOf("</main>", openingIndex);
+  if (closingIndex < openingIndex) return html;
+  return `${html.slice(0, openingIndex)}<section class="${rootClass}"${html.slice(openingIndex + opening.length, closingIndex)}</section>${html.slice(closingIndex + 7)}`;
+}
+
+function normalizeAdminLandmarks(html: string): string {
+  return ["mod-c-workspace", "mod-c-sales", "mod-c-fulfilment", "pos-reconciliation"]
+    .reduce((current, rootClass) => normalizeEmbeddedMain(current, rootClass), html);
+}
+
 function adminInput(
   localPath: string,
   data: StagingOperationalData,
@@ -141,7 +155,7 @@ function adminHtml(
     }
   }
   return {
-    html: prefixAdminLinks(addNotice(html, releaseNotice(data, version))),
+    html: prefixAdminLinks(addNotice(normalizeAdminLandmarks(html), releaseNotice(data, version))),
     status,
   };
 }
