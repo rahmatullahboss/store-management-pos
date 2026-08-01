@@ -82,14 +82,15 @@ function stableEvidence(value: readonly {
   );
 }
 
-async function sha256(value: string): Promise<string> {
+async function decimalEvidenceDigest(value: string): Promise<string> {
   const digest = await crypto.subtle.digest(
     "SHA-256",
     new TextEncoder().encode(value),
   );
-  return [...new Uint8Array(digest)]
+  const hexadecimal = [...new Uint8Array(digest)]
     .map((byte) => byte.toString(16).padStart(2, "0"))
     .join("");
+  return BigInt(`0x${hexadecimal}`).toString();
 }
 
 function uniqueSortedWarehouseIds(value: readonly string[]): readonly string[] {
@@ -194,7 +195,7 @@ export function createStorefrontInventoryQuotePort(
         availableAmount: observation.available.amount,
         availableScale: observation.available.scale,
       }));
-      const version = `mw-${await sha256(stableEvidence(evidencePayload))}`;
+      const version = await decimalEvidenceDigest(stableEvidence(evidencePayload));
 
       return Object.freeze({
         variantId: input.item.variantId,
