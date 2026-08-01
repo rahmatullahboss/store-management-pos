@@ -7,6 +7,10 @@ import {
   type AdminShellInput,
 } from "../../admin-web/src/app-shell/index.js";
 import { renderRegisterWorkspace } from "../../pos-web/src/modules/register/surface.js";
+import {
+  renderAdminNotFoundPage,
+  renderConnectedAdminPage,
+} from "./staging-connected-admin-pages.js";
 import type { StagingOperationalData } from "./staging-operational-data.js";
 import { loadReleaseCandidateOperationalData } from "./staging-operational-release-data.js";
 import {
@@ -98,15 +102,6 @@ function adminInput(
   };
 }
 
-function genericPage(localPath: string): string {
-  const label = localPath
-    .split("/")
-    .filter(Boolean)
-    .map((item) => item.replaceAll("-", " "))
-    .join(" / ") || "Operations";
-  return `<style>.rc-next{padding:clamp(1rem,2.4vw,2rem);background:#f5f3ec;color:#17231e}.rc-next h1{max-width:16ch;margin:0;font-size:clamp(2rem,4vw,3.7rem);line-height:1;letter-spacing:-.035em;text-wrap:balance}.rc-next p{max-width:72ch;line-height:1.6;color:#405049}.rc-next__flow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:1.4rem;background:#fffefa;border-radius:14px;box-shadow:0 10px 24px rgba(23,35,30,.08);overflow:hidden}.rc-next__flow div{padding:1rem 1.1rem;border-inline-end:1px solid #d7ddd8}.rc-next__flow div:last-child{border:0}.rc-next__flow strong,.rc-next__flow span{display:block}.rc-next__flow span{margin-top:.3rem;color:#59675f}@media(max-width:720px){.rc-next__flow{grid-template-columns:1fr}.rc-next__flow div{border-inline-end:0;border-bottom:1px solid #d7ddd8}}</style><section class="rc-next" data-staging-page="connected-next"><h1>${escapeHtml(label)} is the next connected workflow.</h1><p>The module schema and navigation are present, but this page is intentionally not pretending that command processing is production-ready. Read journeys for dashboard, catalog, inventory, procurement, customers and sales are connected now.</p><div class="rc-next__flow"><div><strong>Current evidence</strong><span>Authenticated tenant and scoped permissions are database-resolved.</span></div><div><strong>Enabled command</strong><span>Only MFA-gated reservation create/release is connected.</span></div><div><strong>Command boundary</strong><span>All other mutations stay disabled until dedicated evidence passes.</span></div></div></section>`;
-}
-
 function adminHtml(
   pathname: string,
   data: StagingOperationalData,
@@ -137,8 +132,13 @@ function adminHtml(
   } else if (localPath === "/sales") {
     html = renderSalesAdminPage(base, data.sales);
   } else {
-    html = renderAdminShell({ ...base, content: genericPage(localPath) });
-    status = 200;
+    const connected = renderConnectedAdminPage(localPath, base, data);
+    if (connected) {
+      html = connected;
+    } else {
+      html = renderAdminNotFoundPage(base, localPath);
+      status = 404;
+    }
   }
   return {
     html: prefixAdminLinks(addNotice(html, releaseNotice(data, version))),
