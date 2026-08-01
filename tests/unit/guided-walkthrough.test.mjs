@@ -14,7 +14,7 @@ test("guided walkthrough mounts an accessible, restartable first-use guide", () 
   assert.match(guidedWalkthroughMarkup, /data-guide-back/u);
   assert.match(guidedWalkthroughMarkup, /data-guide-next/u);
   assert.match(guidedWalkthroughMarkup, /event\.key==="Escape"/u);
-  assert.match(guidedWalkthroughMarkup, /event\.key==="Tab"/u);
+  assert.match(guidedWalkthroughMarkup, /event\.key!=="Tab"/u);
   assert.match(guidedWalkthroughMarkup, /prefers-reduced-motion/u);
   assert.match(directionSupportStyles, /data-store-walkthrough/u);
 });
