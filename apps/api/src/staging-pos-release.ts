@@ -1,3 +1,4 @@
+import { hardenPosWorkspaceAccessibility } from "../../pos-web/src/accessibility.js";
 import { renderRegisterWorkspace } from "../../pos-web/src/modules/register/surface.js";
 import {
   loadReleaseCandidateOperationalData,
@@ -59,7 +60,7 @@ export async function handleExactStagingPos(
   if (!context) return redirect(request);
   const data = await loadReleaseCandidateOperationalData(env.DATABASE_URL, context);
   const version = env.STAGING_GIT_SHA?.slice(0, 12) || "local";
-  const register = renderRegisterWorkspace(data.pos).replace(
+  const register = hardenPosWorkspaceAccessibility(renderRegisterWorkspace(data.pos)).replace(
     'class="modd-complete"',
     'class="modd-complete" data-command="checkout"',
   );
