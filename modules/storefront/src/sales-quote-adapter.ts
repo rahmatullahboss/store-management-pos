@@ -5,7 +5,9 @@ export function createStorefrontSalesServiceQuotePort(
   service: Pick<SalesService, "createQuote">,
 ): StorefrontSalesQuotePort {
   return Object.freeze({
-    async createQuote(input) {
+    async createQuote(
+      input: Parameters<StorefrontSalesQuotePort["createQuote"]>[0],
+    ) {
       return service.createQuote(input.requestContext, {
         idempotencyKey: input.idempotencyKey,
         customer: input.customer,
