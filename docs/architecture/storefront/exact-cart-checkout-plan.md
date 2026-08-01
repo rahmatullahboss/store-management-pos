@@ -4,7 +4,7 @@ Status: **active**
 
 Checkpoint: `H4`
 
-Active slices: `H4-QUOTE-02`, `H4-CHECKOUT-03`, and contract/preflight `H4-SUBMIT-04`
+Active slices: `H4-QUOTE-02`, `H4-CHECKOUT-03`, contract/preflight `H4-SUBMIT-04`, and verified buyer recovery
 
 ## Objective
 
@@ -77,7 +77,6 @@ Remaining before capability route activation:
 2. Obtain versioned pre-order fulfillment/shipping options and exact amounts from MOD-C. See Issue #97.
 3. Obtain side-effect-free public payment capability eligibility from MOD-E without exposing provider secrets or creating an intent merely for discovery. See Issue #98.
 4. Revalidate quote price/tax and stock immediately before side effects through the final canonical adapters.
-5. Add canonical-adapter integration and buyer recovery UI evidence for capability removal/version change.
 
 ## H4-SUBMIT-04 — idempotent order and payment submission
 
@@ -101,17 +100,36 @@ Remaining after owning-module capabilities are concrete:
 5. Prove retries/concurrency cannot duplicate order, reservation, payment or ledger effects.
 6. Return confirmation/receipt state only from canonical MOD-C/MOD-E evidence.
 
+## H4-RECOVERY-05 — buyer-safe stale-state recovery
+
+Status: **complete and verified for the pre-side-effect H4 surface**
+
+Completed:
+
+1. Added a typed recovery view-model that maps corrupt cart recovery, quote expiry/change/unavailability, price-tax changes, inventory changes, country-policy changes, shipping changes, payment changes and checkout unavailability to explicit blocking actions.
+2. The recovery model never parses backend error text and only permits `canSubmit=true` when quote and checkout capabilities are both `ready` with no recovery item.
+3. Added accessible server-rendered recovery UI with English, Bengali, Arabic RTL and Japanese/CJK copy; it performs no canonical mutation.
+4. Added synthetic evidence-only route; no production/customer data is used.
+5. Added bounded process-group lifecycle around recovery browser evidence to prevent dev-server child/grandchild leakage or CI hangs without weakening the assertions.
+6. Browser evidence checks axe WCAG, lang/dir, exact recovery reasons, safe actions, overflow/clipping, upstream-brand leakage, skip-link/keyboard behavior, reduced motion and 200% text.
+7. Bengali recovery runs under bounded 3G, Arabic under RTL and Japanese covers CJK presentation.
+
+Exit met: stale/corrupt pre-side-effect checkout states produce explicit safe buyer recovery instead of silent fallback, unsafe submit or ambiguous error text.
+
 ## Verified checkpoint evidence
 
-Exact code head `42c92d70ba744980c61255d2839778800cb89885`, Storefront CI run `30709922779`:
+Exact code head `db135e7c72ac418ee1158ab10cb3665ee88ab943`, Storefront CI run `30710984952`:
 
-- root format, lint, module boundaries, TypeScript, database validation, build, tests and security gates: passed;
+- root format, lint, module boundaries, TypeScript, database validation, build, complete tests and security gates: passed;
 - PostgreSQL 17 storefront rehearsal: passed;
-- buyer/admin browser and accessibility evidence: passed;
+- existing buyer browser/accessibility evidence: **5 / 5 scenarios passed**;
+- checkout recovery browser/accessibility evidence: **4 / 4 scenarios passed with 0 axe violations**;
+- admin browser/accessibility evidence: **4 / 4 scenarios passed**;
+- Astro check during browser evidence: **25 files, 0 errors, 0 warnings, 0 hints**;
 - Cloudflare preview deploy, runtime metrics and cleanup: passed;
-- non-destructive Neon recovery: passed after targeted rerun of the concurrency-cancelled job.
+- non-destructive Neon recovery: passed directly on the exact head.
 
-The previous fully counted H4 baseline at `400cfb00e78db334c903a298bc560f05c31ee526` passed 549/549 repository tests; the later exact head above contains the additional submit/idempotency/cart-state suites and its complete root test gate passed. This document does not infer a new numeric total without a directly surfaced aggregate count.
+The previous fully counted H4 baseline at `400cfb00e78db334c903a298bc560f05c31ee526` passed 549/549 repository tests; the later exact head above contains the additional submit/idempotency/cart-state/recovery suites and its complete root test gate passed. This document does not infer a new numeric total without a directly surfaced aggregate count.
 
 ## Verification gates for remaining H4 work
 
