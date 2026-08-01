@@ -7,6 +7,7 @@ import {
   type AdminShellInput,
 } from "../../admin-web/src/app-shell/index.js";
 import { renderRegisterWorkspace } from "../../pos-web/src/modules/register/surface.js";
+import { hardenAdminDocumentAccessibility } from "./staging-admin-accessibility.js";
 import {
   renderAdminNotFoundPage,
   renderConnectedAdminPage,
@@ -154,8 +155,9 @@ function adminHtml(
       status = 404;
     }
   }
+  const accessible = hardenAdminDocumentAccessibility(normalizeAdminLandmarks(html));
   return {
-    html: prefixAdminLinks(addNotice(normalizeAdminLandmarks(html), releaseNotice(data, version))),
+    html: prefixAdminLinks(addNotice(accessible, releaseNotice(data, version))),
     status,
   };
 }
