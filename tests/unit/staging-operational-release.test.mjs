@@ -41,7 +41,7 @@ test("release data preserves exact POS minor units and normalizes unsupported nu
   assert.match(release, /payableMinor/u);
 });
 
-test("authenticated operational routes replace empty staging shells", async () => {
+test("authenticated operational routes authorize before loading release-candidate business data", async () => {
   const worker = await source("apps/api/src/staging-operational-worker.ts");
   assert.match(worker, /renderStagingDashboard/u);
   assert.match(worker, /renderStagingCatalog/u);
@@ -50,7 +50,14 @@ test("authenticated operational routes replace empty staging shells", async () =
   assert.match(worker, /renderCustomerAdminPage/u);
   assert.match(worker, /renderSalesAdminPage/u);
   assert.match(worker, /loadReleaseCandidateOperationalData/u);
-  assert.match(worker, /database-resolved read permissions/u);
+  assert.match(worker, /database-resolved permissions/u);
+  assert.match(worker, /STAGING_POS_PERMISSION = "pos\.checkout\.read"/u);
+  const adminAuthorization = worker.lastIndexOf("if (requiredPermission && !context.permissions.includes(requiredPermission))");
+  const posAuthorization = worker.lastIndexOf("if (pos && !context.permissions.includes(STAGING_POS_PERMISSION))");
+  const dataLoad = worker.lastIndexOf("const data = await loadReleaseCandidateOperationalData");
+  assert.ok(adminAuthorization >= 0);
+  assert.ok(posAuthorization > adminAuthorization);
+  assert.ok(dataLoad > posAuthorization);
 });
 
 test("persistent deployment proves useful routes and responsive browser surfaces", async () => {
@@ -90,14 +97,24 @@ test("operational staging persists aggregate operability evidence before enforci
   assert.doesNotMatch(loader, /alert\.observed/u);
 });
 
-test("persistent staging workflow publishes bounded operability summary and evidence paths", async () => {
+test("persistent staging workflow publishes bounded operability and live-role evidence paths", async () => {
   const workflow = await source(".github/workflows/persistent-admin-pos-staging.yml");
   for (const path of [
     '"tooling/scripts/staging-operability.mjs"',
     '"tooling/scripts/staging-outbox-publisher.mjs"',
+    '"tooling/scripts/staging-live-role-e2e.mjs"',
+    '"tooling/fixtures/main-web-role-matrix.mjs"',
+    '"tests/architecture/staging-live-role-e2e.test.mjs"',
+    '"tests/unit/staging-operational-authorization-preflight.test.mjs"',
     '"tests/unit/staging-operability.test.mjs"',
     '"tests/unit/staging-outbox-publisher.test.mjs"',
   ]) assert.ok(workflow.includes(path), `missing workflow path ${path}`);
+  assert.match(workflow, /Live database role contexts:/u);
+  assert.match(workflow, /Live database role route assertions:/u);
+  assert.match(workflow, /Live permission revocation:/u);
+  assert.match(workflow, /Live session revocation:/u);
+  assert.match(workflow, /Ambiguous role fail-closed:/u);
+  assert.match(workflow, /Cross-tenant scope rejection:/u);
   assert.match(workflow, /Outbox claimed\/delivered\/replayed:/u);
   assert.match(workflow, /Outbox failed\/remaining\/exhausted:/u);
   assert.match(workflow, /Outbox payloads in artifacts:/u);
