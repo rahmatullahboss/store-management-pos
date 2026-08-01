@@ -2,8 +2,8 @@ workpack:
   id: MOD-H
   title: Storefront Commerce and Custom Domains
   status: active
-  current_checkpoint: H3
-  updated_at: 2026-07-30
+  current_checkpoint: H4
+  updated_at: 2026-08-01
   owner_model: one_agent_complete_workpack
   pull_request: 48
   pull_request_state: draft
@@ -30,8 +30,8 @@ upstream:
   product_branding_reuse: prohibited
   provenance_recording: required
   wholesale_import: prohibited
-  imported_source_batches: 4
-  latest_import_batch: SF-UP-004
+  imported_source_batches: 5
+  latest_import_batch: SF-UP-005
 
 checkpoints:
   H0:
@@ -42,7 +42,7 @@ checkpoints:
       - workpack_continuation_hub_programme_board_and_execution_policy_created
       - product_scope_delivery_roadmap_and_implementation_backlog_created
       - reuse_register_OSS_0006_and_internal_notice_created
-      - file_level_adaptation_manifests_SF_UP_001_to_SF_UP_004
+      - file_level_adaptation_manifests_SF_UP_001_to_SF_UP_005
       - module_boundary_registered
       - latest_integration_baseline_merged_by_sync_PR_53
       - integration_conflicts_resolved_additively_and_validated
@@ -138,7 +138,7 @@ checkpoints:
 
   H3:
     title: Public catalog and content
-    status: active
+    status: complete
     completed_slices:
       H3-CONTENT-01:
         status: complete
@@ -274,17 +274,70 @@ checkpoints:
           Cloudflare_requests: 1
           Cloudflare_errors: 0
           checkpoint_doc: docs/architecture/storefront/public-discovery-checkpoint.md
-    active_slice:
-      id: H3-SEO-MEDIA-04
-      description: Add published-only robots, sitemap, canonical and structured metadata, bounded product media delivery and exact cache-generation families using selectively adapted Scalius discovery patterns.
-      plan_doc: docs/architecture/storefront/public-seo-media-plan.md
-    remaining:
-      - media_delivery_and_cache_generation
-      - SEO_discovery_robots_sitemap_and_structured_data
-      - public_catalog_low_bandwidth_and_broader_locale_evidence
+      H3-SEO-MEDIA-04:
+        status: complete
+        completed:
+          - published_only_robots_sitemap_canonical_and_structured_product_metadata
+          - STF_0014_public_SEO_resolution
+          - bounded_public_product_media_projection_and_STF_0015_media_resolution
+          - exact_cache_generation_families_STF_0016_and_STF_0017
+          - fail_closed_generation_lookup_and_scope_isolation
+          - safe_public_media_and_cache_API_base_path_joining
+          - safe_cache_resource_token_normalisation
+          - SF_UP_005_selective_SEO_media_cache_adaptation
+          - Bengali_bounded_3G_and_Japanese_CJK_browser_evidence
+          - PostgreSQL_17_Cloudflare_and_non_destructive_Neon_evidence
+        exact_head_evidence:
+          head: d5e5c6a0b0a780a89c9702f0ade6f632c0dc60ab
+          storefront_ci_run: 30693905643
+          storefront_verify_job: 91353332834
+          postgres_rehearsal_job: 91353407634
+          browser_evidence_job: 91353407632
+          cloudflare_preview_job: 91353407633
+          neon_recovery_job: 91353407734
+          repository_tests: 486
+          buyer_browser_scenarios: 5
+          buyer_browser_locales: 4
+          bounded_3g_scenarios: 1
+          public_content_browser_scenarios: 3
+          public_catalog_browser_scenarios: 3
+          public_discovery_browser_scenarios: 3
+          storefront_migrations: 17
+          storefront_tables: 17
+          forced_RLS_tables: 17
+          audit_events: 95
+          outbox_events: 95
+          command_receipts: 24
+          cache_generation_rows: 1
+          cache_generation_families: 9
+          Cloudflare_requests: 5
+          Cloudflare_errors: 0
+          checkpoint_doc: docs/architecture/storefront/public-seo-media-checkpoint.md
+    remaining: []
+
   H4:
     title: Exact cart and checkout
-    status: blocked_by_H3
+    status: active
+    active_slice:
+      id: H4-QUOTE-01
+      description: Establish authority-safe cart intent and exact server quote contracts before wiring MOD-A/B/C/E/F adapters.
+      plan_doc: docs/architecture/storefront/exact-cart-checkout-plan.md
+      implementation_head: c155871efcfccb930d4408f82cd204a0cf42a0ac
+      completed_so_far:
+        - strict_versioned_cart_quote_request_contract
+        - browser_commercial_authority_field_rejection
+        - exact_quantity_coupon_country_and_idempotency_validation
+        - versioned_exact_quote_envelope_contract
+        - price_list_publication_calculation_and_inventory_evidence_reconciliation
+        - focused_cart_quote_contract_tests
+    remaining:
+      - authoritative_MOD_A_MOD_B_MOD_C_quote_adapter
+      - quote_persistence_expiry_revision_and_revalidation_recovery
+      - MOD_F_country_address_contact_policy
+      - MOD_C_shipping_capability_projection
+      - MOD_E_payment_capability_projection
+      - idempotent_order_reservation_payment_submission_and_unknown_state_recovery
+      - checkout_browser_PostgreSQL_Cloudflare_and_Neon_evidence
   H5:
     title: Customer and order experience
     status: blocked_by_H4
@@ -293,7 +346,7 @@ checkpoints:
     status: blocked_by_H2_and_MOD_G_provider_control_plane
   H7:
     title: Hardening and handoff
-    status: blocked_by_H3_to_H6
+    status: blocked_by_H4_to_H6
 
 module_authority:
   catalog_pricing_tax: MOD-A
@@ -305,9 +358,9 @@ module_authority:
   storefront_publication_presentation_domains: MOD-H
 
 next_action:
-  id: H3-SEO-MEDIA-04
-  description: Follow the approved SEO/media plan: selectively adapt Scalius robots, sitemap, canonical, discovery-cache and generation patterns to local published-only contracts without importing upstream business authority.
-  documentation_first: docs/architecture/storefront/public-seo-media-plan.md
+  id: H4-QUOTE-01
+  description: Wire the strict cart intent contract to an authoritative server quote adapter that resolves MOD-A price and tax, MOD-B availability and MOD-C sales quote orchestration without trusting browser commercial values.
+  documentation_first: docs/architecture/storefront/exact-cart-checkout-plan.md
 
 last_commits:
   - sha: e9dc992ded901452b3633b3d20a261e50668bc88
@@ -322,13 +375,18 @@ last_commits:
     purpose: quota-safe full validation of the H3 catalog checkpoint
   - sha: bad50da86831d1392e77d0263f978220356a36d6
     purpose: H3 category collection search filters PostgreSQL truth Cloudflare retention and exact-head evidence
+  - sha: d5e5c6a0b0a780a89c9702f0ade6f632c0dc60ab
+    purpose: H3 SEO media cache and multilingual low-bandwidth exact-head evidence
+  - sha: c155871efcfccb930d4408f82cd204a0cf42a0ac
+    purpose: H4 authority-safe cart quote contracts and focused tests
 
 evidence:
   github:
     pr: 48
     base_sha: fd63dfde4d5940112a9c77c2743b281e49ff6b55
-    verified_implementation_head: bad50da86831d1392e77d0263f978220356a36d6
-    verified_validation_head: bad50da86831d1392e77d0263f978220356a36d6
+    verified_implementation_head: d5e5c6a0b0a780a89c9702f0ade6f632c0dc60ab
+    verified_validation_head: d5e5c6a0b0a780a89c9702f0ade6f632c0dc60ab
+    active_H4_head: c155871efcfccb930d4408f82cd204a0cf42a0ac
     integration_sync_pr: 53
     integration_sync_report: docs/architecture/storefront/integration-conflicts.txt
   neon:
@@ -341,16 +399,17 @@ evidence:
     generic_preview_policy: skipped_for_MOD_H_until_safe_quota_slot
     required_evidence: PostgreSQL_17_full_replay_plus_non_destructive_Neon_recovery
   adaptation:
-    latest_batch: SF-UP-004
+    latest_batch: SF-UP-005
     upstream_product_card_blob: 68bc025696a3e36dbf316d64f2e026ac719ddcf9
     upstream_discovery_blobs:
       category_page: fb8c87c5828766d9a63f149e1bac3692384a1f79
       collection_page: 110a72dd675ab282ae5efa656529844b3a8aabba
       search_page: 9a8bf2f1c8876d57875209791dd2c0a878c2c385
+    seo_media_cache_provenance: docs/architecture/storefront/SF-UP-005-SEO-CACHE.yaml
     product_facing_upstream_branding: none
     upstream_business_authority_imported: false
   known_risks:
     - dedicated_neon_branch_waiting_for_safe_quota_slot
     - custom_domain_provider_execution_requires_MOD_G_control_plane_adapter
-    - media_cache_generation_and_SEO_discovery_remain_in_H3
-    - customer_auth_cart_checkout_and_order_experience_remain_future_checkpoints
+    - H4_quote_checkout_requires_authoritative_MOD_A_B_C_E_F_adapter_composition
+    - customer_auth_order_experience_custom_domain_and_final_hardening_remain_future_checkpoints
