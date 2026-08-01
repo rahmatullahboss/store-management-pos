@@ -9,7 +9,7 @@ const ADMIN_FOCUS_REPLACEMENT = `      if (scenario.kind === "admin") {
         metrics.walkthrough = await sessionPage.evaluate(() => {
           const guide = document.querySelector("[data-store-walkthrough]");
           if (!guide || guide.hasAttribute("hidden")) {
-            return { offered: false, modal: false, dismissed: true };
+            return { offered: false, modal: false, dismissed: true, persistedDismissal: true };
           }
           const modal = guide.getAttribute("role") === "dialog"
             && guide.getAttribute("aria-modal") === "true";
@@ -19,8 +19,16 @@ const ADMIN_FOCUS_REPLACEMENT = `      if (scenario.kind === "admin") {
             offered: true,
             modal,
             dismissed: guide.hasAttribute("hidden"),
+            persistedDismissal: false,
           };
         });
+        if (metrics.walkthrough.offered === true) {
+          await sessionPage.reload({ waitUntil: "networkidle0" });
+          metrics.walkthrough.persistedDismissal = await sessionPage.evaluate(() => {
+            const guide = document.querySelector("[data-store-walkthrough]");
+            return !guide || guide.hasAttribute("hidden");
+          });
+        }
         await sessionPage.keyboard.press("Home");
         await sessionPage.keyboard.press("Tab");
         await sessionPage.keyboard.press("Enter");
@@ -31,17 +39,19 @@ const EVIDENCE_ANCHOR = `            skipFocusedMain: metrics.skipFocusedMain ??
 const EVIDENCE_REPLACEMENT = `            skipFocusedMain: metrics.skipFocusedMain ?? null,
             walkthroughOffered: metrics.walkthrough?.offered ?? null,
             walkthroughModal: metrics.walkthrough?.modal ?? null,
-            walkthroughDismissed: metrics.walkthrough?.dismissed ?? null,`;
+            walkthroughDismissed: metrics.walkthrough?.dismissed ?? null,
+            walkthroughPersistedDismissal: metrics.walkthrough?.persistedDismissal ?? null,`;
 
 const PASS_ANCHOR = `(scenario.kind !== "admin" || metrics.skipFocusedMain === true),`;
 const PASS_REPLACEMENT = `(scenario.kind !== "admin" || metrics.skipFocusedMain === true)
             && (scenario.id !== "admin-dashboard-desktop"
               || (metrics.walkthrough?.offered === true
                 && metrics.walkthrough?.modal === true
-                && metrics.walkthrough?.dismissed === true)),`;
+                && metrics.walkthrough?.dismissed === true
+                && metrics.walkthrough?.persistedDismissal === true)),`;
 
 export function addGuidedWalkthroughBrowserEvidence(source) {
-  if (source.includes("walkthroughOffered: metrics.walkthrough?.offered")) return source;
+  if (source.includes("walkthroughPersistedDismissal: metrics.walkthrough?.persistedDismissal")) return source;
   for (const [label, anchor] of [
     ["Admin focus", ADMIN_FOCUS_ANCHOR],
     ["scenario evidence", EVIDENCE_ANCHOR],

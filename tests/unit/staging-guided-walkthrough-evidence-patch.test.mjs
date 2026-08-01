@@ -17,15 +17,18 @@ const source = `
       });
 `;
 
-test("staging browser evidence dismisses the first-use walkthrough before testing skip navigation", () => {
+test("staging browser evidence dismisses and persists the first-use walkthrough before testing skip navigation", () => {
   const patched = addGuidedWalkthroughBrowserEvidence(source);
 
   assert.match(patched, /data-store-walkthrough/);
   assert.match(patched, /aria-modal/);
   assert.match(patched, /data-guide-dismiss/);
+  assert.match(patched, /sessionPage\.reload\(\{ waitUntil: "networkidle0" \}\)/);
   assert.match(patched, /walkthroughOffered/);
   assert.match(patched, /walkthroughModal/);
   assert.match(patched, /walkthroughDismissed/);
+  assert.match(patched, /walkthroughPersistedDismissal/);
+  assert.match(patched, /metrics\.walkthrough\?\.persistedDismissal === true/);
   assert.match(patched, /scenario\.id !== "admin-dashboard-desktop"/);
   assert.match(patched, /metrics\.skipFocusedMain === true/);
   assert.equal(addGuidedWalkthroughBrowserEvidence(patched), patched);
