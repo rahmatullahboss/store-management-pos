@@ -158,7 +158,7 @@ function leakMarkers(html) {
 }
 
 function posDocument(data) {
-  return `<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body>${renderRegisterWorkspace(data.pos)}</body></html>`;
+  return `<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Store POS role E2E</title><style>html,body{max-width:100%;overflow-x:hidden}body{margin:0}.modd-register,.modd-workspace,.modd-cart,.modd-checkout,.modd-table-wrap{min-width:0;max-width:100%}.modd-table-wrap{overflow-x:auto;overscroll-behavior-x:contain}</style></head><body>${renderRegisterWorkspace(data.pos)}</body></html>`;
 }
 
 async function analyzePage(page, axeSource, { runAxe = false } = {}) {
