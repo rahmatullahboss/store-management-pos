@@ -130,13 +130,13 @@ const themeStyle = Object.entries(theme)
         <p>{copy.intro}</p>
       </section>
       <CheckoutRecovery recovery={recovery} locale={locale} actionHrefs={actionHrefs} />
-      <section class="safe-targets" aria-label="Synthetic recovery action targets">
-        <span id="cart-review">Cart review target</span>
-        <span id="quote-refresh">Quote refresh target</span>
-        <span id="destination-review">Destination review target</span>
-        <span id="shipping-review">Shipping review target</span>
-        <span id="payment-review">Payment review target</span>
-      </section>
+      <div class="safe-targets" aria-hidden="true">
+        <span id="cart-review"></span>
+        <span id="quote-refresh"></span>
+        <span id="destination-review"></span>
+        <span id="shipping-review"></span>
+        <span id="payment-review"></span>
+      </div>
     </main>
     <footer><div class="container">{copy.footer}</div></footer>
   </body>
@@ -213,7 +213,6 @@ const themeStyle = Object.entries(theme)
     height: 1px;
     overflow: hidden;
     clip: rect(0 0 0 0);
-    white-space: nowrap;
   }
   footer {
     padding-block: 2rem;
