@@ -97,6 +97,11 @@ export function preflightStorefrontCheckoutSubmission(
     );
   }
   assertRevision(
+    capabilities.authority.quoteAuthorityToken,
+    intent.quoteAuthorityToken,
+    "Quote authority token",
+  );
+  assertRevision(
     capabilities.authority.countryPolicyRevision,
     intent.countryPolicyRevision,
     "Country policy revision",
