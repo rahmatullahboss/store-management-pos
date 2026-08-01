@@ -215,6 +215,7 @@ await writeFile(
 process.env.DATABASE_URL = uri;
 try {
   await import("./run-custom-auth-staging.mjs");
+  await import("./staging-live-role-e2e.mjs");
   await persistOperabilityEvidence(uri);
 } finally {
   delete process.env.DATABASE_URL;
