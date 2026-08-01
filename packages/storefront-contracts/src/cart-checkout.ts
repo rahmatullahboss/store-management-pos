@@ -61,6 +61,7 @@ const UUID_PATTERN =
 const INTEGER_PATTERN = /^(?:0|[1-9][0-9]*)$/u;
 const POSITIVE_INTEGER_PATTERN = /^[1-9][0-9]*$/u;
 const TOKEN_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:/-]{0,199}$/u;
+const EVIDENCE_TOKEN_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:,+/-]{0,255}$/u;
 const COUPON_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$/u;
 const COUNTRY_PATTERN = /^[A-Z]{2}$/u;
 const REQUEST_KEYS = new Set([
@@ -169,6 +170,14 @@ function integerVersion(value: unknown, label: string): string {
     throw new StorefrontContractError(
       `${label} must be a non-negative integer string.`,
     );
+  }
+  return normalized;
+}
+
+function evidenceToken(value: unknown, label: string): string {
+  const normalized = boundedText(value, label, 256);
+  if (!EVIDENCE_TOKEN_PATTERN.test(normalized)) {
+    throw new StorefrontContractError(`${label} must be an opaque evidence token.`);
   }
   return normalized;
 }
@@ -473,7 +482,7 @@ function parseInventoryVersions(
         source.variantId,
         "cartQuote.authority.inventoryVersion.variantId",
       ),
-      version: integerVersion(
+      version: evidenceToken(
         source.version,
         "cartQuote.authority.inventoryVersion.version",
       ),
