@@ -17,6 +17,7 @@
     "test:integration": "node --test tests/integration/*.test.mjs",
     "test:e2e:main-web": "npm run build && node tooling/scripts/main-web-e2e-v2.mjs",
     "test:e2e:roles": "npm run build && node tooling/scripts/main-web-role-e2e.mjs",
+    "test:e2e:roles:live": "node tooling/scripts/staging-live-role-e2e.mjs",
     "check:boundaries": "node tooling/scripts/check-boundaries.mjs",
     "check:secrets": "node tooling/scripts/check-secrets.mjs",
     "check:licenses": "node tooling/scripts/check-licenses.mjs",
