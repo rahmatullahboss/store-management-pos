@@ -15,6 +15,10 @@ const shapeFixMigrationUrl = new URL(
   "../../database/foundation/migrations/FND-0021-internal-token-production-attestation-receipt-jsonb-shape-fix.sql",
   import.meta.url,
 );
+const countCastFixMigrationUrl = new URL(
+  "../../database/foundation/migrations/FND-0022-internal-token-production-attestation-receipt-count-cast-fix.sql",
+  import.meta.url,
+);
 
 test("FND-0019 creates isolated append-only receipt-journal storage", async () => {
   const sql = await readFile(storageMigrationUrl, "utf8");
@@ -153,17 +157,19 @@ test("FND-0020 exposes only the JSON command to the governance role", async () =
   );
 });
 
-test("foundation manifest pins FND-0019 through FND-0021 exact checksums last", async () => {
+test("foundation manifest pins FND-0019 through FND-0022 exact checksums last", async () => {
   const storageSql = await readFile(storageMigrationUrl);
   const hardeningSql = await readFile(hardeningMigrationUrl);
   const shapeFixSql = await readFile(shapeFixMigrationUrl);
+  const countCastFixSql = await readFile(countCastFixMigrationUrl);
   const manifest = JSON.parse(
     await readFile(new URL("../../database/foundation/manifest.json", import.meta.url), "utf8"),
   );
   const storageChecksum = createHash("sha256").update(storageSql).digest("hex");
   const hardeningChecksum = createHash("sha256").update(hardeningSql).digest("hex");
   const shapeFixChecksum = createHash("sha256").update(shapeFixSql).digest("hex");
-  assert.deepEqual(manifest.migrations.slice(-3), [
+  const countCastFixChecksum = createHash("sha256").update(countCastFixSql).digest("hex");
+  assert.deepEqual(manifest.migrations.slice(-4), [
     {
       id: "FND-0019",
       file: "FND-0019-internal-token-production-attestation-receipt-journal.sql",
@@ -179,6 +185,11 @@ test("foundation manifest pins FND-0019 through FND-0021 exact checksums last", 
       file: "FND-0021-internal-token-production-attestation-receipt-jsonb-shape-fix.sql",
       sha256: shapeFixChecksum,
     },
+    {
+      id: "FND-0022",
+      file: "FND-0022-internal-token-production-attestation-receipt-count-cast-fix.sql",
+      sha256: countCastFixChecksum,
+    },
   ]);
   assert.equal(
     storageChecksum,
@@ -191,6 +202,10 @@ test("foundation manifest pins FND-0019 through FND-0021 exact checksums last", 
   assert.equal(
     shapeFixChecksum,
     "75315123c624faeb667d8deb3de7c34fc9f4a656c77228a98bc03446c5954925",
+  );
+  assert.equal(
+    countCastFixChecksum,
+    "be7401fb8f3aa0164aea432cf81902f7abbf01f64dfc2cffa68af415cf976064",
   );
 });
 
