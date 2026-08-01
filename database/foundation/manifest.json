@@ -45,7 +45,7 @@
     {
       "id": "FND-0009",
       "file": "FND-0009-custom-auth-totp-step-up.sql",
-      "sha256": "19a3f5e32a6d5f904f454cd339a4bdec02fbd47688035f140db40e"
+      "sha256": "19a3f5e32a6d218406493969025847aec25202eb76cd1f4d31a5a37031feb2c8"
     },
     {
       "id": "FND-0010",
