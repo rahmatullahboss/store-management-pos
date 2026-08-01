@@ -286,6 +286,20 @@ async function publishTheme(
   return dataResponse(result, result.replayed ? 200 : 201);
 }
 
+function domainProviderControlUnavailable(): Response {
+  return new Response(
+    JSON.stringify({ error: { code: "DOMAIN_PROVIDER_CONTROL_UNAVAILABLE" } }),
+    {
+      status: 503,
+      headers: {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/json; charset=utf-8",
+        "X-Content-Type-Options": "nosniff",
+      },
+    },
+  );
+}
+
 export async function handleStorefrontRequest(
   request: Request,
   url: URL,
@@ -293,6 +307,12 @@ export async function handleStorefrontRequest(
   database: NeonDatabase,
   commandService: StorefrontCommands = commands(database),
 ): Promise<Response | null> {
+  const providerVerification = url.pathname.match(/^\/v1\/storefront\/domains\/([^/]+)\/verifications$/u);
+  const providerTransition = url.pathname.match(/^\/v1\/storefront\/domains\/([^/]+)\/transition$/u);
+  if (request.method === "POST" && (providerVerification?.[1] || providerTransition?.[1])) {
+    return domainProviderControlUnavailable();
+  }
+
   if (request.method === "POST" && url.pathname === "/v1/storefront/storefronts") {
     return await createStorefront(request, context, commandService);
   }
