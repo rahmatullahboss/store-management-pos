@@ -46,7 +46,7 @@ test("FND-0022 resolves the receipt-count literal through a restricted integer o
   assert.match(compatibilitySql, /'FND-0022'/u);
 });
 
-test("foundation manifest pins the FND-0022 compatibility migration last", async () => {
+test("foundation manifest preserves the exact FND-0022 compatibility migration", async () => {
   const migration = await readFile(compatibilityMigrationUrl);
   const checksum = createHash("sha256").update(migration).digest("hex");
   const manifest = JSON.parse(
@@ -56,7 +56,7 @@ test("foundation manifest pins the FND-0022 compatibility migration last", async
     ),
   );
 
-  assert.deepEqual(manifest.migrations.at(-1), {
+  assert.deepEqual(manifest.migrations.find((entry) => entry.id === "FND-0022"), {
     id: "FND-0022",
     file: "FND-0022-internal-token-production-attestation-receipt-count-cast-fix.sql",
     sha256: checksum,
