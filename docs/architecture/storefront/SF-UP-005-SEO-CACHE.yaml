@@ -1,6 +1,6 @@
 batch:
   id: SF-UP-005
-  status: active
+  status: complete
   source:
     repository: https://github.com/scaliuslabs/scalius-commerce-lite
     branch: mono-repo
@@ -77,6 +77,7 @@ batch:
     - tests/unit/storefront-media-cache.test.mjs
     - tests/integration/storefront-public-seo-rehearsal.sql
     - docs/architecture/storefront/public-seo-media-plan.md
+    - docs/architecture/storefront/public-seo-media-checkpoint.md
   modifications:
     - replaced upstream hostname and store discovery with active local canonical-host resolution
     - replaced upstream D1 and KV authority with PostgreSQL security-definer read projections and generation rows
@@ -91,6 +92,8 @@ batch:
     - classified bootstrap content catalog product category collection search sitemap and media cache families
     - isolated cache-family keys by tenant storefront channel request and canonical host locale currency price revision publication generation build family generation and resource
     - changed missing malformed or timed-out cache generation lookup from upstream default-generation fallback to local fail-closed bypass
+    - normalised API base-path joins and cache resource tokens so trailing slashes cannot create malformed public URLs or family keys
+    - added Bengali bounded-3G and Japanese CJK browser evidence alongside English and Arabic RTL
     - removed upstream branding analytics demo data fixed IDs and environment constants
   rejected:
     - D1_and_Drizzle_persistence
@@ -116,4 +119,30 @@ batch:
     - low_bandwidth_mobile_RTL_and_200_percent_text_browser_evidence
     - Cloudflare_preview_runtime_cleanup
     - non_destructive_Neon_recovery
+  exact_head_evidence:
+    source_head: d5e5c6a0b0a780a89c9702f0ade6f632c0dc60ab
+    storefront_ci_run: 30693905643
+    storefront_verify_job: 91353332834
+    postgres_rehearsal_job: 91353407634
+    browser_evidence_job: 91353407632
+    cloudflare_preview_job: 91353407633
+    neon_recovery_job: 91353407734
+    repository_tests: 486
+    browser_scenarios: 5
+    locales:
+      - en-GB
+      - bn-BD
+      - ar
+      - ja-JP
+    bounded_3g_scenarios: 1
+    cloudflare_requests: 5
+    cloudflare_errors: 0
+    storefront_migrations: 17
+    storefront_tables: 17
+    forced_rls_tables: 17
+    audit_events: 95
+    outbox_events: 95
+    command_receipts: 24
+    cache_generation_rows: 1
+    cache_generation_families: 9
   local_owner: MOD-H-storefront-commerce
