@@ -2,9 +2,9 @@
 
 Status: **active**
 
-Current slices: `H4-QUOTE-02` + `H4-CHECKOUT-03` + pre-side-effect `H4-SUBMIT-04`
+Current slices: `H4-QUOTE-02` + `H4-CHECKOUT-03` + pre-side-effect `H4-SUBMIT-04` + verified buyer recovery
 
-Latest fully verified code head: `42c92d70ba744980c61255d2839778800cb89885`
+Latest fully verified code head: `db135e7c72ac418ee1158ab10cb3665ee88ab943`
 
 ## Completed safely
 
@@ -47,17 +47,30 @@ Latest fully verified code head: `42c92d70ba744980c61255d2839778800cb89885`
 - Added deterministic SHA-256 submission request hashing over the normalized strict intent. Property/key order does not change the hash; quote/shipping/payment authority evidence changes do.
 - No order creation/conversion, inventory reservation, payment intent or accounting side effect is wired from MOD-H yet.
 
+### Buyer recovery UX
+
+- Added a typed recovery model instead of parsing error strings. It maps corrupt-cart recovery, quote expiry/change/unavailability, price-tax change, inventory change, country-policy change, shipping change, payment change and checkout unavailability into explicit blocking buyer actions.
+- `canSubmit` is false unless both quote and checkout capabilities are `ready` and no recovery item exists.
+- Added an accessible server-rendered `CheckoutRecovery.astro` component with English, Bengali, Arabic RTL and Japanese/CJK copy. It performs no commerce mutation and only renders safe recovery actions.
+- Added a dedicated evidence-only recovery route with synthetic data; no production/customer data is used.
+- Added a bounded process-group evidence runner so the Astro dev-process tree cannot hang CI after evidence completion.
+- Recovery browser gate validates WCAG axe results, locale/direction, exact recovery reason sequence, safe action targets, viewport/clipping, upstream-brand leakage, skip-link keyboard behavior, reduced motion and 200% text.
+- Bengali recovery evidence runs under bounded 3G; Arabic runs RTL; Japanese covers CJK presentation.
+
 ## Verified evidence
 
-Exact code head `42c92d70ba744980c61255d2839778800cb89885` passed Storefront CI run `30709922779`:
+Exact code head `db135e7c72ac418ee1158ab10cb3665ee88ab943` passed Storefront CI run `30710984952`:
 
 - root format, lint, module boundaries, TypeScript, database validation, build, complete repository test gate and security gates: **passed**;
 - PostgreSQL 17 storefront rehearsal: **passed**;
-- buyer/admin browser and accessibility evidence: **passed**;
+- existing buyer browser/accessibility evidence: **5 / 5 scenarios passed**;
+- new checkout recovery browser/accessibility evidence: **4 / 4 scenarios passed**, **0 axe violations**;
+- admin browser/accessibility evidence: **4 / 4 scenarios passed**;
+- Astro check during browser evidence: **25 files, 0 errors, 0 warnings, 0 hints**;
 - Cloudflare preview deploy, runtime metrics and cleanup: **passed**;
-- non-destructive Neon recovery: **passed after targeted rerun** of the concurrency-cancelled job.
+- non-destructive Neon recovery: **passed directly on the exact head**.
 
-The earlier fully counted H4 baseline at `400cfb00e78db334c903a298bc560f05c31ee526` passed **549 / 549** tests. The exact head above contains additional submit/idempotency/cart-state suites and its full root test gate passed; no new aggregate numeric count is inferred here without a directly surfaced total.
+The earlier fully counted H4 baseline at `400cfb00e78db334c903a298bc560f05c31ee526` passed **549 / 549** tests. The exact head above contains additional submit/idempotency/cart-state/recovery suites and its full root test gate passed; no new aggregate numeric count is inferred here without a directly surfaced total.
 
 ## Deliberately not exposed yet
 
