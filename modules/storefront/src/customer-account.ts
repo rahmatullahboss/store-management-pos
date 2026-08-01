@@ -155,7 +155,12 @@ function projectCustomer(
     )
     .map((contact) =>
       Object.freeze({
-        type: contact.type,
+        type:
+          contact.type === "email"
+            ? "email"
+            : contact.type === "phone"
+              ? "phone"
+              : "mobile",
         value: bounded(contact.value, "Customer contact", 320),
         primary: contact.primary,
         verified: contact.verifiedAt !== undefined,
