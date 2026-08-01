@@ -133,7 +133,7 @@ test("authenticated requests require session-derived opaque keys and anonymous r
   );
 });
 
-test("checkout and admin policies fail closed when distributed abuse control is unavailable", () => {
+test("checkout and admin policies fail closed when distributed abuse control is unavailable", async () => {
   for (const url of [
     "https://shop.example.com/v1/storefront/cart/quote",
     "https://shop.example.com/v1/storefront/checkout/submit",
