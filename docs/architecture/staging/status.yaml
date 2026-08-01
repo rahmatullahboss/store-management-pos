@@ -1,0 +1,425 @@
+schema_version: 16
+workstream: persistent-admin-pos-staging
+status: asymmetric_internal_token_live_evidence_complete_production_kms_pending
+branch: ops/persistent-admin-pos-staging-v1
+base_sha: 3a414363a40f48bd6e526418d9e82679501b170e
+verified_implementation_head: dc5b1f8328ad7d7f1c472c9ed446b24145a86229
+resources:
+  cloudflare_worker: store-pos-staging
+  base_url: https://store-pos-staging.rahmatullahzisan.workers.dev
+  neon_project_name: store-management-pos-staging
+  neon_project_id: morning-flower-46531465
+  neon_branch_name: main
+  neon_branch_id: br-empty-sound-afkx5vkj
+  database: neondb
+  identity_provider: ozzyl_custom_postgres_auth
+  environment_classification: production_shaped_synthetic_staging
+checkpoints:
+  documentation_first:
+    status: complete
+    plan: docs/architecture/staging/usable-release-candidate-plan.md
+    protected_read_plan: docs/architecture/staging/internal-token-read-api-plan.md
+    account_recovery_plan: docs/architecture/staging/account-recovery-plan.md
+  dedicated_neon_project:
+    status: complete
+  persistent_worker:
+    status: complete
+    worker_name: store-pos-staging
+    cleanup_on_success: false
+  migration_replay:
+    status: complete
+    registered_migrations: 64
+    synthetic_tenants: 2
+    custom_auth_core_tables: 4
+    auth_action_token_table: present
+    legacy_neon_auth_tables: 0
+  staging_ui_auth:
+    status: complete
+    provider: ozzyl_custom_postgres_auth
+    external_provider_dependency: false
+    bcrypt_cost: 12
+    session_hours: 8
+    plaintext_session_token_stored: false
+    anonymous_redirect: passed
+    registration_preflight: passed
+    login_preflight: passed
+    account_creation: passed
+    session_probe: passed
+    browser_login: passed
+    browser_logout: passed
+    cookie_policy: secure_http_only_same_site_lax_host_only
+    login_rate_limit: configured
+    credential_lockout: configured
+    synthetic_account_cleanup: passed
+    credentials_persisted: false
+  totp_mfa_step_up:
+    status: complete
+    provider: totp
+    secret_storage: password_derived_aes_gcm_ciphertext
+    plaintext_secret_persisted: false
+    password_recheck: required
+    cloudflare_kdf: chained_pbkdf2_sha256_3x100000
+    total_kdf_iterations: 300000
+    totp_period_seconds: 30
+    grant_lifetime_seconds: 300
+    grant_single_use: true
+    grant_session_bound: true
+    grant_permission_bound: true
+    replay_rejection: passed
+    active_factor_recheck: passed
+    authorization_drift_policy: fail_closed
+  account_recovery:
+    status: complete
+    browser_routes:
+      - /forgot-password
+      - /reset-password
+      - /password-reset-complete
+      - /verify-email
+      - /email-verification-complete
+    request_route: POST /auth/password-recovery/request
+    reset_route: POST /auth/password-recovery/complete
+    verification_route: POST /auth/email-verification/complete
+    token_entropy_bytes: 32
+    persisted_token_material: sha256_hash_only
+    password_recovery_lifetime_seconds: 900
+    email_verification_lifetime_seconds: 86400
+    single_use: true
+    purpose_bound: true
+    latest_token_wins: true
+    rate_limit: configured
+    non_enumerating_response: passed
+    reset_page: passed
+    password_rotation: passed
+    old_password_rejection: passed
+    new_password_login: passed
+    prior_session_revocation: passed
+    outstanding_step_up_revocation: passed
+    password_derived_mfa_revocation: passed
+    reset_replay_rejection: passed
+    email_verification: passed
+    verification_replay_rejection: passed
+    password_reset_audit_events: 1
+    email_verified_audit_events: 1
+    raw_token_artifact_leaks: 0
+    production_email_delivery: false
+    delivery_adapter_boundary: defined
+  database_read_authorization:
+    status: complete
+    endpoint: /auth/context
+    role: staging-read-only
+    permission_source: platform_role_grants
+    permission_count: 16
+    allowed_risk_level: standard
+    browser_supplied_permissions: false
+    tenant_membership_required: true
+    scoped_legal_entity: true
+    scoped_store: true
+    scoped_warehouse: true
+    scoped_register: true
+    inactive_or_missing_context: fail_closed
+    live_probe: passed
+  business_api_token_exchange:
+    status: complete
+    lifetime_seconds: 300
+    audience: store-management-api-staging
+    issuer_mode: exact_worker_origin
+    signing_algorithm: RS256
+    key_id_required: true
+    keyset_schema_version: 1
+    active_signing_key_count: 1
+    active_verification_key_count: 1
+    previous_verification_key_count: 1
+    rotation_overlap_seconds: 600
+    public_jwks_path: /internal-identity/.well-known/jwks.json
+    private_key_published: false
+    deployment_keyset: [REDACTED_SECRET]
+    deployment_rotation: ephemeral_active_plus_previous
+    live_evidence_state: exact_head_verified
+    live_workflow_run_id: 30609623111
+    live_workflow_job_id: 91089297482
+    live_report_git_sha: 55c5b0ed3b366d8376e3018c4a625ee51369e931
+    live_artifact_id: 8784940903
+    live_artifact_digest: sha256:c6ed951221b83550aa05aa0836ae269d4dba28374fb914815a6775440f6dbd3f
+    live_artifact_independent_inspection: passed
+    published_verification_key_count: 2
+    revoked_key_count: 0
+    private_jwk_fields_published: 0
+    artifact_credential_like_markers: 0
+    browser_exposed: false
+    cookie_persisted: false
+    artifact_persisted: false
+    fresh_database_context_per_verification: true
+    tamper_failure: passed
+    expiry_failure: passed
+    revoked_session_failure: passed
+    permission_drift_failure: passed
+    non_read_permission_rejection: passed
+    production_oidc_verifier_modified: false
+  controlled_command_token:
+    status: complete
+    lifetime_seconds: 60
+    signing_algorithm: RS256
+    key_id_required: true
+    shared_asymmetric_keyset: true
+    permission: inventory.reservation.manage
+    assurance: pwd_plus_totp
+    browser_exposed: false
+    fresh_database_context_per_verification: true
+    warehouse_scope_enforced: true
+  authoritative_business_api_reads:
+    status: complete
+    methods:
+      - GET
+      - HEAD
+    routes:
+      - /api/v1/inventory/availability
+      - /api/v1/inventory/movements
+      - /api/v1/procurement/suppliers
+      - /api/v1/procurement/purchase-orders
+    request_context_builder: buildRequestContext
+    existing_module_handlers: true
+    rls_transactions: true
+    cross_warehouse_scope_denial: passed
+    unsupported_method_policy: 405
+    unapproved_route_policy: 404
+  controlled_reservation_writes:
+    status: complete
+    routes:
+      - POST /api/v1/inventory/reservations
+      - POST /api/v1/inventory/reservations/{reservation_id}/release
+    browser_route: /admin/inventory/reservations
+    canonical_unit: EA
+    quantity_limit: 1_to_5
+    create: passed
+    consumed_grant_replay: rejected
+    release_with_second_step_up: passed
+    availability_reconciliation: passed
+    immutable_audit_events: 2
+    outbox_events: 2
+    used_step_up_grants: 2
+    synthetic_reservation_cleanup: passed
+    payments_enabled: false
+    journals_enabled: false
+    banking_enabled: false
+    stock_posting_enabled: false
+    transfer_enabled: false
+  operational_dataset:
+    status: complete
+    mode: deterministic_synthetic_module_records
+    active_products: 5
+    active_variants: 5
+    suppliers: 3
+    open_purchase_orders: 3
+    active_customers: 4
+    active_sales_orders: 3
+    sellable_units: 238
+    reserved_units: 4
+    available_units: 234
+    inventory_value_minor_bdt: 11448000
+    active_sales_value_minor_bdt: 510000
+    immutable_stock_ledger_entries: 5
+    direct_balance_seed_inserts: 0
+    inventory_ledger_reconciliation: passed
+    concurrency_lock: configured
+    partial_seed_policy: fail_closed
+  operational_browser_reads:
+    status: complete
+    routes:
+      - /admin
+      - /admin/catalog
+      - /admin/inventory
+      - /admin/inventory/reservations
+      - /admin/procurement
+      - /admin/customers
+      - /admin/sales
+      - /pos
+    exact_money_source: integer_minor_units
+    normalized_currency_label: BDT
+    unrestricted_authoritative_writes: false
+  http_smoke:
+    status: complete
+    routes_passed: 24
+    routes_total: 24
+  browser_smoke:
+    status: complete
+    fail_closed_gate: enabled
+    scenarios_passed: 6
+    scenarios_total: 6
+    axe_violations: 0
+    horizontal_overflow_failures: 0
+    database_url_leaks: 0
+    auth_cookie_leaks: 0
+    raw_action_token_leaks: 0
+    keyboard_skip_navigation: passed
+    keyboard_scrollable_reservation_region: passed
+  api_health:
+    status: complete
+  backup_restore_rehearsal:
+    status: live_evidence_complete_production_acceptance_pending
+    environment: disposable_neon_project_only
+    production_acceptance: false
+    report_schema_version: 2
+    workflow_head_sha: 2f589e3de7a7352757172fbb19937885487f04a2
+    report_git_sha: c8f8e0d7fda3ffb1b5ed0331d9ab43eb60c09b79
+    workflow_run_id: 30579560300
+    workflow_job_id: 90996224407
+    artifact_id: 8774068031
+    artifact_digest: sha256:4a653575a5b315e11cdb25ffbcfcee71e00a3b0e300833fb03d10e6a48639e74
+    artifact_independent_inspection: passed
+    shared_registry_executor: tooling/scripts/apply-migration-registry.mjs
+    manifest_count: 17
+    registered_migration_count: 64
+    checksum_before_database_access: true
+    exact_ordered_marker_verification: true
+    synthetic_foundation_seed_only: true
+    checkpoint_controls:
+      tenant_restored: true
+      reference_count: 1
+      audit_count: 1
+      outbox_count: 1
+      idempotency_count: 1
+      migration_registry_exact: true
+    destructive_mutation_observed: true
+    restored_controls:
+      reference_count: 1
+      audit_count: 1
+      outbox_count: 1
+      idempotency_count: 1
+      migration_registry_exact: true
+    exact_checkpoint_restore: true
+    marker_reconciled: true
+    restore_ready_ms: 2388.3
+    reconciliation_ms: 1368.19
+    total_recovery_ms: 3756.49
+    cleanup_deleted: true
+    failure_category: null
+    summary_disposable_identifiers: omitted
+    summary_credentials_or_row_values: omitted
+    artifact_credential_like_markers: 0
+    generic_preview_job_id: 90996337636
+    generic_preview_result: skipped_by_dedicated_persistent_staging_policy
+    generic_preview_lifecycle_artifact_id: 8774083355
+    generic_preview_lifecycle_artifact_digest: sha256:f322060a79f6a428c5b1ddefc002fce5bf9531091063051351992d8a10047212
+    production_retention_approved: false
+    encrypted_logical_export_proven: false
+    regional_recovery_approved: false
+    production_rpo_rto_approved: false
+    production_class_rehearsal_accepted: false
+    acceptance_policy: docs/architecture/staging/backup-restore-acceptance.md
+    implementation_plan: docs/superpowers/plans/2026-07-31-full-registry-neon-recovery.md
+    unit_tests:
+      - tests/unit/migration-registry-executor.test.mjs
+      - tests/unit/neon-full-registry-ci.test.mjs
+  aggregate_operability:
+    status: live_evidence_complete_clear_gate
+    report_schema_version: 7
+    previous_live_report_schema_version: 6
+    policy_schema_version: 1
+    signal_count: 12
+    live_evidence_state: exact_head_verified
+    operability_status: healthy
+    launch_gate: clear
+    warning_count: 0
+    critical_count: 0
+    http_probe_failures: 0
+    browser_scenario_failures: 0
+    axe_violations: 0
+    horizontal_overflow_failures: 0
+    identity_control_failures: 0
+    controlled_command_failures: 0
+    artifact_secret_leaks: 0
+    outbox_publisher_failures: 0
+    inventory_reconciliation_mismatches: 0
+    journal_imbalance_count: 0
+    outbox_backlog_count: 0
+    outbox_oldest_unpublished_seconds: 0
+    fixed_low_cardinality_metrics: true
+    atomic_report_write: true
+    critical_gate: fail_after_evidence_persistence
+    zero_tolerance_controls:
+      - availability_and_http_probes
+      - browser_and_accessibility
+      - identity_recovery_and_mfa
+      - controlled_reservation_command
+      - artifact_secret_exposure
+      - synthetic_outbox_publisher_delivery
+      - inventory_projection_reconciliation
+      - journal_balance_integrity
+    outbox_policy: synthetic_publisher_active_post_drain_warning_only_until_production_transport_slo
+    synthetic_outbox_publisher:
+      status: live_evidence_complete
+      schema_version: 1
+      consumer: staging-operability-evidence-v1
+      synthetic_tenant_only: true
+      lease_claim: for_update_skip_locked
+      durable_receipt: platform.inbox_receipts
+      receipt_payload: canonical_sha256_hash_only
+      replay_safe: true
+      stale_attempt_protection: true
+      bounded_retry: true
+      batches: 1
+      claimed: 2
+      delivered: 2
+      replayed: 0
+      failed: 0
+      remaining: 0
+      exhausted: 0
+      oldest_unpublished_seconds: 0
+      payloads_persisted_in_artifacts: false
+      external_delivery: false
+      unit_test: tests/unit/staging-outbox-publisher.test.mjs
+      implementation_plan: docs/superpowers/plans/2026-07-31-staging-outbox-publisher.md
+    production_alert_delivery: false
+    runbook: docs/architecture/staging/operability-alerts-runbook.md
+    unit_test: tests/unit/staging-operability.test.mjs
+  custom_domain:
+    status: pending
+evidence:
+  implementation_head: dc5b1f8328ad7d7f1c472c9ed446b24145a86229
+  workflow_head_sha: dc5b1f8328ad7d7f1c472c9ed446b24145a86229
+  report_git_sha: 55c5b0ed3b366d8376e3018c4a625ee51369e931
+  workflow_run_id: 30609623111
+  workflow_job_id: 91089297482
+  artifact_id: 8784940903
+  artifact_digest: sha256:c6ed951221b83550aa05aa0836ae269d4dba28374fb914815a6775440f6dbd3f
+  artifact_independent_inspection: passed
+  previous_live_operability:
+    report_schema_version: 6
+    status: degraded
+    launch_gate: review
+    warning_count: 1
+    critical_count: 0
+    outbox_backlog_count: 40
+    outbox_oldest_unpublished_seconds: 9751
+    active_alert: staging.outbox_oldest_unpublished_seconds.warning
+  foundation_ci_run_id: 30579560300
+  foundation_verify_job_id: 90996127047
+  foundation_cloudflare_job_id: 90996224201
+  foundation_neon_recovery_job_id: 90996224407
+  foundation_neon_preview_job_id: 90996337636
+  foundation_design_run_id: 30579560316
+  foundation_design_job_id: 90996127184
+  marketing_preview_run_id: 30579560245
+  marketing_verify_job_id: 90996127116
+  marketing_deploy_job_id: 90996291791
+  identity_checkpoint: docs/architecture/staging/staging-identity-checkpoint.md
+  usable_release_checkpoint: docs/architecture/staging/usable-release-candidate-checkpoint.md
+  protected_read_plan: docs/architecture/staging/internal-token-read-api-plan.md
+  account_recovery_plan: docs/architecture/staging/account-recovery-plan.md
+  operability_plan: docs/architecture/staging/production-operability-plan.md
+  operability_runbook: docs/architecture/staging/operability-alerts-runbook.md
+  operability_implementation_plan: docs/superpowers/plans/2026-07-31-staging-operability-hardening.md
+  outbox_publisher_implementation_plan: docs/superpowers/plans/2026-07-31-staging-outbox-publisher.md
+  backup_restore_acceptance: docs/architecture/staging/backup-restore-acceptance.md
+  full_registry_recovery_implementation_plan: docs/superpowers/plans/2026-07-31-full-registry-neon-recovery.md
+  asymmetric_internal_token_plan: docs/superpowers/plans/2026-07-31-asymmetric-internal-token-jwks.md
+  asymmetric_internal_token_lifecycle: docs/architecture/staging/asymmetric-internal-token-key-lifecycle.md
+limitations:
+  - this is a production-shaped synthetic staging release candidate, not a production launch
+  - repository policy prohibits production credentials, production data and production database branches in this workstream
+  - protected inventory and procurement reads are complete; remaining enabled modules still need protected read integration
+  - only inventory reservation create and release are enabled as controlled business writes; payment, refund, journal, period-close, banking, fiscal, destructive and other inventory commands remain disabled
+  - password recovery and email-verification token lifecycles are implemented, but production sender domain, transactional email provider, templates, bounce handling, delivery monitoring and support policy are not configured
+  - schema-v7 synthetic outbox publisher live evidence is complete with a healthy clear gate; production transport/provider, SLO, paging and dead-letter ownership remain pending
+  - full-registry disposable PITR recovery live evidence is complete for 17 manifests and 64 migrations; generic preview was intentionally skipped by dedicated-branch policy, and production PITR retention, encrypted logical export, regional recovery, approved RPO/RTO and production-class restore acceptance remain pending
+  - production domain, production MFA recovery and factor governance, KMS/HSM-backed internal-token key ownership, scheduled/emergency rotation governance, production alert delivery and controlled launch approval remain pending

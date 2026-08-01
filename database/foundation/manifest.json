@@ -26,6 +26,91 @@
       "id": "FND-0005",
       "file": "FND-0005-session-revocation-privilege-hardening.sql",
       "sha256": "ff50c6d4f607002540d9e3399ff7523de840ada8c6d0580ecf7f47a7b403ef00"
+    },
+    {
+      "id": "FND-0006",
+      "file": "FND-0006-custom-auth.sql",
+      "sha256": "46670cd84960c26298924d1005e3157a1fd5ae21e63a6d2979c91c179842d7be"
+    },
+    {
+      "id": "FND-0007",
+      "file": "FND-0007-custom-auth-login-fix.sql",
+      "sha256": "dfc41924ef0cc180195fd6bf7afe0753c7a6de9e20bbba806d0537efc1d3d72e"
+    },
+    {
+      "id": "FND-0008",
+      "file": "FND-0008-custom-auth-read-context.sql",
+      "sha256": "ac5bf72fde89ec9e5268ec5b1128e9152b03d09a5eabd6a8ea050d5bf1ea3812"
+    },
+    {
+      "id": "FND-0009",
+      "file": "FND-0009-custom-auth-totp-step-up.sql",
+      "sha256": "19a3f5e32a6d218406493969025847aec25202eb76cd1f4d31a5a37031feb2c8"
+    },
+    {
+      "id": "FND-0010",
+      "file": "FND-0010-custom-auth-step-up-consume-hardening.sql",
+      "sha256": "6965e454f4204b37123a9c5a01ca03a2b06aee23ec9b9fa46d503975decb6a56"
+    },
+    {
+      "id": "FND-0011",
+      "file": "FND-0011-custom-auth-mfa-password-search-path.sql",
+      "sha256": "ae51d38ab6c5ba5bf2e6383f904f454cd339a4bdec02fbd47688035f140db40e"
+    },
+    {
+      "id": "FND-0012",
+      "file": "FND-0012-custom-auth-mfa-ciphertext-validation.sql",
+      "sha256": "bea92bb65c4057fd900b7ba03c95b4ba37afc8ea2f5410cb3ce2c49d2d1e3231"
+    },
+    {
+      "id": "FND-0013",
+      "file": "FND-0013-custom-auth-action-tokens.sql",
+      "sha256": "a9c9cd27e0eb7d38996d7422bcee2cc402951f46260347edf30d10fc14c0b4d6"
+    },
+    {
+      "id": "FND-0014",
+      "file": "FND-0014-custom-auth-action-token-alias-hardening.sql",
+      "sha256": "920dc299ed6e1098266a9905de9c6efce5ab0f9cf94be144d68e3902f5706569"
+    },
+    {
+      "id": "FND-0015",
+      "file": "FND-0015-internal-token-key-change-journal.sql",
+      "sha256": "9c01584b710f8332aeb80381b7ef504f743fcdbb47589740288d19f2d37f6dda"
+    },
+    {
+      "id": "FND-0016",
+      "file": "FND-0016-internal-token-provider-signing-journal.sql",
+      "sha256": "e790b6245ba49724cdd65f8142213249a9c7a59cb3151f366d8e699e9c820ad8"
+    },
+    {
+      "id": "FND-0017",
+      "file": "FND-0017-internal-token-provider-evidence-custody.sql",
+      "sha256": "a36bf0b9ff211ca351cf0278dbb11c216065f5be0939d8564c5577731f5c7e8a"
+    },
+    {
+      "id": "FND-0018",
+      "file": "FND-0018-internal-token-provider-evidence-disposition.sql",
+      "sha256": "411f098c38083d10f236aba8139878767cc2d2cc11b67cffa497856de2f569d0"
+    },
+    {
+      "id": "FND-0019",
+      "file": "FND-0019-internal-token-production-attestation-receipt-journal.sql",
+      "sha256": "393321f13e663d4dc5e01c0bd9894b336aa895ad7c922fb95e63bd0de147d3c9"
+    },
+    {
+      "id": "FND-0020",
+      "file": "FND-0020-internal-token-production-attestation-receipt-append-hardening.sql",
+      "sha256": "ee9fa8612b9a778b0dbf265baf82069bb8b547d8d11086fb2cd59e9f01118860"
+    },
+    {
+      "id": "FND-0021",
+      "file": "FND-0021-internal-token-production-attestation-receipt-jsonb-shape-fix.sql",
+      "sha256": "75315123c624faeb667d8deb3de7c34fc9f4a656c77228a98bc03446c5954925"
+    },
+    {
+      "id": "FND-0022",
+      "file": "FND-0022-internal-token-production-attestation-receipt-count-cast-fix.sql",
+      "sha256": "be7401fb8f3aa0164aea432cf81902f7abbf01f64dfc2cffa68af415cf976064"
     }
   ]
 }

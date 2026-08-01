@@ -1,6 +1,7 @@
 {
   "module": "MOD-B-PROCUREMENT",
   "version": 1,
+  "order": 5,
   "migrations": [
     {
       "id": "PUR-0001",

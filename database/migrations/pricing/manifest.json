@@ -1,6 +1,7 @@
 {
   "module": "MOD-A-PRICING",
   "version": 1,
+  "order": 2,
   "migrations": [
     {
       "id": "PRC-0001",

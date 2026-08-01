@@ -1,10 +1,10 @@
-import { createHash } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { performance } from "node:perf_hooks";
 import { neon, Client } from "@neondatabase/serverless";
 import { fileURLToPath } from "node:url";
+import { applyMigrationRegistry } from "./apply-migration-registry.mjs";
 
 const { NEON_API_KEY, NEON_PROJECT_ID, NEON_PARENT_BRANCH_ID, GITHUB_HEAD_REF, GITHUB_RUN_ID, GITHUB_SHA } = process.env;
 if (!NEON_API_KEY || !NEON_PROJECT_ID || !NEON_PARENT_BRANCH_ID) {
@@ -148,7 +148,13 @@ let staleBranchesDeleted = 0;
 let branchLimitRetry = false;
 let status = "failed";
 let failure = null;
-let migrationIds = [];
+let migrationRegistry = {
+  schemaVersion: 1,
+  manifestCount: 0,
+  migrationCount: 0,
+  moduleIds: [],
+  migrationIds: [],
+};
 
 try {
   staleBranchesDeleted = await cleanupStalePreviewBranches();
@@ -163,20 +169,12 @@ try {
   const connectionString = uriResponse.uri;
   if (typeof connectionString !== "string") throw new Error("Neon API did not return a connection URI");
 
-  const manifest = JSON.parse(await readFile(path.join(root, "database/foundation/manifest.json"), "utf8"));
-  migrationIds = manifest.migrations.map((migration) => migration.id);
   const client = new Client({ connectionString });
   const connectStarted = performance.now();
   await client.connect();
   initialConnectMs = performance.now() - connectStarted;
   try {
-    for (const migration of manifest.migrations) {
-      const migrationSql = await readFile(path.join(root, "database/foundation/migrations", migration.file), "utf8");
-      const digest = createHash("sha256").update(migrationSql).digest("hex");
-      if (digest !== migration.sha256) throw new Error(`${migration.id} checksum does not match the manifest`);
-      await client.query(migrationSql);
-    }
-    await client.query(await readFile(path.join(root, "database/foundation/seeds/dev.sql"), "utf8"));
+    migrationRegistry = await applyMigrationRegistry(client, root);
   } finally {
     await client.end();
   }
@@ -220,7 +218,7 @@ try {
     }
   }
   const lifecycle = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     status,
     generatedAt: new Date().toISOString(),
     gitSha: GITHUB_SHA || null,
@@ -230,7 +228,10 @@ try {
     branchName,
     branchId: branchId || null,
     endpointId: endpointId || null,
-    migrationIds,
+    manifestCount: migrationRegistry.manifestCount,
+    migrationCount: migrationRegistry.migrationCount,
+    moduleIds: migrationRegistry.moduleIds,
+    migrationIds: migrationRegistry.migrationIds,
     staleBranchesDeleted,
     branchLimitRetry,
     initialComputeConnectMs: initialConnectMs === null ? null : Number(initialConnectMs.toFixed(2)),

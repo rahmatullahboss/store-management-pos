@@ -1,6 +1,7 @@
 {
   "module": "MOD-B-INVENTORY",
   "version": 1,
+  "order": 4,
   "migrations": [
     {
       "id": "INV-0001",

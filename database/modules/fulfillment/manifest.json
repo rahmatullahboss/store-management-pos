@@ -1,6 +1,7 @@
 {
   "module": "MOD-C-FULFILLMENT",
   "version": 2,
+  "order": 8,
   "migrations": [
     {
       "id": "FUL-0001",

@@ -1,0 +1,67 @@
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const root = fileURLToPath(new URL("../..", import.meta.url));
+const branch = (
+  process.env.GITHUB_HEAD_REF ||
+  process.env.GITHUB_REF_NAME ||
+  ""
+).trim();
+const persistentStagingBranch = "ops/persistent-admin-pos-staging-v1";
+const dedicatedStagingImplementationBranches = new Set([
+  "agent/asymmetric-internal-token-jwks",
+  "agent/internal-token-kms-signer-boundary",
+  "agent/internal-token-provider-audit-policy",
+  "agent/internal-token-change-journal-policy",
+  "agent/internal-token-durable-journal",
+  "agent/internal-token-journal-command-boundary",
+  "agent/internal-token-journal-authoritative-history",
+  "agent/internal-token-provider-signing-receipt",
+  "agent/internal-token-provider-signing-journal",
+  "agent/internal-token-provider-evidence-custody",
+  "agent/internal-token-provider-evidence-disposition",
+  "agent/internal-token-production-launch-admission",
+  "agent/internal-token-provider-operational-gate",
+  "agent/internal-token-production-launch-revocation",
+  "agent/internal-token-production-control-attestation",
+  "agent/internal-token-production-attestation-issuer-identity",
+  "agent/internal-token-production-attestation-receipt-journal",
+  "agent/internal-token-production-attestation-receipt-postgres",
+]);
+const usesDedicatedStagingNeon =
+  branch === persistentStagingBranch ||
+  dedicatedStagingImplementationBranches.has(branch);
+
+if (usesDedicatedStagingNeon) {
+  const artifactsDir = path.join(root, "artifacts", "foundation");
+  await mkdir(artifactsDir, { recursive: true });
+  await writeFile(
+    path.join(artifactsDir, "neon-preview-lifecycle.json"),
+    `${JSON.stringify(
+      {
+        schemaVersion: 2,
+        status: "skipped",
+        reason: "dedicated-persistent-staging-neon",
+        branch,
+        persistentStagingBranch,
+        implementationBranch: branch !== persistentStagingBranch,
+        genericProjectId: "twilight-boat-26805962",
+        dedicatedProjectId: "morning-flower-46531465",
+        dedicatedBranchId: "br-empty-sound-afkx5vkj",
+        destructiveCleanupPerformed: false,
+        genericPreviewCapacityConsumed: false,
+        evidence:
+          "Persistent staging workflow applies and verifies the full migration chain on the dedicated project.",
+      },
+      null,
+      2,
+    )}\n`,
+    "utf8",
+  );
+  console.log(
+    `Skipped generic disposable Neon preview for ${branch}; dedicated persistent staging Neon evidence remains mandatory.`,
+  );
+} else {
+  await import("./neon-preview-ci.mjs");
+}

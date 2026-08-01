@@ -1,6 +1,7 @@
 {
   "module": "MOD-C-SALES",
   "version": 2,
+  "order": 7,
   "migrations": [
     {
       "id": "SAL-0001",

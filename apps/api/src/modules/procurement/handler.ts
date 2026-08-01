@@ -1,7 +1,7 @@
 import type { RequestContext } from "../../../../../packages/foundation/src/context.js";
 import type { NeonDatabase } from "../../../../../packages/foundation/src/db.js";
 import { parseSupplierImport } from "../../../../../modules/procurement/import-export.js";
-import { ProcurementSqlRepository } from "../../../../../modules/procurement/sql-repository.js";
+import { ProcurementApiSqlRepository } from "../../../../../modules/procurement/api-sql-repository.js";
 import { boundedLimit, jsonBody, jsonResponse, optionalString, requireArray, requireInteger, requirePermission, requireRecord, requireString, requireUuid } from "../http.js";
 
 function quantity(value: unknown): { amount: string; unit: string; scale: number } {
@@ -9,7 +9,7 @@ function quantity(value: unknown): { amount: string; unit: string; scale: number
   return { amount: requireString(record.amount, "quantity.amount", 80), unit: requireString(record.unit, "quantity.unit", 32).toUpperCase(), scale: requireInteger(record.scale, "quantity.scale", 0, 18) };
 }
 
-export async function handleProcurementRequest(request: Request, url: URL, context: RequestContext, database: NeonDatabase, repository = new ProcurementSqlRepository()): Promise<Response | undefined> {
+export async function handleProcurementRequest(request: Request, url: URL, context: RequestContext, database: NeonDatabase, repository = new ProcurementApiSqlRepository()): Promise<Response | undefined> {
   if (request.method === "GET" && url.pathname === "/v1/procurement/suppliers") {
     requirePermission(context, "procurement.supplier.read");
     return jsonResponse({ data: await database.withClientTransaction(context, async (client) => await repository.listSuppliers(client, context, { ...(url.searchParams.get("status") ? { status: url.searchParams.get("status")! } : {}), limit: boundedLimit(url) })) });

@@ -4,6 +4,7 @@ import { errorResponse } from "../../../packages/foundation/src/errors.js";
 import { uuidV7 } from "../../../packages/foundation/src/ids.js";
 import type { MetricSink } from "../../../packages/foundation/src/observability.js";
 import { handleAllocateOpenItem, handleClosePeriod, handleCreateOpenItem, handleGeneralLedger, handleOpenItemAging, handlePostJournal, handleReopenPeriod, handleReverseJournal, handleTrialBalance } from "./accounting-handler.js";
+import type { TokenVerifier } from "./auth.js";
 import { handleImportBankStatement, handleListUnreconciled, handleReconcileStatementLine, handleRecordReconciliationRun, handleReverseReconciliation } from "./banking-handler.js";
 import { observeFinanceOperation } from "./finance-observability.js";
 import { handleFinanceReadiness } from "./finance-readiness-handler.js";
@@ -29,6 +30,7 @@ export interface ApiEnvironment extends PublicPartnerApiBindings {
   readonly OIDC_AUDIENCE?: string;
   readonly OIDC_JWKS_URI?: string;
   readonly OIDC_MFA_ACR_VALUES?: string;
+  readonly STAGING_TOKEN_VERIFIER?: TokenVerifier;
   readonly FINANCE_METRICS?: MetricSink;
   readonly FISCAL_PROVIDERS?: FiscalProviderRegistry;
 }

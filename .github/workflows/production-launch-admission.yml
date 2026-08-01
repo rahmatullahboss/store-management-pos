@@ -1,0 +1,135 @@
+name: Production Launch Admission
+
+on:
+  pull_request:
+    branches:
+      - main
+      - ops/persistent-admin-pos-staging-v1
+    paths:
+      - "tooling/scripts/internal-token-production-launch-admission.mjs"
+      - "tooling/scripts/internal-token-production-launch-revocation.mjs"
+      - "tooling/scripts/internal-token-production-control-attestation.mjs"
+      - "tooling/scripts/internal-token-production-attestation-issuer-identity.mjs"
+      - "tooling/scripts/internal-token-production-attestation-receipt-journal.mjs"
+      - "tooling/scripts/internal-token-production-attestation-receipt-postgres.mjs"
+      - "tooling/scripts/staging-attestation-receipt-postgres-evidence.mjs"
+      - "tooling/scripts/run-attestation-receipt-postgres-staging.mjs"
+      - "tooling/scripts/check-production-launch-admission.mjs"
+      - "database/foundation/manifest.json"
+      - "database/foundation/migrations/FND-0019-internal-token-production-attestation-receipt-journal.sql"
+      - "database/foundation/migrations/FND-0020-internal-token-production-attestation-receipt-append-hardening.sql"
+      - "tests/helpers/production-launch-governance-fixtures.mjs"
+      - "tests/helpers/production-control-attestation-fixtures.mjs"
+      - "tests/helpers/production-attestation-issuer-identity-fixtures.mjs"
+      - "tests/unit/internal-token-production-launch-admission*.test.mjs"
+      - "tests/unit/internal-token-production-launch-revocation*.test.mjs"
+      - "tests/unit/internal-token-production-control-attestation*.test.mjs"
+      - "tests/unit/internal-token-production-attestation-issuer-identity*.test.mjs"
+      - "tests/unit/internal-token-production-attestation-receipt-journal*.test.mjs"
+      - "tests/unit/internal-token-production-attestation-receipt-postgres.test.mjs"
+      - "tests/architecture/production-launch-admission.test.mjs"
+      - "tests/architecture/production-launch-revocation.test.mjs"
+      - "tests/architecture/production-control-attestation.test.mjs"
+      - "tests/architecture/production-attestation-issuer-identity.test.mjs"
+      - "tests/architecture/production-attestation-receipt-journal.test.mjs"
+      - "tests/architecture/production-attestation-receipt-postgres.test.mjs"
+      - "docs/architecture/production-launch-admission.md"
+      - "docs/architecture/production-launch-revocation.md"
+      - "docs/architecture/production-control-attestation.md"
+      - "docs/architecture/production-attestation-issuer-identity.md"
+      - "docs/architecture/production-attestation-receipt-journal.md"
+      - "docs/architecture/production-attestation-receipt-postgres.md"
+      - "package.json"
+      - ".github/workflows/production-launch-admission.yml"
+  push:
+    branches:
+      - main
+      - ops/persistent-admin-pos-staging-v1
+    paths:
+      - "tooling/scripts/internal-token-production-launch-admission.mjs"
+      - "tooling/scripts/internal-token-production-launch-revocation.mjs"
+      - "tooling/scripts/internal-token-production-control-attestation.mjs"
+      - "tooling/scripts/internal-token-production-attestation-issuer-identity.mjs"
+      - "tooling/scripts/internal-token-production-attestation-receipt-journal.mjs"
+      - "tooling/scripts/internal-token-production-attestation-receipt-postgres.mjs"
+      - "tooling/scripts/staging-attestation-receipt-postgres-evidence.mjs"
+      - "tooling/scripts/run-attestation-receipt-postgres-staging.mjs"
+      - "tooling/scripts/check-production-launch-admission.mjs"
+      - "database/foundation/manifest.json"
+      - "database/foundation/migrations/FND-0019-internal-token-production-attestation-receipt-journal.sql"
+      - "database/foundation/migrations/FND-0020-internal-token-production-attestation-receipt-append-hardening.sql"
+      - "tests/helpers/production-launch-governance-fixtures.mjs"
+      - "tests/helpers/production-control-attestation-fixtures.mjs"
+      - "tests/helpers/production-attestation-issuer-identity-fixtures.mjs"
+      - "tests/unit/internal-token-production-launch-admission*.test.mjs"
+      - "tests/unit/internal-token-production-launch-revocation*.test.mjs"
+      - "tests/unit/internal-token-production-control-attestation*.test.mjs"
+      - "tests/unit/internal-token-production-attestation-issuer-identity*.test.mjs"
+      - "tests/unit/internal-token-production-attestation-receipt-journal*.test.mjs"
+      - "tests/unit/internal-token-production-attestation-receipt-postgres.test.mjs"
+      - "tests/architecture/production-launch-admission.test.mjs"
+      - "tests/architecture/production-launch-revocation.test.mjs"
+      - "tests/architecture/production-control-attestation.test.mjs"
+      - "tests/architecture/production-attestation-issuer-identity.test.mjs"
+      - "tests/architecture/production-attestation-receipt-journal.test.mjs"
+      - "tests/architecture/production-attestation-receipt-postgres.test.mjs"
+      - "docs/architecture/production-launch-admission.md"
+      - "docs/architecture/production-launch-revocation.md"
+      - "docs/architecture/production-control-attestation.md"
+      - "docs/architecture/production-attestation-issuer-identity.md"
+      - "docs/architecture/production-attestation-receipt-journal.md"
+      - "docs/architecture/production-attestation-receipt-postgres.md"
+      - "package.json"
+      - ".github/workflows/production-launch-admission.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-launch-admission-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-not-requested:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      STORE_DEPLOYMENT_TARGET: ci
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - name: Install pinned dependencies
+        run: npm ci --ignore-scripts
+      - name: Verify production launch remains blocked without production evidence
+        run: npm run check:production-launch
+      - name: Assert CI cannot report production admission
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFile } from 'node:fs/promises';
+          const report = JSON.parse(await readFile(
+            'artifacts/foundation/production-launch-admission.json',
+            'utf8',
+          ));
+          assert.deepEqual(report, {
+            approvalCount: 0,
+            controlCount: 0,
+            environment: 'ci',
+            evidenceDigestsIncluded: false,
+            identifiersIncluded: false,
+            launchGate: 'blocked',
+            schemaVersion: 1,
+            status: 'not_requested',
+          });
+          NODE
+      - name: Upload aggregate admission evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: production-launch-admission-${{ github.run_id }}
+          path: artifacts/foundation/production-launch-admission.json
+          if-no-files-found: error
+          retention-days: 14
