@@ -6,6 +6,16 @@ import {
 const DIGEST = /^[A-Za-z0-9_-]{43}$/u;
 const RECEIPT_COUNT = 13;
 const SCHEMA_VERSION = 1;
+const SAFE_DATABASE_DIAGNOSTIC_FIELDS = Object.freeze([
+  Object.freeze(["code", "pgCode", 20]),
+  Object.freeze(["where", "databaseWhere", 2_000]),
+  Object.freeze(["routine", "databaseRoutine", 200]),
+  Object.freeze(["dataType", "databaseDataType", 200]),
+  Object.freeze(["schema", "databaseSchema", 200]),
+  Object.freeze(["table", "databaseTable", 200]),
+  Object.freeze(["column", "databaseColumn", 200]),
+  Object.freeze(["constraint", "databaseConstraint", 200]),
+]);
 
 export const INTERNAL_TOKEN_PRODUCTION_ATTESTATION_RECEIPT_POSTGRES_APPEND_SQL = `
 SELECT platform.record_internal_token_production_attestation_receipt_batch(
@@ -22,10 +32,36 @@ SELECT
   entry_count::text
 FROM platform.read_internal_token_production_attestation_receipt_journal_state()`;
 
-function fail(message) {
-  throw new Error(
-    `Internal-token production attestation receipt Postgres recorder: ${message}`,
+function diagnosticText(value, maximumLength) {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.replace(/\s+/gu, " ").trim();
+  if (normalized.length === 0) return undefined;
+  return normalized.slice(0, maximumLength);
+}
+
+function databaseDiagnostics(error) {
+  const diagnostics = {};
+  for (const [source, target, maximumLength] of SAFE_DATABASE_DIAGNOSTIC_FIELDS) {
+    const value = diagnosticText(error?.[source], maximumLength);
+    if (value !== undefined) diagnostics[target] = value;
+  }
+  return Object.freeze(diagnostics);
+}
+
+function fail(message, diagnostics) {
+  const context = diagnostics
+    ? Object.entries(diagnostics)
+        .map(([key, value]) => `${key}=${value}`)
+        .join("; ")
+    : "";
+  const error = new Error(
+    `Internal-token production attestation receipt Postgres recorder: ${message}${context ? ` [${context}]` : ""}`,
   );
+  if (diagnostics && Object.keys(diagnostics).length > 0) {
+    error.diagnostics = diagnostics;
+    if (typeof diagnostics.pgCode === "string") error.code = diagnostics.pgCode;
+  }
+  throw error;
 }
 
 function exact(value, keys, name) {
@@ -288,8 +324,8 @@ export function createPostgresInternalTokenProductionAttestationReceiptJournalRe
           INTERNAL_TOKEN_PRODUCTION_ATTESTATION_RECEIPT_POSTGRES_APPEND_SQL,
           [JSON.stringify(proposedCommand)],
         );
-      } catch {
-        fail("append failed");
+      } catch (error) {
+        fail("append failed", databaseDiagnostics(error));
       }
       if (!result || !Array.isArray(result.rows) || result.rows.length !== 1) {
         fail("database acknowledgment row count is invalid");
@@ -312,8 +348,8 @@ export function createPostgresInternalTokenProductionAttestationReceiptJournalRe
         result = await client.query(
           INTERNAL_TOKEN_PRODUCTION_ATTESTATION_RECEIPT_POSTGRES_STATE_SQL,
         );
-      } catch {
-        fail("state read failed");
+      } catch (error) {
+        fail("state read failed", databaseDiagnostics(error));
       }
       if (!result || !Array.isArray(result.rows) || result.rows.length !== 1) {
         fail("journal state is unavailable");
