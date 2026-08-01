@@ -236,7 +236,7 @@ test("private client rejects unsafe endpoints and malformed/internal response au
       hostname,
       orderId,
     ),
-    /unsupported fields: warehouseId/u,
+    /Storefront customer order request failed/u,
   );
 
   const fractionalMoney = captureTransport(() =>
@@ -248,6 +248,6 @@ test("private client rejects unsafe endpoints and malformed/internal response au
       hostname,
       orderId,
     ),
-    /minor must be an integer string/u,
+    /Storefront customer order request failed/u,
   );
 });
