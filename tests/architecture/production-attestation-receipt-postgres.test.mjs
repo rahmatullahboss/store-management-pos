@@ -11,6 +11,10 @@ const hardeningMigrationUrl = new URL(
   "../../database/foundation/migrations/FND-0020-internal-token-production-attestation-receipt-append-hardening.sql",
   import.meta.url,
 );
+const shapeFixMigrationUrl = new URL(
+  "../../database/foundation/migrations/FND-0021-internal-token-production-attestation-receipt-jsonb-shape-fix.sql",
+  import.meta.url,
+);
 
 test("FND-0019 creates isolated append-only receipt-journal storage", async () => {
   const sql = await readFile(storageMigrationUrl, "utf8");
@@ -64,6 +68,26 @@ test("FND-0020 disables the positional append and requires one exact JSON comman
   assert.match(sql, /jsonb_array_length\(p_command->'receiptDigests'\) <> 13/u);
   assert.match(sql, /count\(DISTINCT receipt_digest\)/u);
   assert.match(sql, /v_distinct_count <> 22/u);
+});
+
+test("FND-0021 repairs JSON object cardinality without rewriting applied migrations", async () => {
+  const sql = await readFile(shapeFixMigrationUrl, "utf8");
+  assert.match(
+    sql,
+    /CREATE OR REPLACE FUNCTION platform\.jsonb_object_length\([\s\S]*p_value jsonb/u,
+  );
+  assert.match(sql, /FROM jsonb_object_keys\(p_value\)/u);
+  assert.match(sql, /RETURNS integer/u);
+  assert.match(sql, /IMMUTABLE/u);
+  assert.match(sql, /STRICT/u);
+  assert.match(sql, /PARALLEL SAFE/u);
+  assert.match(sql, /SET search_path = pg_catalog, platform/u);
+  assert.match(
+    sql,
+    /REVOKE ALL ON FUNCTION platform\.jsonb_object_length\(jsonb\) FROM PUBLIC/u,
+  );
+  assert.match(sql, /'FND-0021'/u);
+  assert.doesNotMatch(sql, /CREATE OR REPLACE FUNCTION platform\.record_internal_token/u);
 });
 
 test("FND-0020 serializes, recomputes digests and applies compare-and-swap", async () => {
@@ -129,15 +153,17 @@ test("FND-0020 exposes only the JSON command to the governance role", async () =
   );
 });
 
-test("foundation manifest pins FND-0019 and FND-0020 exact checksums last", async () => {
+test("foundation manifest pins FND-0019 through FND-0021 exact checksums last", async () => {
   const storageSql = await readFile(storageMigrationUrl);
   const hardeningSql = await readFile(hardeningMigrationUrl);
+  const shapeFixSql = await readFile(shapeFixMigrationUrl);
   const manifest = JSON.parse(
     await readFile(new URL("../../database/foundation/manifest.json", import.meta.url), "utf8"),
   );
   const storageChecksum = createHash("sha256").update(storageSql).digest("hex");
   const hardeningChecksum = createHash("sha256").update(hardeningSql).digest("hex");
-  assert.deepEqual(manifest.migrations.slice(-2), [
+  const shapeFixChecksum = createHash("sha256").update(shapeFixSql).digest("hex");
+  assert.deepEqual(manifest.migrations.slice(-3), [
     {
       id: "FND-0019",
       file: "FND-0019-internal-token-production-attestation-receipt-journal.sql",
@@ -148,6 +174,11 @@ test("foundation manifest pins FND-0019 and FND-0020 exact checksums last", asyn
       file: "FND-0020-internal-token-production-attestation-receipt-append-hardening.sql",
       sha256: hardeningChecksum,
     },
+    {
+      id: "FND-0021",
+      file: "FND-0021-internal-token-production-attestation-receipt-jsonb-shape-fix.sql",
+      sha256: shapeFixChecksum,
+    },
   ]);
   assert.equal(
     storageChecksum,
@@ -156,6 +187,10 @@ test("foundation manifest pins FND-0019 and FND-0020 exact checksums last", asyn
   assert.equal(
     hardeningChecksum,
     "ee9fa8612b9a778b0dbf265baf82069bb8b547d8d11086fb2cd59e9f01118860",
+  );
+  assert.equal(
+    shapeFixChecksum,
+    "75315123c624faeb667d8deb3de7c34fc9f4a656c77228a98bc03446c5954925",
   );
 });
 
