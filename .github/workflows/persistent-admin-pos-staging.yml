@@ -13,6 +13,7 @@ on:
       - "packages/ui/**"
       - "modules/**"
       - "database/**"
+      - "tests/architecture/staging-live-role-e2e.test.mjs"
       - "tests/unit/persistent-admin-pos-staging.test.mjs"
       - "tests/unit/staging-operability.test.mjs"
       - "tests/unit/staging-outbox-publisher.test.mjs"
@@ -25,6 +26,7 @@ on:
       - "tests/unit/staging-asymmetric-deployment.test.mjs"
       - "tests/helpers/staging-token-keyset.mjs"
       - "tests/unit/staging-account-recovery.test.mjs"
+      - "tooling/fixtures/main-web-role-matrix.mjs"
       - "tooling/scripts/apply-migrations.mjs"
       - "tooling/scripts/deploy-custom-auth-staging.mjs"
       - "tooling/scripts/run-custom-auth-staging.mjs"
@@ -33,6 +35,7 @@ on:
       - "tooling/scripts/staging-mfa-reservation-evidence.mjs"
       - "tooling/scripts/staging-account-recovery-evidence.mjs"
       - "tooling/scripts/run-operational-staging.mjs"
+      - "tooling/scripts/staging-live-role-e2e.mjs"
       - "tooling/scripts/staging-operability.mjs"
       - "tooling/scripts/staging-outbox-publisher.mjs"
       - "tooling/scripts/staging-operational-runner.mjs"
@@ -51,6 +54,7 @@ on:
       - "packages/ui/**"
       - "modules/**"
       - "database/**"
+      - "tests/architecture/staging-live-role-e2e.test.mjs"
       - "tests/unit/persistent-admin-pos-staging.test.mjs"
       - "tests/unit/staging-operability.test.mjs"
       - "tests/unit/staging-outbox-publisher.test.mjs"
@@ -63,6 +67,7 @@ on:
       - "tests/unit/staging-asymmetric-deployment.test.mjs"
       - "tests/helpers/staging-token-keyset.mjs"
       - "tests/unit/staging-account-recovery.test.mjs"
+      - "tooling/fixtures/main-web-role-matrix.mjs"
       - "tooling/scripts/apply-migrations.mjs"
       - "tooling/scripts/deploy-custom-auth-staging.mjs"
       - "tooling/scripts/run-custom-auth-staging.mjs"
@@ -71,6 +76,7 @@ on:
       - "tooling/scripts/staging-mfa-reservation-evidence.mjs"
       - "tooling/scripts/staging-account-recovery-evidence.mjs"
       - "tooling/scripts/run-operational-staging.mjs"
+      - "tooling/scripts/staging-live-role-e2e.mjs"
       - "tooling/scripts/staging-operability.mjs"
       - "tooling/scripts/staging-outbox-publisher.mjs"
       - "tooling/scripts/staging-operational-runner.mjs"
@@ -114,11 +120,15 @@ jobs:
           node <<'NODE'
           const { readFileSync, appendFileSync, existsSync } = require('node:fs');
           const reportPath = 'artifacts/staging/persistent-staging-report.json';
+          const roleReportPath = 'artifacts/staging/live-role-e2e-report.json';
           if (!existsSync(reportPath)) {
             appendFileSync(process.env.GITHUB_STEP_SUMMARY, '## Persistent staging\n\nNo deployment report was produced.\n');
             process.exit(0);
           }
           const report = JSON.parse(readFileSync(reportPath, 'utf8'));
+          const roleE2E = existsSync(roleReportPath)
+            ? JSON.parse(readFileSync(roleReportPath, 'utf8'))
+            : {};
           const browser = Array.isArray(report.browser) ? report.browser : [];
           const operability = report.operability ?? {};
           const publisher = report.outboxPublisher ?? {};
@@ -156,6 +166,14 @@ jobs:
             `- General authoritative browser writes: ${report.authoritativeBrowserWritesEnabled === true ? 'enabled' : 'disabled'}`,
             `- Live browser scenarios: ${browser.filter((item) => item.passed === true).length}/${browser.length}`,
             `- Axe violations: ${browser.reduce((total, item) => total + (item.violations?.length ?? 0), 0)}`,
+            `- Live database role contexts: ${roleE2E.summary?.contextsPassed ?? 'not available'}/${roleE2E.summary?.contextsTotal ?? 'not available'}`,
+            `- Live database role route assertions: ${roleE2E.summary?.routeAssertionsPassed ?? 'not available'}/${roleE2E.summary?.routeAssertionsTotal ?? 'not available'}`,
+            `- Live database role primary surfaces: ${roleE2E.summary?.primarySurfacesPassed ?? 'not available'}/${roleE2E.summary?.primarySurfacesTotal ?? 'not available'}`,
+            `- Cross-role P0 surface journeys: ${roleE2E.summary?.journeySurfacesPassed ?? 'not available'}/${roleE2E.summary?.journeySurfacesTotal ?? 'not available'}`,
+            `- Live permission revocation: ${roleE2E.permissionRevocation?.passed === true ? 'passed' : 'not confirmed'}`,
+            `- Live session revocation: ${roleE2E.sessionRevocation?.passed === true ? 'passed' : 'not confirmed'}`,
+            `- Ambiguous role fail-closed: ${roleE2E.ambiguousRole?.passed === true ? 'passed' : 'not confirmed'}`,
+            `- Cross-tenant scope rejection: ${roleE2E.crossTenantScope?.passed === true ? 'passed' : 'not confirmed'}`,
             `- Outbox publisher consumer: ${publisher.consumer ?? 'not available'}`,
             `- Outbox claimed/delivered/replayed: ${publisher.claimed ?? 'not available'}/${publisher.delivered ?? 'not available'}/${publisher.replayed ?? 'not available'}`,
             `- Outbox failed/remaining/exhausted: ${publisher.failed ?? 'not available'}/${publisher.remaining ?? 'not available'}/${publisher.exhausted ?? 'not available'}`,
