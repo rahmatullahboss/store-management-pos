@@ -184,6 +184,8 @@ export async function handleStorefrontCustomerAccountRequest(
       const message = error.message;
       const malformed =
         message.includes("query parameters") ||
+        message.startsWith("orderHistoryRequest.") ||
+        message.includes("Unsupported storefront order history request contract") ||
         message.includes("request is invalid") ||
         message.includes("path is invalid") ||
         message.includes("ID must be a UUID") ||
