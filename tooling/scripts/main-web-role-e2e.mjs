@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import puppeteer from "puppeteer-core";
 
 import { renderOperationalAdminHtml } from "../../build/apps/api/src/staging-operational-worker.js";
+import { hardenPosWorkspaceAccessibility } from "../../build/apps/pos-web/src/accessibility.js";
 import { renderRegisterWorkspace } from "../../build/apps/pos-web/src/modules/register/surface.js";
 import { ADMIN_ROLE_MATRIX_ROUTES, E2E_PERSONAS } from "../fixtures/main-web-role-matrix.mjs";
 
@@ -158,7 +159,8 @@ function leakMarkers(html) {
 }
 
 function posDocument(data) {
-  return `<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Store POS role E2E</title><style>html,body{max-width:100%;overflow-x:hidden}body{margin:0}.modd-register,.modd-workspace,.modd-cart,.modd-checkout,.modd-table-wrap{min-width:0;max-width:100%}.modd-table-wrap{overflow-x:auto;overscroll-behavior-x:contain}</style></head><body>${renderRegisterWorkspace(data.pos)}</body></html>`;
+  const workspace = hardenPosWorkspaceAccessibility(renderRegisterWorkspace(data.pos));
+  return `<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Store POS role E2E</title><style>html,body{max-width:100%;overflow-x:hidden}body{margin:0}.modd-register,.modd-workspace,.modd-cart,.modd-checkout,.modd-table-wrap{min-width:0;max-width:100%}.modd-table-wrap{overflow-x:auto;overscroll-behavior-x:contain}</style></head><body>${workspace}</body></html>`;
 }
 
 async function analyzePage(page, axeSource, { runAxe = false } = {}) {
