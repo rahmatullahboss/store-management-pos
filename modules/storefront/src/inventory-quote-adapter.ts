@@ -139,7 +139,9 @@ export function createStorefrontInventoryQuotePort(
   dependencies: StorefrontInventoryQuoteAdapterDependencies,
 ): StorefrontInventoryQuotePort {
   return Object.freeze({
-    async resolve(input): Promise<StorefrontInventoryQuoteEvidenceV1> {
+    async resolve(
+      input: Parameters<StorefrontInventoryQuotePort["resolve"]>[0],
+    ): Promise<StorefrontInventoryQuoteEvidenceV1> {
       const legalEntityId = input.principal.requestContext.legalEntityId;
       const storeId = input.principal.requestContext.storeId;
       if (!legalEntityId || !storeId) {
