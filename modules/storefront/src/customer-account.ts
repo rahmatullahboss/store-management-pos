@@ -52,6 +52,7 @@ export interface StorefrontCustomerOrderReadPort {
 
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+const OPAQUE_CURSOR = /^[A-Za-z0-9._~:=-]{1,512}$/u;
 const INTEGER = /^-?(?:0|[1-9][0-9]*)$/u;
 
 function uuid(value: string, label: string): string {
@@ -70,6 +71,14 @@ function bounded(value: string, label: string, maximum: number): string {
     /[\u0000-\u001f\u007f]/u.test(normalized)
   ) {
     throw new StorefrontContractError(`${label} is invalid.`);
+  }
+  return normalized;
+}
+
+function opaqueCursor(value: string, label: string): string {
+  const normalized = bounded(value, label, 512);
+  if (!OPAQUE_CURSOR.test(normalized)) {
+    throw new StorefrontContractError(`${label} must be a bounded URL-safe opaque token.`);
   }
   return normalized;
 }
@@ -387,7 +396,9 @@ export async function listStorefrontCustomerOrdersV1(
     contractVersion: "storefront-order-history.v1",
     context: input.context,
     items: Object.freeze(items),
-    nextCursor: result.nextCursor ? uuid(result.nextCursor, "Order history nextCursor") : null,
+    nextCursor: result.nextCursor
+      ? opaqueCursor(result.nextCursor, "Order history nextCursor")
+      : null,
   });
 }
 
