@@ -70,8 +70,8 @@ const syntheticCapabilities = {
 } as const;
 const recovery = deriveStorefrontCheckoutRecoveryV1({
   cartRecovered: true,
-  quote: syntheticQuote as never,
-  capabilities: syntheticCapabilities as never,
+  quote: syntheticQuote,
+  capabilities: syntheticCapabilities,
   now: () => "2030-08-01T18:00:00.000Z",
 });
 const actionHrefs = {
