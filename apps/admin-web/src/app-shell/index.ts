@@ -1,9 +1,11 @@
 import { renderAppShell } from "../../../../packages/ui/src/app-shell.js";
 import { directionSupportStyles } from "../../../../packages/ui/src/direction-support.js";
 import { renderAdminFoundationReference, type FoundationReferenceOptions } from "../../../../packages/ui/src/foundation-reference.js";
+import { renderOperationsLedgerAdminScreen } from "../../../../packages/ui/src/operations-ledger-screens.js";
 import { renderAccountingControlPage, type AccountingControlPage } from "../modules/accounting/page.js";
 import { renderBankReconciliationPage, type BankReconciliationPage } from "../modules/banking/page.js";
 import { CATALOG_ADMIN_ROUTES } from "../modules/catalog/routes.js";
+import type { ModAAdminRenderOptions } from "../modules/catalog/surface.js";
 import { renderCustomerWorkspace, type CustomerWorkspaceInput } from "../modules/customer/surface.js";
 import { renderFulfillmentWorkspace, type FulfillmentWorkspaceInput } from "../modules/fulfillment/surface.js";
 import { renderIntegrationConsolePage, type IntegrationConsolePage } from "../modules/integrations/page.js";
@@ -13,12 +15,21 @@ import { LOCALIZATION_COMPLIANCE_ADMIN_ROUTES } from "../modules/localization/ro
 import { renderPaymentOperationsPage, type PaymentOperationsPage } from "../modules/payments/page.js";
 import { renderPosReconciliationPage, type PosReconciliationPage } from "../modules/pos/reconciliation-page.js";
 import { PRICING_TAX_ADMIN_ROUTES } from "../modules/pricing/routes.js";
+import type { PricingTaxAdminRenderOptions } from "../modules/pricing/workspace.js";
 import { renderProcurementOperationsPage, type ProcurementDashboardFixture } from "../modules/procurement/index.js";
 import { renderFinanceReadinessPage, type FinanceReadinessPage } from "../modules/reporting/finance-readiness-page.js";
 import { renderReportingOperationsPage, type ReportingOperationsPage } from "../modules/reporting/operations-page.js";
 import { MOD_G_ADMIN_ROUTES } from "../modules/reporting/routes.js";
 import { renderSaasAdminPage, type SaasAdminPage } from "../modules/saas-admin/page.js";
 import { renderSalesWorkspace, type SalesWorkspaceInput } from "../modules/sales/surface.js";
+import {
+  renderCatalogStitchPage,
+  renderOperationsDashboard,
+  renderPricingStitchPage,
+  renderTaxExemptionsPage,
+  type OperationsDashboardInput,
+  type TaxExemptionsPageInput,
+} from "../stitch-operational-pages.js";
 import { composeAdminRoutes, type AdminRouteDescriptor } from "./routes.js";
 
 const MOD_B_ADMIN_ROUTES: readonly AdminRouteDescriptor[] = Object.freeze([
@@ -132,15 +143,24 @@ export function renderAdminShell(input: AdminShellInput): string {
     identity: { displayName: input.displayName, tenantName: input.tenantName, permissions: input.permissions },
     routes: integratedAdminRoutes,
     currentPath: input.currentPath,
-    content: `${directionSupportStyles}${input.content}`,
+    content: `${directionSupportStyles}${renderOperationsLedgerAdminScreen(input.currentPath, input.content)}`,
     variant: "admin",
-    context: { workspace: "Operations admin", location: input.location ?? "All locations", businessDate: input.businessDate ?? "Business date · 28 Jul 2026", locale: input.locale ?? "en" },
+    context: { workspace: "Operations admin", location: input.location ?? "All locations", businessDate: input.businessDate ?? "Current business date", locale: input.locale ?? "en" },
     offline: input.offline ?? false,
     ...(input.direction ? { direction: input.direction } : {}),
   });
 }
 
-export function renderAdminFoundationPreview(input: Omit<AdminShellInput, "content" | "currentPath">, reference: FoundationReferenceOptions = {}): string { return renderAdminShell({ ...input, currentPath: "/", content: renderAdminFoundationReference(reference), offline: reference.state === "offline" || input.offline === true }); }
+export function renderAdminFoundationPreview(input: Omit<AdminShellInput, "content" | "currentPath">, reference: FoundationReferenceOptions = {}): string { return renderAdminShell({ ...input, currentPath: "/platform/reference", content: renderAdminFoundationReference(reference), offline: reference.state === "offline" || input.offline === true }); }
+export function renderAdminDashboardPage(input: Omit<AdminShellInput, "content" | "currentPath">, page?: OperationsDashboardInput): string { return renderAdminShell({ ...input, currentPath: "/", content: renderOperationsDashboard(page) }); }
+export function renderCatalogAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, options: ModAAdminRenderOptions = {}): string { return renderAdminShell({ ...input, currentPath: "/catalog", content: renderCatalogStitchPage("catalog", options) }); }
+export function renderProductRecordAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, productId: string, options: ModAAdminRenderOptions = {}): string { return renderAdminShell({ ...input, currentPath: `/catalog/products/${encodeURIComponent(productId)}`, content: renderCatalogStitchPage("product-record", { ...options, activeId: options.activeId ?? productId }) }); }
+export function renderCatalogImportsAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, options: ModAAdminRenderOptions = {}): string { return renderAdminShell({ ...input, currentPath: "/catalog/imports", content: renderCatalogStitchPage("catalog-imports", options) }); }
+export function renderPricingAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, options: PricingTaxAdminRenderOptions = {}): string { return renderAdminShell({ ...input, currentPath: "/pricing", content: renderPricingStitchPage("pricing", options) }); }
+export function renderPromotionsAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, options: PricingTaxAdminRenderOptions = {}): string { return renderAdminShell({ ...input, currentPath: "/pricing/promotions", content: renderPricingStitchPage("promotions", options) }); }
+export function renderDiscountApprovalsAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, options: PricingTaxAdminRenderOptions = {}): string { return renderAdminShell({ ...input, currentPath: "/pricing/discount-approvals", content: renderPricingStitchPage("discount-approvals", options) }); }
+export function renderTaxConfigurationAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, options: PricingTaxAdminRenderOptions = {}): string { return renderAdminShell({ ...input, currentPath: "/tax", content: renderPricingStitchPage("tax", options) }); }
+export function renderTaxExemptionsAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page?: TaxExemptionsPageInput): string { return renderAdminShell({ ...input, currentPath: "/tax/exemptions", content: renderTaxExemptionsPage(page) }); }
 export function renderInventoryAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, fixture?: InventoryDashboardFixture): string { return renderAdminShell({ ...input, currentPath: "/inventory", content: renderInventoryOperationsPage(fixture) }); }
 export function renderProcurementAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, fixture?: ProcurementDashboardFixture): string { return renderAdminShell({ ...input, currentPath: "/procurement", content: renderProcurementOperationsPage(fixture) }); }
 export function renderCustomerAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, workspace: CustomerWorkspaceInput): string { return renderAdminShell({ ...input, currentPath: "/customers", content: renderCustomerWorkspace(workspace) }); }
