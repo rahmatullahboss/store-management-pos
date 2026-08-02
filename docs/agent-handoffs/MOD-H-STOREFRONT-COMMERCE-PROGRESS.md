@@ -8,9 +8,9 @@ Integration target: `program/integration-v1`
 
 Draft PR: #48
 
-Latest fully verified implementation head: `4d4b48ee6f882ed40a067676f5dba7a8e013f49b`
+Latest fully verified implementation head: `8b44f666a42fc50aaec1333b22a5b5eee678165e`
 
-Latest fully verified Storefront CI: `30733358590`
+Latest fully verified Storefront CI: `30755307713`
 
 This document is a progress handoff, not a completion receipt. MOD-H must remain draft until the owning-module/runtime blockers and final activation gates below are resolved and verified.
 
@@ -21,7 +21,7 @@ This document is a progress handoff, not a completion receipt. MOD-H must remain
 - Do not reset, discard, overwrite or force-push existing MOD-H work.
 - Do not delete/reset/repurpose another module's Neon branch to create capacity for MOD-H.
 - Storefront remains a presentation/buyer-interaction channel; it is not a parallel commerce/provider backend.
-- A blocker acceptance document never authorizes activation by itself; owner delivery + exact-head evidence is mandatory.
+- A blocker acceptance document or issue number never authorizes activation by itself; owner delivery + serial integration + exact-head evidence is mandatory.
 
 ## 2. Verified checkpoint ledger
 
@@ -128,46 +128,70 @@ Exact implementation head: `4d4b48ee6f882ed40a067676f5dba7a8e013f49b`
 
 Storefront CI: `30733358590`
 
-Added:
+Added machine-readable/human acceptance docs, executable boundary/non-registration tests and checkpoint receipt `docs/architecture/storefront/h7-integration-readiness-checkpoint.md`.
 
-- `docs/architecture/storefront/dependency-integration-acceptance.json`;
-- `docs/architecture/storefront/dependency-integration-acceptance.md`;
-- `tests/unit/storefront-dependency-integration-acceptance.test.mjs`;
-- verified checkpoint receipt: `docs/architecture/storefront/h7-integration-readiness-checkpoint.md`.
+The acceptance manifest covers exactly #97/#98/#100/#101/#102/#104/#107/#108. Every entry has an owner, capability, existing MOD-H boundary, activation surfaces, required evidence and `activationAllowed: false`.
 
-The machine-readable acceptance manifest covers exactly #97/#98/#100/#101/#102/#104/#107/#108. Every entry has an owner, capability, existing MOD-H boundary, activation surfaces, required evidence and `activationAllowed: false`.
+Serial activation requires owner delivery into `program/integration-v1`, no arbitrary `main` merge, no browser/provider authority synthesis, negative scope/stale/retry/idempotency/privacy tests before registration and fresh exact-head Storefront CI.
 
-The executable gate proves:
+#### H7-DEPENDENCY-GATE-08 — complete/verified
 
-- every current external blocker appears exactly once;
-- every referenced integration boundary exists under repository-owned MOD-H/API roots;
-- #104/#107/#108 map to their verified domain/abuse/telemetry bridge paths;
-- live API/buyer roots still do not import cart-quote, checkout-capability, customer-account, domain-provider, abuse-provider or operational-sink bridges;
-- documentation cannot silently authorize a blocked route/provider.
+Implementation head: `88a38c35e4b18dc254176c2729c030678716b5fd`
 
-Serial activation instructions require owner delivery into `program/integration-v1`, no arbitrary `main` merge, no browser/provider authority synthesis, negative scope/stale/retry/idempotency/privacy tests before registration, and fresh exact-head Storefront CI in the same activation checkpoint.
+Strengthened isolation head: `f06d350d109c5161b03ed26dba852914a6f116f1`
 
-Exact CI evidence, run `30733358590` latest successful attempt:
+Storefront CI: `30753736803`
 
-- verify `91457708872` — passed;
-- PostgreSQL `91457709078` — passed;
-- browser/accessibility/performance `91457709262` — passed;
-- Cloudflare `91457722062` — passed;
-- Neon recovery `91457708663` — passed after targeted rerun of an earlier concurrency cancellation.
+Checkpoint receipt: `docs/architecture/storefront/h7-dependency-gate-checkpoint.md`.
 
-Exact browser evidence:
+The release policy formalizes conjunctive requirements:
 
-- Astro: 27 files, 0 errors, 0 warnings, 0 hints;
-- buyer: 5/5 across 4 locales with one low-bandwidth scenario;
-- admin: 4/4;
-- public content/catalog/discovery/search all passed; discovery/search Axe violations 0;
-- checkout recovery: 4/4;
-- order tracking: 4/4;
-- bounded synthetic load: 64/64 requests, p95 **83.24 ms**, `productionSla: false`.
+- public cart quote → #97;
+- checkout capability/submit → #97 + #98 + #100;
+- private account/order reads → #101;
+- buyer return/support → #101 + #102;
+- domain provider/custom-domain activation → #104;
+- distributed abuse enforcement → #107;
+- operational event sink → #108.
 
-Artifact: 45 files, 1,465,761 bytes, ID `8828703975`, SHA-256 `ccd4c0ef2a83ac51711062e7e816f1a2b06abb6f33ef2d892ddfe6b63be7a15a`.
+Unknown issue numbers cannot substitute for blockers. Static tests explicitly forbid `dependency-activation`, `evaluateStorefrontDependencyActivationV1` and `assertStorefrontDependencyActivationV1` from live API/buyer roots.
 
-No blocker was resolved or activated by this readiness checkpoint.
+Exact strengthened CI `30753736803` passed all five lanes. Browser evidence: Astro 27/0/0/0; buyer 5/5 across 4 locales with one low-bandwidth scenario; admin 4/4; content/catalog/discovery/search passed with discovery/search Axe 0; checkout recovery 4/4; order tracking 4/4; bounded synthetic performance 64/64 at p95 **59.76 ms**, not a production SLA. Artifact ID `8835292030`, SHA-256 `71866e18b9baae63e2be69f4e71554acf506d5df5c9c619bf510a178573b9e0e`.
+
+#### H7-DEPENDENCY-EVIDENCE-09 — complete/verified
+
+Exact implementation head: `8b44f666a42fc50aaec1333b22a5b5eee678165e`
+
+Storefront CI: `30755307713`
+
+Checkpoint receipt: `docs/architecture/storefront/h7-dependency-evidence-checkpoint.md`.
+
+The dependency evaluator no longer accepts issue numbers alone. Each claimed verified blocker requires strict structured evidence containing:
+
+- exact blocker issue number;
+- integration target `program/integration-v1`;
+- owner delivery commit SHA;
+- serial integration commit SHA;
+- storefront verification commit SHA;
+- positive safe-integer Storefront CI run ID.
+
+Commit identities must be lowercase 40-character hexadecimal SHAs. Wrong integration target, unknown issue, malformed/uppercase SHA, invalid run ID, duplicate blocker evidence and arbitrary extra metadata all fail closed. Unknown fields are rejected, so provider tokens/credentials/free-form metadata cannot be attached to release evidence.
+
+Tests prove issue-number-only evidence is rejected and a protected surface can become release-ready only after every required blocker has a complete structured evidence record.
+
+Exact CI `30755307713` passed all five lanes:
+
+- verify `91516334537` — passed;
+- browser/accessibility/performance `91516418078` — passed;
+- PostgreSQL `91516418084` — passed;
+- Cloudflare `91516418089` — passed;
+- Neon recovery `91516418225` — passed.
+
+Browser evidence: Astro 27 files / 0 errors / 0 warnings / 0 hints; buyer 5/5 across 4 locales with one low-bandwidth scenario; admin 4/4; content/catalog/discovery/search passed with discovery/search Axe 0; checkout recovery 4/4; order tracking 4/4; bounded synthetic performance 64/64 at p95 **78.29 ms**, explicitly not a production SLA.
+
+Artifact: 45 files, ID `8835762297`, SHA-256 `8a565bb53121a790754b6568b2f2701be09e26fa7c61c009af1230cee815e443`.
+
+No blocker was resolved or live surface activated by H7-08/H7-09.
 
 ## 3. Current cross-module/runtime blockers
 
@@ -180,7 +204,16 @@ No blocker was resolved or activated by this readiness checkpoint.
 - #107 — actual distributed/provider-backed storefront abuse/rate-limit runtime feeding the verified bridge;
 - #108 — approved shared operational telemetry sink feeding the verified privacy-safe bridge.
 
-No owning-module delivery was found for #97/#98/#100/#101/#102 during the latest checkpoint review. These blockers are not justification to create parallel authority inside MOD-H.
+Latest dependency re-check found no hidden owning delivery. Relative to `program/integration-v1` at `fd63dfde4d5940112a9c77c2743b281e49ff6b55`:
+
+- MOD-C branch: ahead 0 / behind 549;
+- MOD-E branch: ahead 0 / behind 535;
+- MOD-F branch: ahead 0 / behind 130;
+- MOD-G/shared branch: ahead 0 / behind 8.
+
+Repository blocker-capability PR search returned no owning delivery beyond MOD-H PR #48. Issues #97/#98/#100/#101 were re-read and remain open; no approved serial delivery evidence was found for any current blocker.
+
+These blockers are not justification to create parallel authority inside MOD-H.
 
 ## 4. Current fail-closed matrix
 
@@ -201,16 +234,19 @@ No owning-module delivery was found for #97/#98/#100/#101/#102 during the latest
 | Distributed rate-limit enforcement | Not wired until #107 runtime exists |
 | Operational sink bridge | Verified but unreachable from live roots |
 | Operational event sink | Not wired until #108 runtime exists |
+| Dependency activation evaluator | Release-only and statically excluded from live roots |
 
 ## 5. Evidence policy
 
 A coherent checkpoint is not fully verified until the exact code head passes root format/lint/boundaries/typecheck/database/full tests/security, Astro build, PostgreSQL 17 rehearsal, buyer/admin browser/accessibility, Cloudflare preview/runtime/cleanup and non-destructive Neon recovery.
 
+Future blocker activation additionally requires one `StorefrontDependencyVerificationEvidenceV1` record per required blocker. Issue status or issue number alone is not release evidence.
+
 If an external lane is concurrency-cancelled or transiently fails while source gates remain green, target only that affected job. Do not weaken source assertions or budgets to obtain green CI.
 
 ## 6. Machine tracker note
 
-`docs/architecture/storefront/status.yaml` preserves a large H0–H3 historical evidence ledger. Repository tooling currently exposes whole-file replacement rather than a safe semantic partial patch for that tracker. Do not truncate historical evidence merely to advance the newest H7 slice; the checkpoint receipt, this handoff and PR #48 carry the current verified state until a history-preserving tracker patch is available.
+`docs/architecture/storefront/status.yaml` preserves a large H0–H3 historical evidence ledger. Repository tooling currently exposes whole-file replacement rather than a safe semantic partial patch for that tracker. Do not truncate historical evidence merely to advance the newest H7 slice; checkpoint receipts, this handoff and PR #48 carry the current verified state until a history-preserving tracker patch is available.
 
 ## 7. Final completion gate still outstanding
 
@@ -223,5 +259,6 @@ MOD-H is **not complete** until, at minimum:
 5. H6 trusted provider transport/control-plane implementation feeds the verified bridge and conflict/takeover/certificate/offboarding evidence passes;
 6. H7 actual distributed abuse provider/native runtime feeds the verified abuse bridge and passes integration/load evidence;
 7. H7 approved shared telemetry sink consumes only the verified privacy-safe envelope through the verified sink bridge;
-8. fresh migration/recovery/Cloudflare/browser/performance evidence is recorded on the final exact activation head;
-9. this progress handoff is replaced with the final completion receipt and serial integration instructions.
+8. every activating blocker has structured owner-delivery/integration/storefront-verification evidence;
+9. fresh migration/recovery/Cloudflare/browser/performance evidence is recorded on the final exact activation head;
+10. this progress handoff is replaced with the final completion receipt and serial integration instructions.
