@@ -8,7 +8,8 @@
     "MOD-D": {"paths": ["modules/pos", "modules/cash", "modules/offline"], "schemas": ["pos", "cash"], "dependsOn": ["MOD-A", "MOD-B", "MOD-C", "MOD-E"]},
     "MOD-E": {"paths": ["modules/payments", "modules/accounting", "modules/banking"], "schemas": ["payment", "accounting", "banking"], "dependsOn": ["MOD-B", "MOD-C"]},
     "MOD-F": {"paths": ["modules/localization", "modules/compliance"], "schemas": ["localization"], "dependsOn": ["MOD-A", "MOD-C", "MOD-D", "MOD-E"]},
-    "MOD-G": {"paths": ["modules/reporting", "modules/integrations", "modules/saas-admin"], "schemas": ["reporting", "integration"], "dependsOn": ["MOD-A", "MOD-B", "MOD-C", "MOD-D", "MOD-E", "MOD-F"]}
+    "MOD-G": {"paths": ["modules/reporting", "modules/integrations", "modules/saas-admin"], "schemas": ["reporting", "integration"], "dependsOn": ["MOD-A", "MOD-B", "MOD-C", "MOD-D", "MOD-E", "MOD-F"]},
+    "MOD-H": {"paths": ["modules/storefront"], "schemas": ["storefront"], "dependsOn": ["MOD-A", "MOD-B", "MOD-C", "MOD-E", "MOD-F", "MOD-G"]}
   },
   "rules": {
     "privateImportSegment": "/src/internal/",

@@ -1,0 +1,4 @@
+STOREFRONT_STAGE=development
+STOREFRONT_API_BASE_URL=http://localhost:8787
+STOREFRONT_PLATFORM_BASE_DOMAIN=shops.example.test
+STOREFRONT_BUILD_ID=local-storefront

@@ -16,6 +16,7 @@ const sources = [
   { module: "MOD-D", manifest: "database/modules/pos/manifest.json", directory: "database/modules/pos/migrations" },
   { module: "MOD-D", manifest: "database/modules/cash/manifest.json", directory: "database/modules/cash/migrations" },
   { module: "MOD-F", manifest: "database/modules/localization/manifest.json", directory: "database/modules/localization/migrations" },
+  { module: "MOD-H", manifest: "database/modules/storefront/manifest.json", directory: "database/modules/storefront/migrations" },
 ];
 const ids = new Set();
 const databaseMarkers = new Map();
@@ -60,7 +61,7 @@ if (!/receipt_snapshots_append_only/u.test(pos)) throw new Error("POS receipt sn
 if (!/checkout_operation_identity_immutable/u.test(pos)) throw new Error("POS checkout identity immutability guard is missing");
 if (!/payment_state <> 'unknown' OR status IN \('pending','unknown','review'\)/u.test(pos)) throw new Error("POS unknown-payment retry guard is missing");
 const cash = await readFile(path.join(root, "database/modules/cash/migrations/CSH-0001-cash-ledger.sql"), "utf8");
-if (!/cash_events_append_only/u.test(cash)) throw new Error("Cash event append-only trigger is missing");
+if (!/cash_events_append_only/u.test(cash)) throw new Error("Cash event ledger append-only trigger is missing");
 if (!/expected_minor/u.test(cash) || !/variance_minor/u.test(cash)) throw new Error("Cash reconciliation reconstruction is missing");
 const cashControls = await readFile(path.join(root, "database/modules/cash/migrations/CSH-0002-reversal-controls.sql"), "utf8");
 if (!/cash_events_one_reversal_idx/u.test(cashControls)) throw new Error("Cash reversal uniqueness guard is missing");
@@ -79,7 +80,107 @@ if (!/pg_advisory_xact_lock/u.test(localizationCommands)) throw new Error("Count
 if (!/allocate_legal_number/u.test(localizationCommands) || !/record_fiscal_transition/u.test(localizationCommands)) {
   throw new Error("Localization command boundary is incomplete");
 }
-if (!/REVOKE ALL ON FUNCTION/u.test(localizationCommands) || !/GRANT EXECUTE ON FUNCTION/u.test(localizationCommands)) {
-  throw new Error("Localization command privileges are not hardened");
+const storefrontCore = await readFile(path.join(root, "database/modules/storefront/migrations/STF-0001-storefront-core.sql"), "utf8");
+if (!/storefront_domain_hostname_unique/u.test(storefrontCore)) throw new Error("Storefront global hostname uniqueness is missing");
+if (!/storefront_one_canonical_domain_idx/u.test(storefrontCore)) throw new Error("Storefront canonical-domain uniqueness is missing");
+if (!/storefront_domain_verifications_append_only/u.test(storefrontCore)) throw new Error("Storefront domain-verification immutability is missing");
+if (!/Only published products can enter/u.test(await readFile(path.join(root, "packages/storefront-contracts/src/index.ts"), "utf8"))) {
+  throw new Error("Public product-card publication guard is missing");
 }
-console.log(`validated ${ids.size} module migrations (${[...counts].map(([module, count]) => `${module}:${count}`).join(", ")})`);
+if (!/REVOKE INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA storefront FROM store_app_runtime/u.test(storefrontCore)) {
+  throw new Error("Storefront runtime direct writes must be revoked");
+}
+const storefrontCommands = await readFile(path.join(root, "database/modules/storefront/migrations/STF-0002-storefront-commands.sql"), "utf8");
+if (!/storefront_command_receipts_append_only/u.test(storefrontCommands)) throw new Error("Storefront command receipts must be append-only");
+if (!/storefront command idempotency conflict/u.test(storefrontCommands)) throw new Error("Storefront idempotency conflict guard is missing");
+if ((storefrontCommands.match(/pg_advisory_xact_lock/gu) ?? []).length < 3) throw new Error("Storefront lifecycle commands are not sufficiently serialized");
+for (const command of [
+  "create_storefront",
+  "transition_storefront",
+  "create_sales_channel",
+  "transition_sales_channel",
+  "set_product_publication",
+  "register_domain",
+  "record_domain_verification",
+  "transition_domain",
+  "publish_theme_revision",
+]) {
+  if (!storefrontCommands.includes(`FUNCTION storefront.${command}`)) throw new Error(`Storefront command ${command} is missing`);
+}
+if (!/INSERT INTO platform\.audit_events/u.test(storefrontCommands) || !/INSERT INTO platform\.outbox_events/u.test(storefrontCommands)) {
+  throw new Error("Storefront transactional audit/outbox evidence is missing");
+}
+if (!/storefront\.cache\.generation_advanced\.v1/u.test(storefrontCommands)) throw new Error("Storefront cache invalidation event is missing");
+if (!/REVOKE ALL ON FUNCTION storefront\.publish_command_evidence\(\) FROM PUBLIC/u.test(storefrontCommands)) {
+  throw new Error("Storefront evidence publisher must not be publicly executable");
+}
+if (!/GRANT EXECUTE ON FUNCTION storefront\.set_product_publication/u.test(storefrontCommands)) {
+  throw new Error("Storefront public command grants are missing");
+}
+if (!/REVOKE INSERT, UPDATE, DELETE ON storefront\.command_receipts FROM store_app_runtime/u.test(storefrontCommands)) {
+  throw new Error("Storefront runtime command receipt writes must be revoked");
+}
+
+const storefrontPublishing = await readFile(
+  path.join(root, "database/modules/storefront/migrations/STF-0005-publication-content-commands.sql"),
+  "utf8",
+);
+for (const command of [
+  "set_variant_publication",
+  "set_category_publication",
+  "set_collection",
+  "replace_collection_members",
+  "publish_navigation_revision",
+  "publish_content_page_revision",
+  "publish_homepage_revision",
+]) {
+  if (!storefrontPublishing.includes(`FUNCTION storefront.${command}`)) {
+    throw new Error(`Storefront STF-0005 command ${command} is missing`);
+  }
+  if (!storefrontPublishing.includes(`GRANT EXECUTE ON FUNCTION storefront.${command}`)) {
+    throw new Error(`Storefront STF-0005 command ${command} is not granted to runtime`);
+  }
+  if (!storefrontPublishing.includes(`REVOKE ALL ON FUNCTION storefront.${command}`)) {
+    throw new Error(`Storefront STF-0005 command ${command} is publicly executable`);
+  }
+}
+if ((storefrontPublishing.match(/pg_advisory_xact_lock/gu) ?? []).length < 7) {
+  throw new Error("Storefront STF-0005 publication commands are not sufficiently serialized");
+}
+for (const guard of [
+  "published variant requires a published product",
+  "parent category publication not found",
+  "published collection requires published members",
+  "archived collection members cannot change",
+  "publishing content requires an active storefront",
+  "publishing homepage requires an active storefront",
+]) {
+  if (!storefrontPublishing.includes(guard)) throw new Error(`Storefront STF-0005 guard is missing: ${guard}`);
+}
+for (const trigger of [
+  "variant_publications_evidence",
+  "category_publications_evidence",
+  "collections_evidence",
+  "navigation_documents_evidence",
+  "content_pages_evidence",
+  "homepage_revisions_evidence",
+]) {
+  if (!storefrontPublishing.includes(trigger)) throw new Error(`Storefront STF-0005 evidence trigger ${trigger} is missing`);
+}
+for (const event of [
+  "storefront.variant.publication_changed.v1",
+  "storefront.category.publication_changed.v1",
+  "storefront.collection.updated.v1",
+  "storefront.navigation.published.v1",
+  "storefront.content_page.revision_created.v1",
+  "storefront.homepage.revision_created.v1",
+]) {
+  if (!storefrontPublishing.includes(event)) throw new Error(`Storefront STF-0005 outbox event ${event} is missing`);
+}
+if (!/advance_storefront_cache_generations_internal/u.test(storefrontPublishing)) {
+  throw new Error("Storefront STF-0005 storefront-wide cache generation helper is missing");
+}
+if (!/collection member limit exceeded/u.test(storefrontPublishing) || !/collection member document contains duplicates/u.test(storefrontPublishing)) {
+  throw new Error("Storefront STF-0005 collection membership bounds are incomplete");
+}
+console.log(`validated ${ids.size} module migrations across ${counts.size} workpack groups`);

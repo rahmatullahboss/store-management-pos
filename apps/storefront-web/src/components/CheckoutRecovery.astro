@@ -1,0 +1,224 @@
+---
+import type {
+  StorefrontCheckoutRecoveryActionV1,
+  StorefrontCheckoutRecoveryModelV1,
+  StorefrontCheckoutRecoveryReasonV1,
+} from "../../../../packages/storefront-client/src/checkout-recovery.js";
+
+interface Props {
+  recovery: StorefrontCheckoutRecoveryModelV1;
+  locale: "en-GB" | "bn-BD" | "ar" | "ja-JP";
+  actionHrefs: Readonly<Record<StorefrontCheckoutRecoveryActionV1, string>>;
+}
+
+const { recovery, locale, actionHrefs } = Astro.props;
+
+const copy = {
+  "en-GB": {
+    heading: "Checkout needs your attention",
+    reasons: {
+      cart_recovered: ["We reset an unreadable saved cart", "Review the restored cart before requesting a new quote."],
+      quote_expired: ["Your quote expired", "Refresh the quote before continuing so price, tax and availability are current."],
+      quote_changed: ["Your quote changed", "Review the cart changes before continuing."],
+      quote_unavailable: ["An item is no longer available", "Review the cart and change unavailable items before checkout."],
+      price_tax_changed: ["Price or tax changed", "Refresh the quote to use the latest authoritative calculation."],
+      inventory_changed: ["Availability changed", "Review the cart because current sellable stock changed."],
+      country_policy_changed: ["Destination requirements changed", "Review the delivery details before continuing."],
+      shipping_changed: ["Shipping options changed", "Select an eligible shipping option again."],
+      payment_changed: ["Payment options changed", "Select an eligible payment option again."],
+      checkout_unavailable: ["Checkout is temporarily unavailable", "Review the cart and try the safe validation flow again."],
+    },
+    actions: {
+      review_cart: "Review cart",
+      refresh_quote: "Refresh quote",
+      review_destination: "Review delivery details",
+      select_shipping: "Choose shipping",
+      select_payment: "Choose payment",
+    },
+  },
+  "bn-BD": {
+    heading: "চেকআউট চালিয়ে যেতে কিছু তথ্য দেখুন",
+    reasons: {
+      cart_recovered: ["সংরক্ষিত কার্টটি পড়া যায়নি, তাই নিরাপদভাবে রিসেট করা হয়েছে", "নতুন কোট নেওয়ার আগে কার্টটি দেখে নিন।"],
+      quote_expired: ["আপনার কোটের মেয়াদ শেষ হয়েছে", "বর্তমান দাম, কর ও স্টক যাচাই করতে কোটটি আবার নিন।"],
+      quote_changed: ["আপনার কোট পরিবর্তন হয়েছে", "এগোনোর আগে কার্টের পরিবর্তনগুলো দেখে নিন।"],
+      quote_unavailable: ["একটি পণ্য এখন আর পাওয়া যাচ্ছে না", "চেকআউটের আগে কার্ট দেখে অনুপলব্ধ পণ্য পরিবর্তন করুন।"],
+      price_tax_changed: ["দাম বা কর পরিবর্তন হয়েছে", "সর্বশেষ অনুমোদিত হিসাব নিতে কোটটি রিফ্রেশ করুন।"],
+      inventory_changed: ["পণ্যের প্রাপ্যতা পরিবর্তন হয়েছে", "বর্তমান বিক্রয়যোগ্য স্টক বদলেছে, তাই কার্টটি আবার দেখুন।"],
+      country_policy_changed: ["ডেলিভারির তথ্যের নিয়ম পরিবর্তন হয়েছে", "এগোনোর আগে ডেলিভারির তথ্য আবার যাচাই করুন।"],
+      shipping_changed: ["শিপিং অপশন পরিবর্তন হয়েছে", "আবার একটি গ্রহণযোগ্য শিপিং অপশন বেছে নিন।"],
+      payment_changed: ["পেমেন্ট অপশন পরিবর্তন হয়েছে", "আবার একটি গ্রহণযোগ্য পেমেন্ট অপশন বেছে নিন।"],
+      checkout_unavailable: ["চেকআউট সাময়িকভাবে পাওয়া যাচ্ছে না", "কার্ট দেখে নিরাপদ যাচাই প্রক্রিয়াটি আবার চেষ্টা করুন।"],
+    },
+    actions: {
+      review_cart: "কার্ট দেখুন",
+      refresh_quote: "কোট রিফ্রেশ করুন",
+      review_destination: "ডেলিভারি তথ্য দেখুন",
+      select_shipping: "শিপিং বেছে নিন",
+      select_payment: "পেমেন্ট বেছে নিন",
+    },
+  },
+  ar: {
+    heading: "يلزم مراجعة بعض تفاصيل الدفع",
+    reasons: {
+      cart_recovered: ["تعذر قراءة السلة المحفوظة وتمت استعادتها بأمان", "راجع السلة قبل طلب عرض سعر جديد."],
+      quote_expired: ["انتهت صلاحية عرض السعر", "حدّث العرض للتأكد من السعر والضريبة والتوفر الحالي."],
+      quote_changed: ["تغير عرض السعر", "راجع تغييرات السلة قبل المتابعة."],
+      quote_unavailable: ["أحد المنتجات لم يعد متاحاً", "راجع السلة وعدّل المنتجات غير المتاحة قبل الدفع."],
+      price_tax_changed: ["تغير السعر أو الضريبة", "حدّث عرض السعر لاستخدام الحساب المعتمد الأحدث."],
+      inventory_changed: ["تغير التوفر", "راجع السلة لأن المخزون المتاح للبيع قد تغير."],
+      country_policy_changed: ["تغيرت متطلبات عنوان الوجهة", "راجع بيانات التوصيل قبل المتابعة."],
+      shipping_changed: ["تغيرت خيارات الشحن", "اختر خيار شحن مؤهلاً مرة أخرى."],
+      payment_changed: ["تغيرت خيارات الدفع", "اختر خيار دفع مؤهلاً مرة أخرى."],
+      checkout_unavailable: ["الدفع غير متاح مؤقتاً", "راجع السلة وأعد تشغيل التحقق الآمن."],
+    },
+    actions: {
+      review_cart: "مراجعة السلة",
+      refresh_quote: "تحديث عرض السعر",
+      review_destination: "مراجعة بيانات التوصيل",
+      select_shipping: "اختيار الشحن",
+      select_payment: "اختيار الدفع",
+    },
+  },
+  "ja-JP": {
+    heading: "チェックアウト内容の確認が必要です",
+    reasons: {
+      cart_recovered: ["保存済みカートを読み取れなかったため安全に復元しました", "新しい見積もりを取得する前にカートを確認してください。"],
+      quote_expired: ["見積もりの有効期限が切れました", "現在の価格・税・在庫を確認するため見積もりを更新してください。"],
+      quote_changed: ["見積もりが変更されました", "続行する前にカートの変更内容を確認してください。"],
+      quote_unavailable: ["現在購入できない商品があります", "チェックアウト前にカートの商品を確認してください。"],
+      price_tax_changed: ["価格または税が変更されました", "最新の正規計算を使用するため見積もりを更新してください。"],
+      inventory_changed: ["在庫状況が変更されました", "販売可能在庫が変わったためカートを確認してください。"],
+      country_policy_changed: ["配送先の要件が変更されました", "続行する前に配送情報を確認してください。"],
+      shipping_changed: ["配送オプションが変更されました", "利用可能な配送方法をもう一度選択してください。"],
+      payment_changed: ["支払いオプションが変更されました", "利用可能な支払い方法をもう一度選択してください。"],
+      checkout_unavailable: ["チェックアウトを一時的に利用できません", "カートを確認して安全な検証を再実行してください。"],
+    },
+    actions: {
+      review_cart: "カートを確認",
+      refresh_quote: "見積もりを更新",
+      review_destination: "配送情報を確認",
+      select_shipping: "配送方法を選択",
+      select_payment: "支払い方法を選択",
+    },
+  },
+} as const;
+
+const selected = copy[locale];
+const reasonCopy = (reason: StorefrontCheckoutRecoveryReasonV1) => selected.reasons[reason];
+---
+
+{recovery.items.length > 0 && (
+  <section class="checkout-recovery" aria-labelledby="checkout-recovery-title" aria-live="polite">
+    <header class="checkout-recovery__heading">
+      <p class="checkout-recovery__eyebrow">Checkout</p>
+      <h2 id="checkout-recovery-title">{selected.heading}</h2>
+    </header>
+    <ol class="checkout-recovery__list">
+      {recovery.items.map((item) => {
+        const [title, description] = reasonCopy(item.reason);
+        return (
+          <li class="checkout-recovery__item" data-recovery-reason={item.reason}>
+            <div>
+              <h3>{title}</h3>
+              <p>{description}</p>
+            </div>
+            <a class="checkout-recovery__action" href={actionHrefs[item.action]}>
+              {selected.actions[item.action]}
+            </a>
+          </li>
+        );
+      })}
+    </ol>
+  </section>
+)}
+
+<style>
+  .checkout-recovery {
+    display: grid;
+    gap: 1rem;
+    margin-block: 2rem;
+    padding: clamp(1rem, 3vw, 1.5rem);
+    border: 1px solid var(--storefront-border);
+    border-inline-start: 0.35rem solid var(--storefront-primary);
+    border-radius: calc(var(--storefront-radius) * 1.2);
+    background: var(--storefront-surface);
+  }
+
+  .checkout-recovery__heading,
+  .checkout-recovery__item {
+    display: grid;
+    gap: 0.45rem;
+  }
+
+  .checkout-recovery__eyebrow {
+    margin: 0;
+    color: var(--storefront-primary);
+    font-size: 0.78rem;
+    font-weight: 750;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .checkout-recovery h2,
+  .checkout-recovery h3,
+  .checkout-recovery p {
+    margin: 0;
+  }
+
+  .checkout-recovery h2 {
+    font-size: clamp(1.35rem, 3vw, 1.8rem);
+  }
+
+  .checkout-recovery h3 {
+    font-size: 1rem;
+  }
+
+  .checkout-recovery p {
+    color: color-mix(in srgb, var(--storefront-foreground) 72%, transparent);
+  }
+
+  .checkout-recovery__list {
+    display: grid;
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .checkout-recovery__item {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 1rem;
+    padding-block: 0.9rem;
+    border-block-start: 1px solid var(--storefront-border);
+  }
+
+  .checkout-recovery__action {
+    display: inline-flex;
+    min-block-size: 2.75rem;
+    align-items: center;
+    justify-content: center;
+    padding: 0.65rem 0.9rem;
+    border-radius: var(--storefront-radius);
+    background: var(--storefront-primary);
+    color: var(--storefront-primary-foreground);
+    font-weight: 750;
+    text-decoration: none;
+  }
+
+  .checkout-recovery__action:focus-visible {
+    outline: 3px solid var(--storefront-focus);
+    outline-offset: 3px;
+  }
+
+  @media (max-width: 42rem) {
+    .checkout-recovery__item {
+      grid-template-columns: 1fr;
+    }
+
+    .checkout-recovery__action {
+      justify-self: stretch;
+    }
+  }
+</style>

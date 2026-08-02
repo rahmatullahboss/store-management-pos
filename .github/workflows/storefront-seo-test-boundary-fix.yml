@@ -1,0 +1,13 @@
+name: Retired Storefront SEO Migration Test Boundary Fix
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  retired:
+    runs-on: ubuntu-24.04
+    steps:
+      - run: echo "SEO migration assertion maintenance is complete; this workflow is intentionally inert."

@@ -1,0 +1,279 @@
+---
+/**
+ * Presentation structure adapted for MOD-H from the reviewed upstream
+ * ProductCard.astro at commit 4cb83aecb6d27483951618dcf8398592e662f241.
+ *
+ * Types, money formatting, availability, branding and styling are local.
+ * See docs/architecture/storefront/upstream-file-manifest.yaml.
+ */
+import type { StorefrontProductCardV1 } from "../../../../packages/storefront-contracts/src/index.js";
+import { formatStorefrontMoneyV1 } from "../money.js";
+
+interface Props {
+  readonly product: StorefrontProductCardV1;
+  readonly locale: string;
+  readonly priority?: boolean;
+}
+
+const { product, locale, priority = false } = Astro.props;
+const href = `/products/${encodeURIComponent(product.slug)}`;
+const price = formatStorefrontMoneyV1(product.price, locale);
+const compareAtPrice = product.compareAtPrice
+  ? formatStorefrontMoneyV1(product.compareAtPrice, locale)
+  : null;
+const availabilityLabel =
+  product.availability === "unavailable"
+    ? "Sold out"
+    : product.availability === "limited"
+      ? "Limited stock"
+      : product.availability === "preorder"
+        ? "Pre-order"
+        : product.availability === "unknown"
+          ? "Availability at checkout"
+          : null;
+const cardDescriptionId = `product-card-${product.productId}`;
+---
+
+<article class="product-card" data-theme-component="product-card">
+  <div class="product-card__media">
+    <a href={href} aria-label={`View ${product.name}`}>
+      {
+        product.media ? (
+          <img
+            src={product.media.src}
+            alt={product.media.alt}
+            width={product.media.width}
+            height={product.media.height}
+            loading={priority ? "eager" : "lazy"}
+            fetchpriority={priority ? "high" : "auto"}
+            decoding="async"
+          />
+        ) : (
+          <span class="product-card__placeholder" aria-hidden="true">
+            <svg viewBox="0 0 48 48" role="img">
+              <path d="M9 12.5A3.5 3.5 0 0 1 12.5 9h23A3.5 3.5 0 0 1 39 12.5v23a3.5 3.5 0 0 1-3.5 3.5h-23A3.5 3.5 0 0 1 9 35.5v-23Zm4 21.2 7.7-8.1 5.2 5.2 3.5-3.5 5.6 6.4V13H13v20.7Zm15.5-13.2a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
+            </svg>
+          </span>
+        )
+      }
+    </a>
+    <div class="product-card__badges" aria-label="Product status">
+      {product.badge && <span class="product-card__badge">{product.badge}</span>}
+      {
+        availabilityLabel && (
+          <span
+            class:list={[
+              "product-card__badge",
+              product.availability === "unavailable" &&
+                "product-card__badge--unavailable",
+            ]}
+          >
+            {availabilityLabel}
+          </span>
+        )
+      }
+    </div>
+  </div>
+
+  <div class="product-card__body">
+    <h3>
+      <a href={href} aria-describedby={cardDescriptionId}>{product.name}</a>
+    </h3>
+    <p id={cardDescriptionId} class="product-card__price">
+      {
+        compareAtPrice && (
+          <del aria-label={`Previous price ${compareAtPrice}`}>
+            {compareAtPrice}
+          </del>
+        )
+      }
+      <span>
+        {product.pricePrefix === "from" && <small>From </small>}
+        {price}
+      </span>
+    </p>
+    <a class="product-card__action" href={href}>
+      <span>View product</span>
+      <svg viewBox="0 0 20 20" aria-hidden="true">
+        <path d="m7.2 3.8 6.3 6.2-6.3 6.2 1.4 1.4 7.7-7.6-7.7-7.6-1.4 1.4Z" />
+      </svg>
+    </a>
+  </div>
+</article>
+
+<style>
+  .product-card {
+    display: flex;
+    min-width: 0;
+    height: 100%;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid var(--storefront-border);
+    border-radius: calc(var(--storefront-radius) * 1.35);
+    background: var(--storefront-surface);
+    box-shadow: 0 0.5rem 1.5rem color-mix(in srgb, var(--storefront-foreground) 5%, transparent);
+    transition:
+      transform 180ms ease,
+      box-shadow 180ms ease,
+      border-color 180ms ease;
+  }
+
+  .product-card:hover {
+    transform: translateY(-0.2rem);
+    border-color: color-mix(in srgb, var(--storefront-primary) 42%, var(--storefront-border));
+    box-shadow: 0 1.2rem 2.8rem color-mix(in srgb, var(--storefront-foreground) 10%, transparent);
+  }
+
+  .product-card:focus-within {
+    outline: 3px solid var(--storefront-focus);
+    outline-offset: 3px;
+  }
+
+  .product-card__media {
+    position: relative;
+    aspect-ratio: 4 / 5;
+    overflow: hidden;
+    background: var(--storefront-surface-muted);
+  }
+
+  .product-card__media > a {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .product-card__media img,
+  .product-card__placeholder {
+    display: grid;
+    width: 100%;
+    height: 100%;
+    place-items: center;
+    object-fit: contain;
+    transition: transform 240ms ease;
+  }
+
+  .product-card:hover .product-card__media img {
+    transform: scale(1.035);
+  }
+
+  .product-card__placeholder svg {
+    width: 3.5rem;
+    fill: color-mix(in srgb, var(--storefront-foreground) 30%, transparent);
+  }
+
+  .product-card__badges {
+    position: absolute;
+    inset-block-start: 0.75rem;
+    inset-inline-start: 0.75rem;
+    display: flex;
+    max-width: calc(100% - 1.5rem);
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    pointer-events: none;
+  }
+
+  .product-card__badge {
+    overflow: hidden;
+    max-width: 100%;
+    padding: 0.3rem 0.55rem;
+    border: 1px solid var(--storefront-border);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--storefront-surface) 92%, transparent);
+    color: var(--storefront-foreground);
+    font-size: 0.7rem;
+    font-weight: 750;
+    line-height: 1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    box-shadow: 0 0.25rem 0.8rem color-mix(in srgb, var(--storefront-foreground) 8%, transparent);
+  }
+
+  .product-card__badge--unavailable {
+    border-color: color-mix(in srgb, var(--storefront-danger) 35%, var(--storefront-border));
+    color: var(--storefront-danger);
+  }
+
+  .product-card__body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.8rem;
+    padding: 1rem;
+  }
+
+  h3 {
+    margin: 0;
+    font-size: 1rem;
+    line-height: 1.3;
+  }
+
+  h3 a {
+    display: -webkit-box;
+    overflow: hidden;
+    color: var(--storefront-foreground);
+    text-decoration: none;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  h3 a:hover {
+    color: var(--storefront-primary);
+  }
+
+  .product-card__price {
+    display: flex;
+    min-height: 2.65rem;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 0.1rem;
+    margin: auto 0 0;
+  }
+
+  .product-card__price del {
+    color: color-mix(in srgb, var(--storefront-foreground) 72%, transparent);
+    font-size: 0.78rem;
+  }
+
+  .product-card__price > span {
+    color: var(--storefront-foreground);
+    font-size: 1.12rem;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+  }
+
+  .product-card__price small {
+    font-size: 0.72em;
+    font-weight: 650;
+  }
+
+  .product-card__action {
+    display: inline-flex;
+    min-height: 2.65rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    border-radius: var(--storefront-radius);
+    background: var(--storefront-primary);
+    color: var(--storefront-primary-foreground);
+    font-size: 0.88rem;
+    font-weight: 750;
+    text-decoration: none;
+  }
+
+  .product-card__action svg {
+    width: 1rem;
+    fill: currentColor;
+  }
+
+  .product-card__action:focus-visible {
+    outline: 3px solid var(--storefront-focus);
+    outline-offset: 3px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .product-card,
+    .product-card__media img {
+      transition: none;
+    }
+  }
+</style>

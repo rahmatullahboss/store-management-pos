@@ -1,0 +1,13 @@
+name: Retired Storefront JSON-LD CSP Integration
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  retired:
+    runs-on: ubuntu-24.04
+    steps:
+      - run: echo "Product JSON-LD is integrated through the response wrapper; this workflow is intentionally inert."

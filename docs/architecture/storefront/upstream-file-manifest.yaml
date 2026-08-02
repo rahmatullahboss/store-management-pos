@@ -1,0 +1,237 @@
+source:
+  repository: https://github.com/scaliuslabs/scalius-commerce-lite
+  branch: mono-repo
+  commit: 4cb83aecb6d27483951618dcf8398592e662f241
+
+rules:
+  allowed_modes: [copy, adapt, concept_only, reject]
+  manifest_before_or_with_import: true
+  product_facing_upstream_branding: prohibited
+  internal_provenance: required
+  d1_or_upstream_business_authority: prohibited
+  exact_money_replacement: required
+
+batches:
+  - id: SF-UP-000
+    status: reviewed_baseline
+    purpose: Architecture audit and adaptation classification only; no source imported.
+    upstream_paths:
+      - README.md
+      - docs/ARCHITECTURE.md
+      - apps/storefront/README.md
+      - apps/storefront/package.json
+      - apps/storefront/wrangler.jsonc
+      - apps/storefront/src/lib/api/client.ts
+      - apps/storefront/src/lib/api/types.ts
+      - apps/storefront/src/lib/api/products.ts
+      - apps/storefront/src/lib/api/storefront.ts
+      - apps/storefront/src/store/cart.ts
+      - apps/storefront/src/lib/edge-cache.ts
+      - apps/storefront/src/middleware.ts
+      - apps/storefront/src/pages/index.astro
+      - apps/storefront/src/pages/api/checkout/create-order.ts
+      - apps/storefront/src/components/cards/ProductCard.astro
+      - packages/shared/src/storefront-theme.ts
+      - packages/core/src/modules/products/products.storefront.ts
+      - packages/core/src/modules/products/products.public-eligibility.ts
+    mode: concept_only
+    local_paths: []
+    modifications: Initial audit only.
+    decision: Establish selective adaptation boundaries; no code copied in this batch.
+    tests: []
+
+  - id: SF-UP-001
+    status: adapted
+    purpose: Strengthen merchant theme colour sanitisation without importing upstream branding, defaults, data models or business services.
+    upstream_paths:
+      - packages/shared/src/storefront-theme.ts
+    upstream_blob_sha: ccdd95740666f411f944fe47747e7f857321c5e1
+    mode: adapt
+    local_paths:
+      - packages/storefront-theme/src/index.ts
+    modifications:
+      - retained the local storefront-theme.v1 contract and original Ozzyl colour defaults
+      - reduced the upstream theme surface to the locally approved colour, density, corner and container fields
+      - adapted safe hex, CSS colour-function, named-colour and allowlisted CSS-variable validation
+      - adapted control-character, style-breakout, url, import, expression and javascript rejection
+      - added local invalid-entry reporting and CSS token generation
+      - omitted upstream palettes, font families, component styles, product terminology and branding
+    authority_boundary:
+      - presentation_only
+      - no_D1
+      - no_upstream_API_or_core_service
+      - no_price_stock_order_payment_or_accounting_logic
+    tests:
+      - tests/unit/storefront-foundation.test.mjs
+      - Foundation CI typecheck build tests secret licence SBOM dependency audit
+    local_owner: MOD-H-storefront-commerce
+
+  - id: SF-UP-002
+    status: adapted
+    purpose: Establish a minimal Astro SSR and Cloudflare Worker build shell using reviewed compatible versions and adapter configuration patterns.
+    upstream_paths:
+      - apps/storefront/package.json
+      - apps/storefront/astro.config.mjs
+      - apps/storefront/tsconfig.json
+      - apps/storefront/wrangler.jsonc
+    upstream_blob_shas:
+      apps/storefront/package.json: db48596a12ca021c75b288515e4e6f46eab7b0dd
+      apps/storefront/astro.config.mjs: 8a5f077777db692a84e60dfaf6d6942f470f0f7d
+      apps/storefront/tsconfig.json: def4c62c6c6bb2ed6a1bcc3e7fa9631e5707649e
+      apps/storefront/wrangler.jsonc: 347ce17df20f284e0ff24c3a22898bb4c0624b5e
+    mode: adapt
+    local_paths:
+      - apps/storefront-web/package.json
+      - apps/storefront-web/astro.config.mjs
+      - apps/storefront-web/tsconfig.json
+      - apps/storefront-web/wrangler.jsonc
+      - apps/storefront-web/.dev.vars.example
+      - apps/storefront-web/src/pages/[...path].ts
+      - package-lock.json
+      - .github/workflows/storefront-lockfile.yml
+    modifications:
+      - renamed every package, worker and runtime identity to the local Ozzyl-owned storefront workstream
+      - pinned Astro 7.1.3, Cloudflare adapter 14.1.4, Astro check 0.9.9 and TypeScript 6.0.3
+      - diverged from the reviewed upstream Wrangler pin to Wrangler 4.115.0 to remove the Sharp and libvips high-severity advisory chain found by npm audit
+      - omitted React, Tailwind, Radix, analytics, media, cart state, upstream API clients and admin dependencies
+      - removed all upstream account IDs, KV IDs, service names, domains, URLs and environment constants
+      - authored a local Wrangler configuration with no external resource identifiers or production routing
+      - bridged Astro catch-all routing to the local fail-closed Worker runtime and owning-module bootstrap contract
+      - generated the npm lockfile in trusted same-repository CI and verified reproducible install, root build and Astro Cloudflare build before commit
+    authority_boundary:
+      - build_and_public_runtime_shell_only
+      - no_D1_or_Drizzle
+      - no_upstream_API_client_or_business_service
+      - no_price_stock_order_payment_or_accounting_logic
+      - no_product_facing_upstream_branding
+    tests:
+      - Storefront Lockfile run 30488126211
+      - reproducible npm ci
+      - root TypeScript build
+      - Astro check and Cloudflare adapter build
+      - npm audit high severity gate
+      - tests/unit/storefront-worker-shell.test.mjs
+    local_owner: MOD-H-storefront-commerce
+
+  - id: SF-UP-003
+    status: adapted
+    purpose: Adapt the reviewed public product-card presentation structure to local publication-only, exact-money and accessibility contracts.
+    upstream_paths:
+      - apps/storefront/src/components/cards/ProductCard.astro
+    upstream_blob_sha: 68bc025696a3e36dbf316d64f2e026ac719ddcf9
+    mode: adapt
+    local_paths:
+      - apps/storefront-web/src/components/ProductCard.astro
+      - apps/storefront-web/src/pages/evidence/storefront.astro
+      - apps/storefront-web/public/evidence/linen-shirt.svg
+      - packages/storefront-contracts/src/index.ts
+      - tests/unit/storefront-product-card-contract.test.mjs
+      - tooling/scripts/storefront-design-evidence.mjs
+      - tooling/scripts/storefront-design-evidence-runner.mjs
+      - .github/workflows/storefront-ci.yml
+    modifications:
+      - replaced the upstream Product API type with the local storefront-product-card.v1 publication contract
+      - replaced floating-point number pricing and symbol concatenation with integer minor-unit exact-money formatting
+      - rejected every non-published product state at the contract boundary
+      - replaced upstream discount-engine, media-service and availability authority with bounded presentation fields supplied by owning modules
+      - removed lucide-react, Tailwind classes, upstream aliases, branding, API imports and commerce authority
+      - authored original semantic CSS, visible keyboard focus, reduced-motion handling and responsive LTR/RTL layouts
+      - added synthetic-only English desktop/mobile and Arabic RTL browser evidence with 200 percent text scaling, clipping and overflow detection
+      - added a bounded detached process-group runner that rejects stale reports, enforces a four-minute deadline and terminates orphaned Astro processes
+    authority_boundary:
+      - public_presentation_only
+      - MOD_A_owns_product_price_promotion_and_tax
+      - MOD_B_owns_availability_and_reservation
+      - MOD_C_owns_order_and_fulfilment
+      - no_D1_Drizzle_or_upstream_API
+      - no_browser_authoritative_money_stock_or_checkout
+    tests:
+      - tests/unit/storefront-product-card-contract.test.mjs
+      - npm run storefront:design:verify
+      - Storefront CI run 30502115957
+      - browser evidence job 90743920881
+      - zero axe violations, responsive LTR and RTL, keyboard skip-link, 200 percent text and overflow checks
+    local_owner: MOD-H-storefront-commerce
+
+  - id: SF-UP-004
+    status: adapted
+    purpose: Adapt category, collection and search page-composition patterns while retaining local multi-tenant publication, exact-money, availability and PostgreSQL authority.
+    upstream_paths:
+      - apps/storefront/src/pages/categories/[slug].astro
+      - apps/storefront/src/pages/collections/[id].astro
+      - apps/storefront/src/pages/search/index.astro
+    upstream_blob_shas:
+      apps/storefront/src/pages/categories/[slug].astro: fb8c87c5828766d9a63f149e1bac3692384a1f79
+      apps/storefront/src/pages/collections/[id].astro: 110a72dd675ab282ae5efa656529844b3a8aabba
+      apps/storefront/src/pages/search/index.astro: 9a8bf2f1c8876d57875209791dd2c0a878c2c385
+    mode: adapt
+    local_paths:
+      - packages/storefront-contracts/src/public-discovery.ts
+      - packages/storefront-client/src/public-search.ts
+      - modules/storefront/src/public-search.ts
+      - apps/storefront-web/src/discovery-render.ts
+      - apps/storefront-web/src/render.ts
+      - apps/storefront-web/src/worker.ts
+      - tooling/scripts/storefront-public-discovery-design-evidence.mjs
+      - tooling/scripts/storefront-public-search-filter-design-evidence.mjs
+    modifications:
+      - adapted category breadcrumb, description, result-count, child-navigation and empty-state composition
+      - adapted collection heading, curated-member ordering, category-link and empty-state presentation patterns
+      - adapted search query retention, selected-filter state, clear-filter action, facets, bounded pagination and no-result composition
+      - replaced upstream API calls and page data loaders with host-scoped local contracts and PostgreSQL resolver APIs
+      - replaced upstream floating-point price and discount fields with exact integer-minor money from MOD-A
+      - replaced upstream availability assumptions with MOD-B sellable availability less active reservations
+      - removed React islands, Tailwind classes, Lucide icons, analytics payloads, image CDN authority, demo copy and product branding
+      - retained script-free semantic HTML, CSP compatibility, visible focus, mobile layout, 200 percent text and RTL behavior
+      - fail closed for unknown hosts, unpublished taxonomy, hidden collection members, unsupported filters and scope mismatches
+    authority_boundary:
+      - public_presentation_and_query_composition_only
+      - MOD_A_owns_catalog_price_promotion_and_tax
+      - MOD_B_owns_stock_availability_and_reservations
+      - MOD_H_owns_publication_slugs_collections_and_buyer_presentation
+      - no_D1_Drizzle_upstream_API_or_core_service
+      - no_browser_authoritative_filter_price_stock_or_checkout_effects
+    tests:
+      - tests/unit/storefront-public-discovery.test.mjs
+      - tests/unit/storefront-public-search-filters.test.mjs
+      - tests/integration/storefront-public-discovery-rehearsal.sql
+      - tests/integration/storefront-public-search-filter-rehearsal.sql
+      - npm run storefront:discovery:design:evidence
+      - npm run storefront:search-filter:design:evidence
+    local_owner: MOD-H-storefront-commerce
+
+planned_candidates:
+  - upstream_glob: apps/storefront/src/layouts/**
+    proposed_mode: adapt
+    conditions:
+      - remove upstream branding and environment constants
+      - replace API and layout types
+      - map to local accessibility and design requirements
+  - upstream_glob: apps/storefront/src/components/**
+    proposed_mode: adapt
+    conditions:
+      - review each component individually
+      - replace number money fields
+      - remove branding, demo copy and unsafe assumptions
+  - upstream_glob: apps/storefront/src/pages/**
+    proposed_mode: adapt
+    conditions:
+      - public composition only
+      - checkout/account proxy routes require local rewrite
+  - upstream_glob: apps/storefront/src/lib/edge-cache.ts
+    proposed_mode: adapt
+    conditions:
+      - add tenant storefront host locale currency price-list scope
+      - preserve fail-closed private-route and generation behavior
+
+rejected_families:
+  - path: packages/database/**
+    reason: D1 and Drizzle canonical persistence are incompatible with Neon authority.
+  - path: packages/core/**
+    reason: Upstream domain services must not replace MOD-A/B/C/E/F authority.
+  - path: apps/api/**
+    reason: Upstream business API and queue consumer are not used.
+  - path: apps/admin-v2/**
+    reason: Do not introduce a parallel admin design system; selected workflow concepts may be independently implemented.
+  - path: apps/storefront/wrangler.jsonc fixed resources
+    reason: Upstream IDs, service names, domains and URLs were rejected; only generic adapter, assets and observability structure was adapted in SF-UP-002.

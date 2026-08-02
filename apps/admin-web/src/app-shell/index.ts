@@ -19,6 +19,8 @@ import { renderReportingOperationsPage, type ReportingOperationsPage } from "../
 import { MOD_G_ADMIN_ROUTES } from "../modules/reporting/routes.js";
 import { renderSaasAdminPage, type SaasAdminPage } from "../modules/saas-admin/page.js";
 import { renderSalesWorkspace, type SalesWorkspaceInput } from "../modules/sales/surface.js";
+import { renderStorefrontOperationsPage, type StorefrontOperationsPage } from "../modules/storefront/page.js";
+import { STOREFRONT_ADMIN_ROUTES } from "../modules/storefront/routes.js";
 import { composeAdminRoutes, type AdminRouteDescriptor } from "./routes.js";
 
 const MOD_B_ADMIN_ROUTES: readonly AdminRouteDescriptor[] = Object.freeze([
@@ -52,6 +54,7 @@ const integratedAdminRoutes = composeAdminRoutes([
   MOD_D_ADMIN_ROUTES,
   LOCALIZATION_COMPLIANCE_ADMIN_ROUTES,
   MOD_G_ADMIN_ROUTES,
+  STOREFRONT_ADMIN_ROUTES,
 ]);
 
 const MOD_G_EMBEDDED_STYLES = `<style>
@@ -156,3 +159,4 @@ export function renderComplianceAdminPage(input: Omit<AdminShellInput, "content"
 export function renderReportingAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page: ReportingOperationsPage): string { return renderAdminShell({ ...input, currentPath: "/reporting", content: embedPageRoot(renderReportingOperationsPage(page), "modg-page", "Reporting operations") }); }
 export function renderIntegrationsAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page: IntegrationConsolePage): string { return renderAdminShell({ ...input, currentPath: "/integrations", content: embedPageRoot(renderIntegrationConsolePage(page), "modg-int", "Integration console") }); }
 export function renderSaasOperationsAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page: SaasAdminPage): string { return renderAdminShell({ ...input, currentPath: "/platform/saas", content: embedPageRoot(renderSaasAdminPage(page), "modg-saas", "SaaS administration") }); }
+export function renderStorefrontAdminPage(input: Omit<AdminShellInput, "content" | "currentPath">, page: StorefrontOperationsPage): string { return renderAdminShell({ ...input, currentPath: "/storefront", content: embedPageRoot(renderStorefrontOperationsPage(page), "modh-page", "Storefront operations") }); }

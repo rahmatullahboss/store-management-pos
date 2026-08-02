@@ -14,6 +14,12 @@ import { handleLocalizationRequest } from "./modules/localization/handler.js";
 import { handlePosRequest } from "./modules/pos/handler.js";
 import { handlePosReceiptRequest } from "./modules/pos/receipt-handler.js";
 import { handleProcurementRequest } from "./modules/procurement/handler.js";
+import { handleStorefrontRequest } from "./modules/storefront/handler.js";
+import { handleStorefrontPublishingRequest } from "./modules/storefront/publishing-handler.js";
+import { handlePublicStorefrontCacheRequest } from "./modules/storefront/public-cache-handler.js";
+import { handlePublicStorefrontMediaRequest } from "./modules/storefront/public-media-handler.js";
+import { handlePublicStorefrontRequest } from "./modules/storefront/public-handler.js";
+import { handleStorefrontReadRequest } from "./modules/storefront/read-handler.js";
 import { handleCreatePaymentIntent, handleCreateRefund, handleImportSettlement, handlePaymentAction } from "./payment-handler.js";
 import { handlePublicApiDiscovery } from "./public-api-discovery.js";
 import { handlePublicPartnerApi, type PublicPartnerApiBindings } from "./public-partner-api.js";
@@ -42,6 +48,12 @@ export default {
       if (discoveryResponse) return discoveryResponse;
       if (request.method === "GET" && url.pathname === "/health") return Response.json({ status: "healthy", service: "api", databaseMode: "direct-neon", region: env.REGION });
       const database = new NeonDatabase({ connectionString: env.DATABASE_URL });
+      const publicCacheResponse = await handlePublicStorefrontCacheRequest(request, url, database);
+      if (publicCacheResponse) return publicCacheResponse;
+      const publicMediaResponse = await handlePublicStorefrontMediaRequest(request, url, database);
+      if (publicMediaResponse) return publicMediaResponse;
+      const publicStorefrontResponse = await handlePublicStorefrontRequest(request, url, database);
+      if (publicStorefrontResponse) return publicStorefrontResponse;
       const publicPartnerResponse = await handlePublicPartnerApi({ request, url, database, bindings: env, requestId, region: env.REGION });
       if (publicPartnerResponse) return publicPartnerResponse;
       const verifier = createTokenVerifier(env, database);
@@ -64,6 +76,12 @@ export default {
       if (localizationResponse) return localizationResponse;
       const complianceResponse = await handleComplianceRequest(request, url, context, database, env.FISCAL_PROVIDERS);
       if (complianceResponse) return complianceResponse;
+      const storefrontReadResponse = await handleStorefrontReadRequest(request, url, context, database);
+      if (storefrontReadResponse) return storefrontReadResponse;
+      const storefrontPublishingResponse = await handleStorefrontPublishingRequest(request, url, context, database);
+      if (storefrontPublishingResponse) return storefrontPublishingResponse;
+      const storefrontResponse = await handleStorefrontRequest(request, url, context, database);
+      if (storefrontResponse) return storefrontResponse;
 
       if (request.method === "POST" && url.pathname === "/v1/payments/intents") return await observeFinance("payment", "intent.create", async () => await handleCreatePaymentIntent(request, context, database, env));
       const paymentAction = url.pathname.match(/^\/v1\/payments\/intents\/([^/]+)\/(authorize|capture|void|recover)$/u);

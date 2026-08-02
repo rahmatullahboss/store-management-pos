@@ -1,0 +1,258 @@
+name: Storefront CI
+
+on:
+  pull_request:
+    branches:
+      - program/integration-v1
+    paths:
+      - "apps/storefront-web/**"
+      - "apps/admin-web/src/modules/storefront/**"
+      - "apps/admin-web/src/app-shell/**"
+      - "packages/storefront-client/**"
+      - "packages/storefront-contracts/**"
+      - "packages/storefront-theme/**"
+      - "database/modules/storefront/**"
+      - "tests/unit/storefront-*.test.mjs"
+      - "tests/integration/storefront-*.sql"
+      - "tooling/scripts/storefront-design-evidence.mjs"
+      - "tooling/scripts/storefront-design-evidence-runner.mjs"
+      - "tooling/scripts/storefront-checkout-recovery-design-evidence.mjs"
+      - "tooling/scripts/storefront-checkout-recovery-design-evidence-runner.mjs"
+      - "tooling/scripts/storefront-order-tracking-design-evidence.mjs"
+      - "tooling/scripts/storefront-performance-rehearsal.mjs"
+      - "tooling/scripts/storefront-admin-design-evidence.mjs"
+      - "tooling/scripts/storefront-public-content-design-evidence.mjs"
+      - "tooling/scripts/storefront-public-catalog-design-evidence.mjs"
+      - "tooling/scripts/storefront-public-discovery-design-evidence.mjs"
+      - "tooling/scripts/storefront-public-search-filter-design-evidence.mjs"
+      - "tooling/scripts/storefront-postgres-rehearsal.mjs"
+      - "tooling/scripts/validate-module-migrations.mjs"
+      - "tooling/scripts/apply-migrations.mjs"
+      - "docs/architecture/storefront/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/storefront-ci.yml"
+  push:
+    branches:
+      - program/integration-v1
+      - module/storefront-commerce-v1
+    paths:
+      - "apps/storefront-web/**"
+      - "apps/admin-web/src/modules/storefront/**"
+      - "apps/admin-web/src/app-shell/**"
+      - "packages/storefront-client/**"
+      - "packages/storefront-contracts/**"
+      - "packages/storefront-theme/**"
+      - "database/modules/storefront/**"
+      - "tests/unit/storefront-*.test.mjs"
+      - "tests/integration/storefront-*.sql"
+      - "tooling/scripts/storefront-design-evidence.mjs"
+      - "tooling/scripts/storefront-design-evidence-runner.mjs"
+      - "tooling/scripts/storefront-checkout-recovery-design-evidence.mjs"
+      - "tooling/scripts/storefront-checkout-recovery-design-evidence-runner.mjs"
+      - "tooling/scripts/storefront-order-tracking-design-evidence.mjs"
+      - "tooling/scripts/storefront-performance-rehearsal.mjs"
+      - "tooling/scripts/storefront-admin-design-evidence.mjs"
+      - "tooling/scripts/storefront-public-content-design-evidence.mjs"
+      - "tooling/scripts/storefront-public-catalog-design-evidence.mjs"
+      - "tooling/scripts/storefront-public-discovery-design-evidence.mjs"
+      - "tooling/scripts/storefront-public-search-filter-design-evidence.mjs"
+      - "tooling/scripts/storefront-postgres-rehearsal.mjs"
+      - "tooling/scripts/validate-module-migrations.mjs"
+      - "tooling/scripts/apply-migrations.mjs"
+      - "docs/architecture/storefront/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/storefront-ci.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: storefront-ci-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - name: Install exact dependencies
+        run: npm ci --ignore-scripts
+      - name: Root format, type and storefront unit gates
+        run: |
+          npm run format:check
+          npm run lint
+          npm run check:boundaries
+          npm run typecheck
+          npm run db:validate
+          npm test
+      - name: Astro Cloudflare build
+        run: npm run storefront:build
+      - name: Security and dependency gates
+        run: |
+          npm run check:secrets
+          npm run check:licenses
+          npm run sbom
+          npm audit --audit-level=high
+
+  postgres-rehearsal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: verify
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: storefront_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d storefront_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql://postgres@127.0.0.1:5432/storefront_test
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - name: Install PostgreSQL client and exact dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends postgresql-client
+          npm ci --ignore-scripts
+      - name: Run storefront PostgreSQL migration and command rehearsal
+        run: |
+          set -o pipefail
+          mkdir -p artifacts/storefront
+          npm run db:validate
+          npm run storefront:db:rehearsal | tee artifacts/storefront/postgres-rehearsal.txt
+      - name: Upload PostgreSQL rehearsal evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: storefront-postgres-${{ github.run_id }}
+          path: artifacts/storefront/postgres-rehearsal.txt
+          if-no-files-found: warn
+          retention-days: 14
+
+  browser-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: verify
+    env:
+      CHROME_PATH: /usr/bin/google-chrome
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - name: Install exact dependencies
+        run: npm ci --ignore-scripts
+      - name: Load storefront design context
+        run: |
+          mkdir -p artifacts/storefront
+          node .agents/skills/impeccable/scripts/context.mjs --target apps/storefront-web/src/components/ProductCard.astro | tee artifacts/storefront/impeccable-context.txt
+          node .agents/skills/impeccable/scripts/context.mjs --target apps/storefront-web/src/components/CheckoutRecovery.astro | tee artifacts/storefront/checkout-recovery-impeccable-context.txt
+          node .agents/skills/impeccable/scripts/context.mjs --target apps/storefront-web/src/components/OrderTracking.astro | tee artifacts/storefront/order-tracking-impeccable-context.txt
+          node .agents/skills/impeccable/scripts/context.mjs --target apps/admin-web/src/modules/storefront/page.ts | tee artifacts/storefront/admin-impeccable-context.txt
+      - name: Run buyer browser and accessibility evidence
+        run: |
+          npm run storefront:design:verify
+          node tooling/scripts/storefront-checkout-recovery-design-evidence-runner.mjs
+          node tooling/scripts/storefront-order-tracking-design-evidence.mjs
+      - name: Run bounded storefront performance rehearsal
+        run: node tooling/scripts/storefront-performance-rehearsal.mjs
+      - name: Run admin browser and accessibility evidence
+        run: |
+          npm run build
+          node tooling/scripts/storefront-admin-design-evidence.mjs
+      - name: Upload storefront evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: storefront-evidence-${{ github.run_id }}
+          path: |
+            artifacts/storefront/impeccable-context.txt
+            artifacts/storefront/checkout-recovery-impeccable-context.txt
+            artifacts/storefront/order-tracking-impeccable-context.txt
+            artifacts/storefront/admin-impeccable-context.txt
+            docs/architecture/storefront/design-evidence/
+            docs/architecture/storefront/checkout-recovery-design-evidence/
+            docs/architecture/storefront/order-tracking-design-evidence/
+            docs/architecture/storefront/performance-evidence/
+            docs/architecture/storefront/admin-design-evidence/
+          if-no-files-found: warn
+          retention-days: 14
+
+  neon-recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: verify
+    concurrency:
+      group: neon-preview-lifecycle-${{ github.repository }}
+      cancel-in-progress: false
+    env:
+      NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: Run non-destructive Neon recovery evidence
+        run: npm run ci:neon-recovery
+      - name: Upload Neon recovery evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: storefront-neon-recovery-${{ github.run_id }}
+          path: artifacts/foundation/neon-recovery-report.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  cloudflare-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: verify
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: Deploy application preview
+        run: npm run ci:cloudflare-preview
+      - name: Verify runtime metrics
+        run: npm run metrics:cloudflare-runtime
+      - name: Cleanup Cloudflare preview Worker
+        if: always()
+        run: npm run cleanup:cloudflare-preview
+      - name: Upload Cloudflare evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: storefront-cloudflare-${{ github.run_id }}
+          path: artifacts/foundation/cloudflare-*.json
+          if-no-files-found: warn
+          retention-days: 14

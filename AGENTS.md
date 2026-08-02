@@ -7,6 +7,7 @@ This repository uses documentation-first, module-owned development.
 - Complete the Foundation workpack first with one agent.
 - Do not start MOD-A through MOD-G until the Foundation Gate passes.
 - After foundation, one agent owns one complete large module workpack.
+- MOD-H Storefront Commerce is an additive post-foundation workpack activated by the product owner after MOD-A through MOD-F integration.
 - Do not create separate agents for endpoints, tables, screens, migrations or tests inside a workpack.
 - Module agents may develop concurrently only in separate Git worktrees, Git branches and Neon database branches.
 - Integration and merge remain controlled and serial.
@@ -33,6 +34,7 @@ Before implementation, read:
 16. `docs/open-source/reuse-register.yaml`
 17. `PRODUCT.md`
 18. `docs/18-IMPECCABLE-DESIGN-WORKFLOW.md`
+19. For MOD-H, `docs/architecture/storefront/START-HERE.md`, `docs/architecture/storefront/status.yaml` and `docs/architecture/storefront/upstream-file-manifest.yaml`
 
 ## Architecture constraints
 
@@ -46,13 +48,18 @@ Before implementation, read:
 - Tenant, legal entity, store, warehouse, register, timezone and business date are first-class dimensions.
 - Offline POS uses a durable local operation log and idempotent synchronization.
 - D1, KV, Durable Objects and client storage are never fallback canonical databases.
+- A storefront is a sales channel and buyer presentation surface, not a second pricing, stock, order, payment or accounting authority.
+- Public storefront cache keys must isolate tenant, storefront, hostname, locale, currency, price-list/channel revision and content generation.
 
-## Open-source policy
+## Open-source and source-rights policy
 
 - MIT, BSD, ISC and Apache-2.0 components may be used only after file/revision provenance and notice review.
 - ERPNext, Odoo/OCA, Dolibarr and other GPL/AGPL implementations are reference-only by default.
-- Do not copy GPL, AGPL, unknown or custom-license code into the proprietary core.
-- Record every approved dependency or adapted file in `docs/open-source/reuse-register.yaml`.
+- Do not copy GPL, AGPL, unknown or custom-license code into the proprietary core without an explicit recorded product-owner/source-rights approval.
+- A recorded source-rights exception must identify the exact repository, commit, files, allowed product boundary, provenance/notice handling and update owner in `docs/open-source/reuse-register.yaml` and any workpack file manifest.
+- Product-facing rebranding never permits deletion of required internal copyright, licence or provenance records.
+- MOD-H may selectively adapt the reviewed storefront source only within its recorded storefront boundary; it may not import the upstream D1/database/core business authority.
+- Record every approved dependency or adapted file in `docs/open-source/reuse-register.yaml` or the owning workpack's file-level manifest before or in the same commit as the import.
 
 ## UI and design workflow
 
@@ -61,6 +68,7 @@ Before implementation, read:
 - Read the owning Impeccable command reference and `reference/craft-floor.md` before UI implementation.
 - New substantial screens/flows require shaping; completed UI requires hardening, deterministic detection, accessibility/responsive verification and a final polish/finish review.
 - Inherit the approved shared visual system. Do not create a parallel component library or module-specific visual language.
+- Buyer storefront surfaces may have merchant-configurable semantic themes, but platform admin/POS surfaces remain under the Operations Ledger design system.
 - `PRODUCT.md` owns product truth. `DESIGN.md`, after it exists, owns durable implemented visual decisions.
 - Do not create speculative `DESIGN.md`; the Foundation Agent writes it only after the first real application shell is implemented and reviewed.
 - Record Impeccable commands, detector results, visual evidence and unresolved findings in every UI-bearing workpack handoff.
