@@ -2,15 +2,15 @@
 
 Status: **active with external runtime blockers**
 
-Completed slices: `H7-CACHE-ISOLATION-01`, `H7-ABUSE-CONTRACT-02`, `H7-OBS-RUNBOOK-03`, `H7-FAIL-CLOSED-MATRIX-04`, `H7-PERF-CACHE-05`
+Completed slices: `H7-CACHE-ISOLATION-01`, `H7-ABUSE-CONTRACT-02`, `H7-OBS-RUNBOOK-03`, `H7-FAIL-CLOSED-MATRIX-04`, `H7-PERF-CACHE-05`, `H7-RUNTIME-BRIDGES-06`
 
-Latest fully verified implementation head: `8666a1440d5139a132c5028f3b64ad0912855eaf`
+Latest fully verified implementation head: `c5e6fa19db9494eb6e8b7970ee7e69db64986342`
 
-Latest fully verified Storefront CI: `30726322406`
+Latest fully verified Storefront CI: `30732951052`
 
 ## Objective
 
-Close storefront hardening gates without inventing runtime authority outside MOD-H. H7 covers cache isolation/invalidation, abuse controls, privacy-safe observability, fail-closed release safety, bounded performance evidence, recovery/runbooks and final handoff readiness.
+Close storefront hardening gates without inventing runtime authority outside MOD-H. H7 covers cache isolation/invalidation, abuse controls, privacy-safe observability, fail-closed release safety, bounded performance evidence, provider/sink integration boundaries, recovery/runbooks and final handoff readiness.
 
 ## H7-CACHE-ISOLATION-01 — complete and verified
 
@@ -77,7 +77,7 @@ The gate proves:
 - the machine tracker explicitly keeps H4–H7 blockers and blocked states visible;
 - relaxing a blocked route/provider requires an explicit code/test/tracker change rather than accidental import/registration.
 
-The tracker assertion was made future-safe: it validates a non-H3 40-hex verified head instead of hardcoding one old H7 SHA.
+The tracker assertion is future-safe: it validates a non-H3 40-hex verified head instead of hardcoding one old H7 SHA.
 
 Verified future-safe head: `7b858b601cc83fc7bd65d3847ebaa7d9e5998cdc`
 
@@ -99,7 +99,7 @@ The rehearsal:
 - writes `docs/architecture/storefront/performance-evidence/report.json`;
 - explicitly records `evidenceKind: bounded-local-rehearsal` and `productionSla: false`.
 
-Verified run result: **64/64 requests passed, p95 86.31 ms**.
+Original verified slice result: **64/64 requests passed, p95 86.31 ms**.
 
 This evidence is a deterministic regression/load rehearsal, not a production latency/throughput SLA claim.
 
@@ -115,32 +115,87 @@ Strengthened `tests/integration/storefront-cache-family-rehearsal.sql` to verify
 
 The rehearsal also proves targeted media invalidation increments media exactly once without changing catalog, idempotent replay stays single-effect, conflicting replay is rejected, audit/outbox/receipt evidence exists, and runtime cannot execute the internal cache-reason policy function.
 
-### Exact verified evidence
-
 Implementation head: `8666a1440d5139a132c5028f3b64ad0912855eaf`
 
 Storefront CI: `30726322406`
 
-Latest successful attempt jobs:
+## H7-RUNTIME-BRIDGES-06 — complete and verified; provider/sink activation blocked
 
-- verify `91439163345` — passed;
-- PostgreSQL 17 rehearsal `91439153771` — passed;
-- browser/accessibility + bounded performance `91439153689` — passed;
-- Cloudflare preview/runtime/cleanup `91439153617` — passed after targeted rerun of an earlier transient local preview 502;
-- non-destructive Neon recovery `91439153353` — passed after targeted rerun of the earlier concurrency-cancelled job.
+MOD-H now has strict integration-side bridges for Issues #107 and #108 without implementing or activating the missing shared runtime capabilities.
 
-No source guard, performance budget, or assertion was weakened to recover those external/transient jobs.
+### Distributed abuse provider bridge
+
+`modules/storefront/src/abuse-control-provider-bridge.ts`:
+
+- accepts only the already-normalized `storefront-abuse-control-request.v1` boundary;
+- revalidates anonymous `trusted_edge` versus authenticated `authenticated_session` key provenance;
+- creates a versioned `storefront-distributed-abuse-provider-request.v1` for a trusted shared/provider-native runtime;
+- never derives identity from `X-Forwarded-For`, `CF-Connecting-IP`, `True-Client-IP` or other browser-selected headers;
+- accepts only `source: trusted-distributed-provider` result envelopes;
+- rejects raw IP, provider rule IDs/tokens, raw fingerprints and arbitrary metadata;
+- maps provider results through the existing strict `storefront-abuse-control-decision.v1` parser so allow/deny/unavailable, Retry-After and route-specific fail-open/fail-closed semantics cannot be widened by the bridge.
+
+This is an adapter contract, not a distributed limiter. Issue #107 still owns the actual cross-isolate/region provider/native state, production trusted-key derivation, concurrency/expiry behavior, thresholds and runtime binding.
+
+### Operational sink bridge
+
+`modules/storefront/src/operational-sink-bridge.ts`:
+
+- exposes an injectable sink boundary rather than an ad-hoc logger;
+- validates the event with `parseStorefrontOperationalEventV1` before sink invocation;
+- therefore rejects sensitive/free-form event fields before a sink can observe them;
+- uses a strict versioned bounded receipt;
+- collapses sink transport exceptions to `sink_unavailable` without exception text;
+- collapses malformed/provider-internal sink output to `configuration_error` without forwarding secret fields;
+- never changes commerce/domain authority based on telemetry success or failure.
+
+Issue #108 still owns the approved production sink, retention/redaction configuration, metric/trace mapping, credentials/runtime binding and production evidence.
+
+### Fail-closed runtime isolation
+
+The release matrix was strengthened to prove neither bridge is imported by `apps/api/src/index.ts` nor `apps/storefront-web/src/runtime.ts`. Live abuse enforcement and operational sink delivery therefore remain explicitly unwired until the owning runtime capabilities are supplied.
+
+### Exact verified evidence
+
+Implementation head: `c5e6fa19db9494eb6e8b7970ee7e69db64986342`
+
+Storefront CI: `30732951052`
+
+Latest successful attempt:
+
+- verify `91456600965` — passed;
+- PostgreSQL 17 rehearsal `91456595248` — passed;
+- browser/accessibility/performance `91456595266` — passed;
+- Cloudflare preview/runtime/cleanup `91456595173` — passed;
+- non-destructive Neon recovery `91456595008` — passed after targeted rerun of the earlier concurrency-cancelled job.
+
+Browser evidence at this exact implementation head:
+
+- Astro check: 27 files, 0 errors, 0 warnings, 0 hints;
+- buyer evidence: 5/5 across 4 locales with 1 low-bandwidth scenario;
+- admin evidence: 4/4;
+- public content: 3/3;
+- public catalog: 3/3;
+- public discovery: 3/3 with 0 Axe violations;
+- public search/filter: passed with 0 Axe violations;
+- checkout recovery: 4/4;
+- order tracking: 4/4;
+- bounded synthetic performance: **64/64 requests, p95 78.24 ms**, `productionSla: false`.
+
+Evidence artifact: 45 files, SHA-256 `e5d7d922721bbbbc584e0b9acc2ab9862f81aa5bc466f31a0d2739a470af164a`.
+
+No runtime provider, logger, authority guard, privacy rule or performance budget was weakened to obtain green CI.
 
 ## Machine tracker and handoff
 
-`docs/architecture/storefront/status.yaml` preserves historical H0–H3 evidence and tracks H4–H7 blocked/verified slices.
+`docs/architecture/storefront/status.yaml` preserves historical H0–H3 evidence and tracks H4–H7 blocked/verified slices. Because repository tooling currently exposes whole-file replacement rather than a safe semantic partial patch for this large historical tracker, historical evidence must not be truncated merely to advance one slice.
 
 `docs/agent-handoffs/MOD-H-STOREFRONT-COMMERCE-PROGRESS.md` contains the verified checkpoint ledger, fail-closed matrix, blockers and serial integration rules.
 
 ## Remaining H7 work
 
-1. integrate Issue #107 distributed abuse provider;
-2. integrate Issue #108 approved shared telemetry sink without widening the envelope;
+1. integrate the actual Issue #107 distributed abuse provider through the verified bridge;
+2. integrate the actual Issue #108 approved shared telemetry sink through the verified bridge without widening the envelope;
 3. keep H4–H6 authority surfaces fail closed while Issues #97/#98/#100/#101/#102/#104 are resolved;
 4. run fresh exact-head Storefront CI after final owning-module/runtime integration;
 5. replace the progress handoff with a final completion receipt only after all workpack gates pass.
@@ -153,5 +208,5 @@ No source guard, performance budget, or assertion was weakened to recover those 
 - #101 — trusted customer binding + storefront-scoped MOD-C order reads;
 - #102 — buyer-safe return/support request capability;
 - #104 — trusted custom-hostname verification/certificate provider lifecycle;
-- #107 — distributed storefront abuse/rate-limit provider;
-- #108 — approved shared operational telemetry sink preserving the strict storefront envelope.
+- #107 — distributed storefront abuse/rate-limit provider/native runtime feeding the verified bridge;
+- #108 — approved shared operational telemetry sink feeding the verified privacy-safe bridge.
