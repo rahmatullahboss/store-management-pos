@@ -126,6 +126,7 @@ export interface StorefrontOrderHistoryRequestV1 {
 
 const UUID =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+const OPAQUE_CURSOR = /^[A-Za-z0-9._~:=-]{1,512}$/u;
 const INTEGER = /^(?:0|[1-9][0-9]*)$/u;
 const SIGNED_INTEGER = /^-?(?:0|[1-9][0-9]*)$/u;
 const CURRENCY = /^[A-Z]{3}$/u;
@@ -175,6 +176,16 @@ function uuid(value: unknown, label: string): string {
   const normalized = boundedText(value, label, 36).toLowerCase();
   if (!UUID.test(normalized)) {
     throw new StorefrontContractError(`${label} must be a UUID.`);
+  }
+  return normalized;
+}
+
+function opaqueCursor(value: unknown, label: string): string {
+  const normalized = boundedText(value, label, 512);
+  if (!OPAQUE_CURSOR.test(normalized)) {
+    throw new StorefrontContractError(
+      `${label} must be a bounded URL-safe opaque token.`,
+    );
   }
   return normalized;
 }
@@ -417,9 +428,10 @@ export function parseStorefrontOrderHistoryRequestV1(value: unknown): Storefront
   }
   return Object.freeze({
     contractVersion: "storefront-order-history-request.v1",
-    cursor: source.cursor === null || source.cursor === undefined || source.cursor === ""
-      ? null
-      : uuid(source.cursor, "orderHistoryRequest.cursor"),
+    cursor:
+      source.cursor === null || source.cursor === undefined || source.cursor === ""
+        ? null
+        : opaqueCursor(source.cursor, "orderHistoryRequest.cursor"),
     limit: limit as number,
   });
 }
@@ -436,10 +448,13 @@ export function parseStorefrontOrderHistoryPageV1(value: unknown): StorefrontOrd
   return Object.freeze({
     contractVersion: "storefront-order-history.v1",
     context: hostContext(source.context),
-    items: Object.freeze(source.items.map((item, index) => orderSummary(item, `orderHistory.items[${index}]`))),
-    nextCursor: source.nextCursor === null || source.nextCursor === undefined || source.nextCursor === ""
-      ? null
-      : uuid(source.nextCursor, "orderHistory.nextCursor"),
+    items: Object.freeze(
+      source.items.map((item, index) => orderSummary(item, `orderHistory.items[${index}]`)),
+    ),
+    nextCursor:
+      source.nextCursor === null || source.nextCursor === undefined || source.nextCursor === ""
+        ? null
+        : opaqueCursor(source.nextCursor, "orderHistory.nextCursor"),
   });
 }
 
