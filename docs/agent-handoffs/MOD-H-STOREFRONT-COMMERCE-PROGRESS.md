@@ -8,9 +8,9 @@ Integration target: `program/integration-v1`
 
 Draft PR: #48
 
-Latest fully verified implementation head: `2f8569a2e47922bb5d77e584f605fac85dabeb5f`
+Latest fully verified implementation head: `7485f4e80c468de328093fcc09fd22efdc25a110`
 
-Latest fully verified Storefront CI: `30726829026`
+Latest fully verified Storefront CI: `30727323408`
 
 This document is a progress handoff, not a completion receipt. MOD-H must remain draft until the owning-module/runtime blockers and final H7 gates listed below are resolved and verified.
 
@@ -46,20 +46,7 @@ Storefront CI: `30726829026`
 
 Implemented authority-free cart persistence, exact quantity/money contracts, strict buyer quote intent, publication/customer/multi-warehouse revalidation, MOD-C quote bridge without privilege synthesis, checkout capability/recovery contracts and submit freshness/idempotency preflight.
 
-Recovery derivation now consumes only the factual quote/capability fields it actually needs. Full production envelopes remain structurally compatible, while the synthetic evidence route no longer uses `as never` escape casts. No authority or route behavior changed.
-
-Latest exact-head evidence:
-
-- verify `91439948732` — passed;
-- PostgreSQL `91440010432` — passed;
-- browser/accessibility/performance `91440010415` — passed;
-- Cloudflare `91440010410` — passed;
-- Neon recovery `91440010607` — passed;
-- Astro **27 files, 0 errors, 0 warnings, 0 hints**;
-- buyer **5/5**, checkout recovery **4/4**, order tracking **4/4**, admin **4/4**;
-- bounded synthetic performance **64/64**, p95 **64.67 ms**, not a production SLA.
-
-Still deliberately unregistered/fail closed: public quote, checkout capability and checkout submission mutation routes.
+Recovery derivation consumes only the factual quote/capability fields it needs. Full production envelopes remain structurally compatible, while the synthetic evidence route no longer uses escape casts. Public quote/capability/submit routes remain unregistered/fail closed.
 
 Blockers: #97, #98, #100.
 
@@ -69,9 +56,23 @@ Status: **blocker-independent reads/presentation complete; live private routes b
 
 Verified private/security head: `b35b0e260abdcfd882240437f47f59f98a2e7548`
 
-Storefront CI: `30723499435`
+Latest verified pagination refinement head: `7485f4e80c468de328093fcc09fd22efdc25a110`
+
+Storefront CI: `30727323408`
 
 Implemented private profile/order contracts, authenticated-session-only principal, no browser-selected customer authority, strict tenant/legal-entity/store/customer/storefront/sales-channel revalidation, exact-money projection, privacy/internal-authority redaction, HTTPS/no-store clients, unregistered private handler, generic private 403 denial and multilingual read-only order tracking.
+
+`H5-PAGINATION-04` removes the incorrect assumption that a MOD-C order-history cursor must be a UUID. Request and response cursors are now bounded URL-safe opaque tokens up to 512 characters; UUID cursors remain valid. Slash/path syntax, whitespace/control characters and oversized cursors fail closed. Customer/order/product/variant identities remain UUID-only. The module forwards and projects the opaque cursor without interpreting it, and the typed private client round-trips it without sending customer identity.
+
+Exact pagination evidence:
+
+- verify `91441336353` — passed;
+- PostgreSQL `91441384231` — passed;
+- browser/accessibility/performance `91441384334` — passed;
+- Cloudflare `91441384267` — passed;
+- Neon recovery `91441384470` — passed.
+
+The first pagination head failed only the repository final-newline formatter before type/tests; the follow-up changed only those missing final newlines and preserved the opaque-cursor semantics.
 
 Still deliberately unregistered: private profile, order history/detail and live private tracking routes.
 
@@ -121,7 +122,7 @@ Future-safe exact head: `7b858b601cc83fc7bd65d3847ebaa7d9e5998cdc`
 
 Storefront CI: `30726144155`
 
-Added CI-level release matrix proving blocked commerce/private handlers are absent from live roots, domain provider observation stays intercepted before command execution, abuse/telemetry providers are not silently wired and H4–H7 blocker state remains machine-visible. The tracker assertion validates a progressing non-H3 verified SHA rather than hardcoding one old H7 head.
+CI proves blocked commerce/private handlers are absent from live roots, domain provider observation stays intercepted before command execution, abuse/telemetry providers are not silently wired and H4–H7 blocker state remains machine-visible.
 
 #### H7-PERF-CACHE-05 — complete/verified
 
@@ -129,16 +130,7 @@ Exact implementation head: `8666a1440d5139a132c5028f3b64ad0912855eaf`
 
 Storefront CI: `30726322406`
 
-Bounded local performance rehearsal:
-
-- synthetic evidence only, no customer/production data;
-- 64 requests, concurrency 8;
-- 64/64 passed;
-- p95 **86.31 ms** on that checkpoint;
-- response budget <= 512 KiB;
-- report explicitly records `productionSla: false`.
-
-This is a regression/load rehearsal, not a production SLA claim. The newer exact head `2f8569a2…` reran the same gate at p95 **64.67 ms**.
+Bounded local performance rehearsal uses only synthetic evidence, 64 requests at concurrency 8, a <=512 KiB response budget and explicitly records `productionSla: false`. The checkpoint passed 64/64 at p95 86.31 ms; the later recovery-refinement head reran the same gate at p95 64.67 ms. This is regression/load evidence, not a production SLA claim.
 
 PostgreSQL cache invalidation evidence verifies theme/category/collection/product reason→family fan-out, conservative all-family fallback, targeted media isolation, replay/conflict behavior, audit/outbox/receipt evidence and internal-policy privilege restrictions.
 
