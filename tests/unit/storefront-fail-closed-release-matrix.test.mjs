@@ -38,9 +38,19 @@ test("buyer runtime does not silently wire blocked abuse or telemetry providers"
       "distributed abuse provider must be integrated explicitly after Issue #107",
     );
     assert.equal(
+      sourceText.includes("abuse-control-provider-bridge"),
+      false,
+      "trusted distributed abuse bridge must stay off live roots before Issue #107 integration",
+    );
+    assert.equal(
       sourceText.includes("modules/storefront/src/observability.js"),
       false,
       "storefront operational sink must be integrated explicitly after Issue #108",
+    );
+    assert.equal(
+      sourceText.includes("operational-sink-bridge"),
+      false,
+      "trusted operational sink bridge must stay off live roots before Issue #108 integration",
     );
   }
 });
@@ -124,6 +134,9 @@ test("fail-closed matrix can only be relaxed by an explicit blocker-aware code c
   assert.equal(combined.includes("handleStorefrontCartQuoteRequest"), false);
   assert.equal(combined.includes("handleStorefrontCheckoutCapabilityRequest"), false);
   assert.equal(combined.includes("STOREFRONT_ABUSE_CONTROL_UNAVAILABLE"), false);
+  assert.equal(combined.includes("createStorefrontDistributedAbuseProviderRequestV1"), false);
+  assert.equal(combined.includes("mapStorefrontDistributedAbuseProviderResultV1"), false);
   assert.equal(combined.includes("serializeStorefrontOperationalEventV1"), false);
+  assert.equal(combined.includes("deliverStorefrontOperationalEventV1"), false);
   assert.equal(handler.includes("DOMAIN_PROVIDER_CONTROL_UNAVAILABLE"), true);
 });
