@@ -8,11 +8,11 @@ Integration target: `program/integration-v1`
 
 Draft PR: #48
 
-Latest fully verified implementation head: `c52b688f28595cd41c5d735d038436670e638b68`
+Latest fully verified implementation head: `c5e6fa19db9494eb6e8b7970ee7e69db64986342`
 
-Latest fully verified Storefront CI: `30727839962`
+Latest fully verified Storefront CI: `30732951052`
 
-This document is a progress handoff, not a completion receipt. MOD-H must remain draft until the owning-module/runtime blockers and final H7 gates listed below are resolved and verified.
+This document is a progress handoff, not a completion receipt. MOD-H must remain draft until the owning-module/runtime blockers and final activation gates listed below are resolved and verified.
 
 ## 1. Integration safety
 
@@ -91,14 +91,6 @@ The bridge rejects raw provider tokens, free-form failure detail, tenant-style c
 
 The fail-closed release matrix statically proves the bridge is not imported by the API root, tenant-facing storefront handler or buyer runtime. External provider verification/certificate routes therefore remain 503 until #104 supplies the approved transport/control-plane authority.
 
-Exact bridge evidence:
-
-- verify `91442940083` — passed;
-- PostgreSQL `91442990684` — passed;
-- browser/accessibility/performance `91442990692` — passed;
-- Cloudflare `91442789500` — passed;
-- Neon recovery `91442990854` — passed after targeted rerun of the concurrency-cancelled job.
-
 The integrated MOD-G release was inspected and contains generic connector/webhook/credential infrastructure, but no storefront custom-hostname lifecycle authority. #104 is therefore a real remaining capability gap, not a stale integration gap.
 
 ### H7 — hardening
@@ -141,9 +133,48 @@ Exact implementation head: `8666a1440d5139a132c5028f3b64ad0912855eaf`
 
 Storefront CI: `30726322406`
 
-Bounded local performance rehearsal uses only synthetic evidence, 64 requests at concurrency 8, a <=512 KiB response budget and explicitly records `productionSla: false`. The checkpoint passed 64/64 at p95 86.31 ms; later verified heads continue to rerun the same gate. This is regression/load evidence, not a production SLA claim.
+Bounded local performance rehearsal uses only synthetic evidence, 64 requests at concurrency 8, a <=512 KiB response budget and explicitly records `productionSla: false`. The original slice passed 64/64 at p95 86.31 ms; later verified heads continue to rerun the same gate. This is regression/load evidence, not a production SLA claim.
 
 PostgreSQL cache invalidation evidence verifies theme/category/collection/product reason→family fan-out, conservative all-family fallback, targeted media isolation, replay/conflict behavior, audit/outbox/receipt evidence and internal-policy privilege restrictions.
+
+#### H7-RUNTIME-BRIDGES-06 — complete/verified; provider and sink activation blocked
+
+Exact implementation head: `c5e6fa19db9494eb6e8b7970ee7e69db64986342`
+
+Storefront CI: `30732951052`
+
+MOD-H now has strict integration-side bridges for the two remaining H7 runtime dependencies without inventing either missing runtime service.
+
+Distributed abuse bridge:
+
+- `modules/storefront/src/abuse-control-provider-bridge.ts` accepts only normalized MOD-H abuse requests;
+- revalidates anonymous trusted-edge versus authenticated-session key provenance;
+- creates a versioned trusted-runtime provider request;
+- accepts only `source: trusted-distributed-provider` results;
+- rejects raw IP, provider rules/tokens, raw fingerprints and arbitrary metadata;
+- maps through the existing strict abuse decision parser, preserving 429/503, Retry-After and route-specific fail-open/fail-closed policy.
+
+Operational sink bridge:
+
+- `modules/storefront/src/operational-sink-bridge.ts` validates `storefront-operational-event.v1` before sink invocation;
+- sensitive/free-form fields therefore cannot reach the sink;
+- sink exceptions become bounded `sink_unavailable` without exception leakage;
+- malformed/provider-internal receipts become bounded `configuration_error` without secret leakage;
+- telemetry delivery never mutates commerce/domain authority.
+
+The fail-closed release matrix additionally proves both bridges remain absent from API/buyer runtime roots. They are integration-ready contracts, not live providers.
+
+Exact successful attempt:
+
+- verify `91456600965` — passed;
+- PostgreSQL `91456595248` — passed;
+- browser/accessibility/performance `91456595266` — passed;
+- Cloudflare `91456595173` — passed;
+- Neon recovery `91456595008` — passed after targeted rerun of an earlier concurrency cancellation.
+
+Browser evidence at this exact head: Astro 27 files / 0 errors / 0 warnings / 0 hints; buyer 5/5 across 4 locales with one bounded low-bandwidth scenario; admin 4/4; checkout recovery 4/4; order tracking 4/4; discovery/search Axe 0; bounded synthetic load 64/64 at p95 **78.24 ms**, explicitly not a production SLA.
+
+Issues #107 and #108 now contain the verified MOD-H integration contracts. They remain open for the actual distributed provider/native runtime and approved shared telemetry sink respectively.
 
 ## 3. Current cross-module/runtime blockers
 
@@ -153,8 +184,8 @@ PostgreSQL cache invalidation evidence verifies theme/category/collection/produc
 - #101 — trusted authenticated-session → canonical customer binding plus storefront/sales-channel scoped MOD-C order reads;
 - #102 — buyer-safe idempotent return/support request capability;
 - #104 — trusted MOD-G/shared Cloudflare custom-hostname transport/lifecycle implementation feeding the verified MOD-H bridge;
-- #107 — distributed/provider-backed storefront abuse/rate-limit runtime;
-- #108 — approved shared operational telemetry sink preserving the strict storefront envelope.
+- #107 — actual distributed/provider-backed storefront abuse/rate-limit runtime feeding the verified MOD-H bridge;
+- #108 — approved shared operational telemetry sink feeding the verified privacy-safe bridge.
 
 These blockers are not justification to create parallel authority inside MOD-H.
 
@@ -172,10 +203,12 @@ These blockers are not justification to create parallel authority inside MOD-H.
 | Domain registration intent | Available |
 | Tenant/admin provider verification mutation | 503 fail closed |
 | Tenant/admin certificate/provider transition | 503 fail closed |
-| Trusted provider bridge | Verified but unreachable from public/tenant roots |
+| Trusted domain provider bridge | Verified but unreachable from public/tenant roots |
 | Public custom-domain resolution | Requires verified local active/certificate-active state |
-| Distributed rate-limit enforcement | Not wired until #107 |
-| Operational event sink | Not wired until #108; strict envelope verified |
+| Distributed abuse provider bridge | Verified but unreachable from live API/buyer roots |
+| Distributed rate-limit enforcement | Not wired until #107 runtime exists |
+| Operational sink bridge | Verified but unreachable from live API/buyer roots |
+| Operational event sink | Not wired until #108 runtime exists |
 
 ## 5. Evidence policy
 
@@ -186,6 +219,8 @@ If an external lane is concurrency-cancelled or transiently fails while source g
 ## 6. Existing browser/performance evidence
 
 Representative evidence covers English, Bengali bounded-3G, Arabic RTL, Japanese/CJK, keyboard/focus, reduced motion, 200% text, Axe WCAG checks, overflow/clipping, buyer content/catalog/discovery/search, checkout recovery, order tracking, admin surfaces and bounded local performance rehearsal.
+
+Latest verified implementation head `c5e6fa19db9494eb6e8b7970ee7e69db64986342` reran the bounded synthetic 64-request rehearsal at p95 78.24 ms with `productionSla: false`.
 
 All fixtures are synthetic; no production/customer data is used.
 
@@ -198,7 +233,7 @@ MOD-H is **not complete** until, at minimum:
 3. H5 trusted customer binding and scoped order read capability exist before private routes activate;
 4. buyer return/support entry point exists within owning-module policy;
 5. H6 trusted provider transport/control-plane implementation feeds the verified bridge and exact conflict/takeover/certificate/offboarding evidence passes;
-6. H7 distributed abuse provider is integrated or an approved production alternative is supplied;
-7. H7 shared telemetry sink accepts only the verified privacy-safe envelope;
+6. H7 actual distributed abuse provider/native runtime feeds the verified abuse bridge and passes production integration/load evidence;
+7. H7 approved shared telemetry sink accepts only the verified privacy-safe envelope through the verified sink bridge;
 8. fresh migration/recovery/Cloudflare/browser/performance evidence is recorded on the final exact head;
 9. this progress handoff is replaced with the final completion receipt and serial integration instructions.
