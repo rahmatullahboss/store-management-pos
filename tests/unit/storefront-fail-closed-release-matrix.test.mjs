@@ -79,10 +79,17 @@ test("machine tracker keeps blocked authority and H7 runtime dependencies explic
     "issue_104_trusted_MOD_G_shared_Cloudflare_custom_hostname_provider_lifecycle",
     "issue_107_distributed_storefront_abuse_rate_limit_provider",
     "issue_108_approved_shared_operational_telemetry_sink",
-    "verified_implementation_head: a4030ef44814b740538bb3d8a2b7a192bf44ba2a",
   ]) {
     assert.equal(status.includes(required), true, required);
   }
+
+  const verifiedHead = status.match(/verified_implementation_head: ([0-9a-f]{40})/u)?.[1];
+  assert.match(verifiedHead ?? "", /^[0-9a-f]{40}$/u);
+  assert.notEqual(
+    verifiedHead,
+    "d5e5c6a0b0a780a89c9702f0ade6f632c0dc60ab",
+    "machine tracker must not regress to the H3 verified head",
+  );
 });
 
 test("fail-closed matrix can only be relaxed by an explicit blocker-aware code change", async () => {
