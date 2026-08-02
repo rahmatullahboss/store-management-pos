@@ -31,20 +31,20 @@ export type StorefrontActivationSurface =
 export const STOREFRONT_ACTIVATION_REQUIREMENTS: Readonly<
   Record<StorefrontActivationSurface, readonly StorefrontDependencyIssue[]>
 > = Object.freeze({
-  public_cart_quote: Object.freeze([97]),
-  checkout_capabilities: Object.freeze([97, 98, 100]),
-  checkout_submit: Object.freeze([97, 98, 100]),
-  private_profile: Object.freeze([101]),
-  private_order_history: Object.freeze([101]),
-  private_order_detail: Object.freeze([101]),
-  private_order_tracking: Object.freeze([101]),
-  buyer_return_request: Object.freeze([101, 102]),
-  buyer_support_request: Object.freeze([101, 102]),
-  tenant_domain_verification: Object.freeze([104]),
-  tenant_domain_provider_transition: Object.freeze([104]),
-  custom_domain_activation: Object.freeze([104]),
-  distributed_abuse_enforcement: Object.freeze([107]),
-  operational_event_sink: Object.freeze([108]),
+  public_cart_quote: Object.freeze([97] as const),
+  checkout_capabilities: Object.freeze([97, 98, 100] as const),
+  checkout_submit: Object.freeze([97, 98, 100] as const),
+  private_profile: Object.freeze([101] as const),
+  private_order_history: Object.freeze([101] as const),
+  private_order_detail: Object.freeze([101] as const),
+  private_order_tracking: Object.freeze([101] as const),
+  buyer_return_request: Object.freeze([101, 102] as const),
+  buyer_support_request: Object.freeze([101, 102] as const),
+  tenant_domain_verification: Object.freeze([104] as const),
+  tenant_domain_provider_transition: Object.freeze([104] as const),
+  custom_domain_activation: Object.freeze([104] as const),
+  distributed_abuse_enforcement: Object.freeze([107] as const),
+  operational_event_sink: Object.freeze([108] as const),
 });
 
 export interface StorefrontActivationDecisionV1 {
