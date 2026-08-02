@@ -26,6 +26,7 @@ const orderId = "018f0000-0000-4000-8000-000000000403";
 const lineId = "018f0000-0000-4000-8000-000000000404";
 const productId = "018f0000-0000-4000-8000-000000000405";
 const variantId = "018f0000-0000-4000-8000-000000000406";
+const opaqueCursor = "modc:v2:page_00017.sig-abc_123";
 
 function account(overrides = {}) {
   return {
@@ -109,16 +110,16 @@ test("customer account contract accepts only bounded private-profile projection 
   );
 });
 
-test("order history request is bounded and carries no browser customer identity", () => {
+test("order history request is bounded, opaque-cursor capable and carries no browser customer identity", () => {
   assert.deepEqual(
     parseStorefrontOrderHistoryRequestV1({
       contractVersion: "storefront-order-history-request.v1",
-      cursor: null,
+      cursor: opaqueCursor,
       limit: 20,
     }),
     {
       contractVersion: "storefront-order-history-request.v1",
-      cursor: null,
+      cursor: opaqueCursor,
       limit: 20,
     },
   );
@@ -140,18 +141,32 @@ test("order history request is bounded and carries no browser customer identity"
     }),
     /between 1 and 50/u,
   );
+  for (const cursor of ["cursor with spaces", "cursor/with/path", "x".repeat(513)]) {
+    assert.throws(
+      () => parseStorefrontOrderHistoryRequestV1({
+        contractVersion: "storefront-order-history-request.v1",
+        cursor,
+        limit: 20,
+      }),
+      /cursor/u,
+    );
+  }
 });
 
-test("order history and detail preserve exact integer money and reject internal authority fields", () => {
+test("order history and detail preserve opaque cursors, exact integer money and reject internal authority fields", () => {
   const history = {
     contractVersion: "storefront-order-history.v1",
     context,
     items: [summary()],
-    nextCursor: null,
+    nextCursor: opaqueCursor,
   };
   assert.deepEqual(parseStorefrontOrderHistoryPageV1(history), history);
   assert.deepEqual(parseStorefrontOrderDetailV1(detail()), detail());
 
+  assert.throws(
+    () => parseStorefrontOrderHistoryPageV1({ ...history, nextCursor: "unsafe/cursor" }),
+    /nextCursor/u,
+  );
   assert.throws(
     () => parseStorefrontOrderDetailV1(detail({ warehouseId: "warehouse-secret" })),
     /unsupported fields: warehouseId/u,
