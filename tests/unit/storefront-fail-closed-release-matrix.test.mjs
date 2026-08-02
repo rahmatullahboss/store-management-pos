@@ -45,6 +45,28 @@ test("buyer runtime does not silently wire blocked abuse or telemetry providers"
   }
 });
 
+test("trusted domain provider bridge stays off public and tenant-facing runtime roots", async () => {
+  const api = await source("../../apps/api/src/index.ts");
+  const handler = await source("../../apps/api/src/modules/storefront/handler.ts");
+  const runtime = await source("../../apps/storefront-web/src/runtime.ts");
+
+  for (const sourceText of [api, handler, runtime]) {
+    assert.equal(
+      sourceText.includes("domain-provider-bridge"),
+      false,
+      "trusted provider observation bridge must not be reachable from public/tenant routes before Issue #104 integration",
+    );
+    assert.equal(
+      sourceText.includes("mapStorefrontTrustedDomainLifecycleObservationV1"),
+      false,
+    );
+    assert.equal(
+      sourceText.includes("mapStorefrontTrustedDomainVerificationObservationV1"),
+      false,
+    );
+  }
+});
+
 test("external domain provider observations are intercepted before domain command execution", async () => {
   const handler = await source("../../apps/api/src/modules/storefront/handler.ts");
   const guard = handler.indexOf("DOMAIN_PROVIDER_CONTROL_UNAVAILABLE");
