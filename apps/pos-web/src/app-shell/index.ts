@@ -1,6 +1,14 @@
 import { renderAppShell } from "../../../../packages/ui/src/app-shell.js";
 import { directionSupportStyles } from "../../../../packages/ui/src/direction-support.js";
 import { renderPosFoundationReference, type FoundationReferenceOptions } from "../../../../packages/ui/src/foundation-reference.js";
+import {
+  renderPosDeviceWorkspace,
+  renderPosRegisterWorkspace,
+  renderPosSyncWorkspace,
+  type PosDeviceWorkspace,
+  type PosRegisterWorkspace,
+  type PosSyncWorkspace,
+} from "../operations-ledger.js";
 import { posRoutes } from "./routes.js";
 
 export interface OfflineShellState {
@@ -34,9 +42,9 @@ export function renderPosShell(input: PosShellInput): string {
     content: `${directionSupportStyles}${syncSummary}${input.content}`,
     variant: "pos",
     context: {
-      workspace: "Register 02",
+      workspace: "Register operations",
       location: input.location ?? "Dhaka Central",
-      businessDate: input.businessDate ?? "Business date · 28 Jul 2026",
+      businessDate: input.businessDate ?? "Current business date",
       locale: input.locale ?? "en",
     },
     offline: !input.offlineState.online,
@@ -47,4 +55,16 @@ export function renderPosShell(input: PosShellInput): string {
 export function renderPosFoundationPreview(input: Omit<PosShellInput, "content" | "currentPath">, reference: FoundationReferenceOptions = {}): string {
   const offlineState = reference.state === "offline" ? { ...input.offlineState, online: false, pendingOperations: Math.max(1, input.offlineState.pendingOperations) } : input.offlineState;
   return renderPosShell({ ...input, offlineState, currentPath: "/", content: renderPosFoundationReference(reference) });
+}
+
+export function renderPosRegisterPage(input: Omit<PosShellInput, "content" | "currentPath">, page: PosRegisterWorkspace): string {
+  return renderPosShell({ ...input, currentPath: "/", content: renderPosRegisterWorkspace(page) });
+}
+
+export function renderPosSyncPage(input: Omit<PosShellInput, "content" | "currentPath">, page: PosSyncWorkspace): string {
+  return renderPosShell({ ...input, currentPath: "/sync", content: renderPosSyncWorkspace(page) });
+}
+
+export function renderPosDevicePage(input: Omit<PosShellInput, "content" | "currentPath">, page: PosDeviceWorkspace): string {
+  return renderPosShell({ ...input, currentPath: "/device", content: renderPosDeviceWorkspace(page) });
 }
