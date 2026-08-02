@@ -1,6 +1,6 @@
 # Storefront Operations Runbook
 
-Status: **H7 hardening runbook — active**
+Status: **H7 hardening runbook — verified contract, shared sink pending**
 
 Scope: MOD-H buyer storefront, storefront admin/control-plane surfaces, Cloudflare preview/runtime evidence, Neon/PostgreSQL storefront recovery evidence and the currently fail-closed commerce/domain/private-route boundaries.
 
@@ -13,11 +13,12 @@ Scope: MOD-H buyer storefront, storefront admin/control-plane surfaces, Cloudfla
 5. Custom-domain ownership/certificate facts may come only from the trusted provider/control-plane path. Tenant/admin bodies cannot assert `verified`, certificate `active` or provider IDs.
 6. Private customer/order responses are credentialed and `no-store`; customer identity comes from a trusted authenticated-session binding, not browser `customerId`.
 7. A production abuse limiter must be distributed/provider-backed. Do not replace it with a per-isolate Worker-memory counter.
-8. Never force-push, reset, discard or repurpose existing work/Neon branches to recover MOD-H.
+8. Operational telemetry may accept only the validated `storefront-operational-event.v1` envelope; do not attach free-form request/body/exception metadata.
+9. Never force-push, reset, discard or repurpose existing work/Neon branches to recover MOD-H.
 
 ## 2. Privacy-safe operational events
 
-Runtime emitters should use `storefront-operational-event.v1` from `modules/storefront/src/observability.ts` once connected to the shared logging/telemetry sink.
+Runtime emitters should use `storefront-operational-event.v1` from `modules/storefront/src/observability.ts` once connected to the approved shared logging/telemetry sink tracked by Issue #108.
 
 Allowed event names:
 
@@ -43,6 +44,8 @@ The envelope intentionally has no free-form metadata object.
 - arbitrary user-entered search/query/body content.
 
 Use low-cardinality safe reason categories and request/trace correlation tokens instead.
+
+Until Issue #108 is resolved, keep the envelope as a validated contract and do not create a parallel ad-hoc logger. Telemetry delivery failure must never manufacture or mutate commerce/domain authority.
 
 ## 3. Standard verification commands
 
@@ -174,7 +177,7 @@ Storefront CI performs:
 4. cleanup in an `always()` path;
 5. evidence upload.
 
-The current runtime metric gate requires successful Cloudflare GraphQL sampling for the preview script window and zero runtime errors for sampled preview requests.
+The runtime metric gate requires successful Cloudflare GraphQL sampling for the preview script window and zero runtime errors for sampled preview requests.
 
 If preview deploy succeeds but later evidence fails:
 
@@ -208,7 +211,7 @@ Do not expose privileged MOD-C credit-note/order-cancel/internal communication o
 
 Return eligibility, quantities, approval state and refund effects must come from the owning customer-safe return capability when implemented.
 
-## 13. Current cross-module blockers
+## 13. Current cross-module/runtime blockers
 
 - #97 — lossless MOD-A price/tax + MOD-C pre-order shipping;
 - #98 — MOD-E public payment capability;
@@ -216,7 +219,8 @@ Return eligibility, quantities, approval state and refund effects must come from
 - #101 — trusted customer binding + storefront-scoped MOD-C order reads;
 - #102 — buyer-safe return/support request;
 - #104 — trusted custom-hostname verification/certificate provider lifecycle;
-- #107 — distributed storefront abuse/rate-limit provider.
+- #107 — distributed storefront abuse/rate-limit provider;
+- #108 — approved shared telemetry sink preserving the strict event envelope.
 
 These blockers are not justification to create parallel authority in MOD-H.
 
