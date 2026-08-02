@@ -8,9 +8,9 @@ Integration target: `program/integration-v1`
 
 Draft PR: #48
 
-Latest fully verified implementation/documentation head: `a4030ef44814b740538bb3d8a2b7a192bf44ba2a`
+Latest fully verified implementation head: `8666a1440d5139a132c5028f3b64ad0912855eaf`
 
-Latest fully verified Storefront CI: `30724857648`
+Latest fully verified Storefront CI: `30726322406`
 
 This document is a progress handoff, not a completion receipt. MOD-H must remain draft until the owning-module/runtime blockers and final H7 gates listed below are resolved and verified.
 
@@ -42,22 +42,9 @@ Latest fully verified H4 code head: `db135e7c72ac418ee1158ab10cb3665ee88ab943`
 
 Storefront CI: `30710984952`
 
-Implemented:
+Implemented authority-free cart persistence, exact quantity/money contracts, strict buyer quote intent, publication/customer/multi-warehouse revalidation, MOD-C quote bridge without privilege synthesis, checkout capability/recovery contracts and submit freshness/idempotency preflight.
 
-- authority-free browser cart persistence;
-- exact quantity/money contracts;
-- strict buyer-intent quote request;
-- publication/customer/multi-warehouse inventory revalidation;
-- MOD-C quote bridge without privilege synthesis;
-- checkout capability contract and stale/changed/unavailable recovery;
-- submit freshness/idempotency/request-hash preflight;
-- accessible multilingual checkout recovery UI/evidence.
-
-Still deliberately unregistered/fail closed:
-
-- public cart quote route;
-- checkout capability route;
-- checkout submission mutation route.
+Still deliberately unregistered/fail closed: public quote, checkout capability and checkout submission mutation routes.
 
 Blockers: #97, #98, #100.
 
@@ -69,24 +56,9 @@ Verified private/security head: `b35b0e260abdcfd882240437f47f59f98a2e7548`
 
 Storefront CI: `30723499435`
 
-Implemented:
+Implemented private profile/order contracts, authenticated-session-only principal, no browser-selected customer authority, strict tenant/legal-entity/store/customer/storefront/sales-channel revalidation, exact-money projection, privacy/internal-authority redaction, HTTPS/no-store clients, unregistered private handler, generic private 403 denial and multilingual read-only order tracking.
 
-- private versioned customer profile/order history/order detail contracts;
-- trusted authenticated-session principal boundary;
-- no browser-selected customer authority;
-- tenant/legal-entity/store/customer/storefront/sales-channel revalidation;
-- exact-money order projection;
-- internal authority/privacy redaction;
-- credentialed HTTPS/no-store clients;
-- unregistered private account handler;
-- generic private 403 denial without ownership-detail leakage;
-- multilingual read-only order tracking without synthetic carrier event/ETA/refund/return authority.
-
-Still deliberately unregistered:
-
-- private customer profile route;
-- private order history/detail route;
-- live private order-tracking page.
+Still deliberately unregistered: private profile, order history/detail and live private tracking routes.
 
 Blockers: #101 and #102.
 
@@ -98,14 +70,7 @@ Latest fully verified H6 code head: `f0ed777350cc67145381ec02911ea53e9ab72c4d`
 
 Storefront CI: `30723955210`
 
-Implemented:
-
-- tenant-scoped local domain/verification schema and lifecycle invariants;
-- fail-closed public hostname resolution;
-- external tenant/admin provider verification/certificate mutation returns 503 `DOMAIN_PROVIDER_CONTROL_UNAVAILABLE` before command execution;
-- domain registration intent remains available;
-- strict provider-secret-free read-only lifecycle projection;
-- active presentation requires local domain active + verification verified + certificate active simultaneously.
+Implemented tenant-scoped domain/verification schema/invariants, fail-closed public host resolution, external tenant/admin provider verification/certificate 503 guard, domain-registration intent and strict provider-secret-free read-only lifecycle projection.
 
 Provider verification/certificate lifecycle remains blocked on #104.
 
@@ -117,39 +82,70 @@ Exact head: `0f4c14bfddad9e69ac1b51976f6a6fe262c9ae43`
 
 Storefront CI: `30724190935`
 
-Evidence proves public cache isolation across tenant/storefront/channel/request-host/canonical-host/locale/currency/commercial revisions/build/family/generation/resource, delimiter-collision resistance, private-route bypass and unsafe-token fail-closed behavior.
+Evidence proves cache isolation across tenant/storefront/channel/request-host/canonical-host/locale/currency/commercial revisions/build/family/generation/resource, delimiter-collision resistance, private-route bypass and unsafe-token fail closed.
 
-#### H7-ABUSE-CONTRACT-02 — complete/verified
+#### H7-ABUSE-CONTRACT-02 — complete/verified; runtime provider blocked
 
 Exact head: `967a66e58ae89c408a5b3e75afc3a95a2d13fad4`
 
 Storefront CI: `30724380521`
 
-Implemented provider-independent policy/key/decision contracts and safe 429/503 semantics. No Worker-isolate in-memory production limiter was introduced. Runtime distributed enforcement is blocked on #107.
+Provider-independent public/private/checkout/admin policy/key/decision contracts and safe 429/503 semantics are verified. No Worker-isolate in-memory production limiter was introduced. Runtime distributed enforcement is blocked on #107.
 
 #### H7-OBS-RUNBOOK-03 — complete/verified; sink integration blocked
 
-Exact verified head: `a4030ef44814b740538bb3d8a2b7a192bf44ba2a`
+Exact head: `a4030ef44814b740538bb3d8a2b7a192bf44ba2a`
 
 Storefront CI: `30724857648`
 
-Job evidence:
+Verified privacy-safe operational event envelope, strict sensitive/high-cardinality field rejection and operations runbook. Issue #108 tracks the approved shared sink; no ad-hoc logger is wired.
 
-- verify `91434520353` — passed;
-- PostgreSQL 17 rehearsal `91434580011` — passed;
-- buyer/admin browser/accessibility `91434579986` — passed;
-- Cloudflare deploy/runtime/cleanup `91434579971` — passed;
-- non-destructive Neon recovery `91434580104` — passed.
+#### H7-FAIL-CLOSED-MATRIX-04 — complete/verified
 
-Implemented:
+Future-safe exact head: `7b858b601cc83fc7bd65d3847ebaa7d9e5998cdc`
 
-- strict privacy-safe `storefront-operational-event.v1` envelope;
-- fixed low-cardinality cache/public-host/private-access/abuse/domain/checkout event taxonomy;
-- rejection of customer IDs/contact data, hostnames, raw IP/forwarding headers, abuse keys, provider IDs/challenges, payment IDs, warehouse/reservation/storage/internal free-form metadata;
-- operations runbook for cache contamination, private access, checkout guard, domain/provider, abuse-control, Cloudflare and PostgreSQL/Neon incidents;
-- machine tracker synchronized through H7 without deleting historical H0–H3 evidence.
+Storefront CI: `30726144155`
 
-Issue #108 tracks the approved shared operational telemetry sink. MOD-H does not create an ad-hoc logger or permit the sink to widen the strict event envelope.
+Added CI-level release matrix proving blocked commerce/private handlers are absent from live roots, domain provider observation stays intercepted before command execution, abuse/telemetry providers are not silently wired and H4–H7 blocker state remains machine-visible. The tracker assertion validates a progressing non-H3 verified SHA rather than hardcoding one old H7 head.
+
+#### H7-PERF-CACHE-05 — complete/verified
+
+Exact implementation head: `8666a1440d5139a132c5028f3b64ad0912855eaf`
+
+Storefront CI: `30726322406`
+
+Bounded local performance rehearsal:
+
+- synthetic evidence only, no customer/production data;
+- 64 requests, concurrency 8;
+- 64/64 passed;
+- p95 **86.31 ms**;
+- response budget <= 512 KiB;
+- report explicitly records `productionSla: false`.
+
+This is a regression/load rehearsal, not a production SLA claim.
+
+PostgreSQL cache invalidation evidence now verifies:
+
+- theme → content+sitemap;
+- category → catalog+category+search+sitemap;
+- collection → catalog+collection+search+sitemap;
+- product → catalog+product+category+collection+search+sitemap+media;
+- unknown reason → conservative all-nine-family invalidation;
+- targeted media advancement does not change catalog;
+- replay is single-effect, conflicting replay rejected;
+- audit/outbox/receipt evidence exists;
+- runtime cannot execute the internal reason→family policy function.
+
+Latest exact-head jobs after targeted recovery:
+
+- verify `91439163345` — passed;
+- PostgreSQL `91439153771` — passed;
+- browser/accessibility/performance `91439153689` — passed;
+- Cloudflare `91439153617` — passed after targeted rerun of a transient local preview 502;
+- Neon recovery `91439153353` — passed after targeted rerun of a concurrency-cancelled job.
+
+No source guard, budget or assertion was weakened.
 
 ## 3. Current cross-module/runtime blockers
 
@@ -184,22 +180,15 @@ These blockers are not justification to create parallel authority inside MOD-H.
 
 ## 5. Evidence policy
 
-A coherent checkpoint is not fully verified until the exact code head passes the relevant Storefront CI lanes:
+A coherent checkpoint is not fully verified until the exact code head passes root format/lint/boundaries/typecheck/database/full tests/security, Astro build, PostgreSQL 17 rehearsal, buyer/admin browser/accessibility, Cloudflare preview/runtime/cleanup and non-destructive Neon recovery.
 
-- root format/lint/boundaries/typecheck/database/full tests/security;
-- Astro Cloudflare build;
-- PostgreSQL 17 storefront rehearsal;
-- buyer/admin browser/accessibility evidence;
-- Cloudflare preview deploy/runtime metrics/cleanup;
-- non-destructive Neon recovery.
+If an external lane is concurrency-cancelled or transiently fails while source gates remain green, target only that affected job. Do not weaken source assertions or budgets to obtain green CI.
 
-If Neon is concurrency-cancelled without executing source steps, targeted-rerun only that cancelled job and require it to pass before claiming exact-head full green.
+## 6. Existing browser/performance evidence
 
-## 6. Existing browser evidence
+Representative evidence covers English, Bengali bounded-3G, Arabic RTL, Japanese/CJK, keyboard/focus, reduced motion, 200% text, Axe WCAG checks, overflow/clipping, buyer content/catalog/discovery/search, checkout recovery, order tracking, admin surfaces and the bounded 64-request performance rehearsal.
 
-Representative storefront evidence covers English, Bengali bounded-3G, Arabic RTL, Japanese/CJK, keyboard skip-link/focus, reduced motion, 200% text, Axe WCAG checks, root overflow/clipping, buyer content/catalog/discovery/search, checkout recovery, read-only order tracking and admin storefront surfaces.
-
-All evidence fixtures are synthetic; no production/customer data is used.
+All fixtures are synthetic; no production/customer data is used.
 
 ## 7. Final completion gate still outstanding
 
@@ -209,8 +198,8 @@ MOD-H is **not complete** until, at minimum:
 2. retries/concurrency prove no duplicate order/reservation/payment/ledger effects;
 3. H5 trusted customer binding and scoped order read capability exist before private routes activate;
 4. buyer return/support entry point exists within owning-module policy;
-5. H6 trusted provider custom-domain lifecycle exists and exact domain conflict/takeover/certificate/offboarding evidence passes;
+5. H6 trusted provider custom-domain lifecycle exists and exact conflict/takeover/certificate/offboarding evidence passes;
 6. H7 distributed abuse provider is integrated or an approved production alternative is supplied;
 7. H7 shared telemetry sink accepts only the verified privacy-safe envelope;
-8. fresh migration/recovery/Cloudflare/browser evidence is recorded on the final exact head;
+8. fresh migration/recovery/Cloudflare/browser/performance evidence is recorded on the final exact head;
 9. this progress handoff is replaced with the final completion receipt and serial integration instructions.
