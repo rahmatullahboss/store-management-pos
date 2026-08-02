@@ -2,15 +2,15 @@
 
 Status: **active with external runtime blockers**
 
-Completed slices: `H7-CACHE-ISOLATION-01`, `H7-ABUSE-CONTRACT-02`, `H7-OBS-RUNBOOK-03`
+Completed slices: `H7-CACHE-ISOLATION-01`, `H7-ABUSE-CONTRACT-02`, `H7-OBS-RUNBOOK-03`, `H7-FAIL-CLOSED-MATRIX-04`, `H7-PERF-CACHE-05`
 
-Latest fully verified implementation/documentation head: `a4030ef44814b740538bb3d8a2b7a192bf44ba2a`
+Latest fully verified implementation head: `8666a1440d5139a132c5028f3b64ad0912855eaf`
 
-Latest fully verified Storefront CI: `30724857648`
+Latest fully verified Storefront CI: `30726322406`
 
 ## Objective
 
-Close storefront hardening gates without inventing runtime authority outside MOD-H. H7 covers cache isolation, abuse controls, privacy-safe observability, recovery/runbooks and final handoff readiness.
+Close storefront hardening gates without inventing runtime authority outside MOD-H. H7 covers cache isolation/invalidation, abuse controls, privacy-safe observability, fail-closed release safety, bounded performance evidence, recovery/runbooks and final handoff readiness.
 
 ## H7-CACHE-ISOLATION-01 — complete and verified
 
@@ -32,7 +32,7 @@ Storefront CI: `30724190935`
 
 No storefront-specific distributed production limiter was found. MOD-H deliberately did not add a Worker-isolate in-memory counter and call it production abuse protection.
 
-Provider-independent hardening now provides:
+Provider-independent hardening provides:
 
 - explicit public-read/search/media/private-read/checkout/admin policy classes;
 - trusted-edge opaque keys for anonymous traffic;
@@ -53,54 +53,89 @@ Storefront CI: `30724380521`
 
 ## H7-OBS-RUNBOOK-03 — complete and verified; shared sink blocked
 
-Added strict `storefront-operational-event.v1` in `modules/storefront/src/observability.ts`.
-
-Bounded event taxonomy:
-
-- `storefront.cache.decision`;
-- `storefront.public_host.resolve`;
-- `storefront.private_access.decision`;
-- `storefront.abuse_control.decision`;
-- `storefront.domain.lifecycle`;
-- `storefront.checkout.guard`.
-
-The envelope permits only bounded request/trace correlation, safe tenant/storefront/channel identifiers and fixed low-cardinality cache/abuse/domain dimensions. It intentionally has no free-form metadata object.
+Added strict `storefront-operational-event.v1` in `modules/storefront/src/observability.ts` with bounded cache/public-host/private-access/abuse/domain/checkout taxonomy and no free-form metadata.
 
 Strict tests reject customer/contact data, hostnames, raw IP/forwarding headers, abuse keys, provider IDs/challenges, payment IDs, warehouse/reservation authority, R2 object keys/private paths, staff/internal metadata and arbitrary high-cardinality labels.
 
-`docs/architecture/storefront/operations-runbook.md` covers:
+`docs/architecture/storefront/operations-runbook.md` covers public-host/domain failures, cross-tenant cache contamination, private account/order anomalies, checkout guard failure, abuse-provider failure, domain ambiguity, Cloudflare preview/runtime cleanup, PostgreSQL/Neon recovery and buyer return/support boundaries.
 
-- public-host/domain resolution failures;
-- cross-tenant/hostname cache contamination;
-- private account/order anomalies;
-- checkout guard unavailability;
-- abuse-provider failure;
-- domain provider ambiguity/outage;
-- Cloudflare preview/runtime cleanup;
-- PostgreSQL and non-destructive Neon recovery;
-- buyer return/support boundaries.
+Issue #108 tracks the approved shared telemetry sink. MOD-H does not create an ad-hoc logger or permit the future sink to widen the validated envelope.
 
-The runbook forbids manually manufacturing provider state, widening customer/order ownership queries, bypassing checkout authority, or substituting Worker-memory rate limiting for distributed enforcement.
+Verified head: `a4030ef44814b740538bb3d8a2b7a192bf44ba2a`
 
-Issue #108 tracks the approved shared telemetry sink. MOD-H does not create an ad-hoc logger or permit the future sink to widen the validated event envelope with free-form request/body/exception data.
+Storefront CI: `30724857648`
 
-### Verified evidence
+## H7-FAIL-CLOSED-MATRIX-04 — complete and verified
 
-Exact head `a4030ef44814b740538bb3d8a2b7a192bf44ba2a`, Storefront CI `30724857648`:
+Added `tests/unit/storefront-fail-closed-release-matrix.test.mjs` as a blocker-aware release safety gate.
 
-- verify `91434520353` — passed;
-- PostgreSQL 17 rehearsal `91434580011` — passed;
-- buyer/admin browser/accessibility `91434579986` — passed;
-- Cloudflare preview/runtime/cleanup `91434579971` — passed;
-- non-destructive Neon recovery `91434580104` — passed.
+The gate proves:
 
-The same exact head also passed Storefront H1 Validation, Storefront Lockfile, Foundation Design CI and Foundation CI.
+- blocked cart quote, checkout capability/submit and private account handlers/routes remain absent from the API root router;
+- buyer/runtime roots do not silently wire a fake abuse-control provider or ad-hoc observability sink;
+- external provider verification/certificate requests are intercepted by the 503 domain-provider guard before domain command execution;
+- the machine tracker explicitly keeps H4–H7 blockers and blocked states visible;
+- relaxing a blocked route/provider requires an explicit code/test/tracker change rather than accidental import/registration.
+
+The tracker assertion was made future-safe: it validates a non-H3 40-hex verified head instead of hardcoding one old H7 SHA.
+
+Verified future-safe head: `7b858b601cc83fc7bd65d3847ebaa7d9e5998cdc`
+
+Storefront CI: `30726144155` — all five Storefront lanes passed.
+
+## H7-PERF-CACHE-05 — complete and verified
+
+### Bounded local performance rehearsal
+
+Added `tooling/scripts/storefront-performance-rehearsal.mjs` and wired it into Storefront browser evidence.
+
+The rehearsal:
+
+- uses only synthetic evidence routes and no customer/production data;
+- warms English, Bengali, Arabic recovery and Japanese order-tracking evidence surfaces;
+- executes 64 requests at concurrency 8;
+- requires HTTP 200 + `text/html` + non-empty response <= 512 KiB;
+- uses a deliberately generous local p95 gate <= 5000 ms;
+- writes `docs/architecture/storefront/performance-evidence/report.json`;
+- explicitly records `evidenceKind: bounded-local-rehearsal` and `productionSla: false`.
+
+Verified run result: **64/64 requests passed, p95 86.31 ms**.
+
+This evidence is a deterministic regression/load rehearsal, not a production latency/throughput SLA claim.
+
+### Cache invalidation policy evidence
+
+Strengthened `tests/integration/storefront-cache-family-rehearsal.sql` to verify both targeted generation advancement and reason→family fan-out:
+
+- theme publish → `content`, `sitemap`;
+- category publication → `catalog`, `category`, `search`, `sitemap`;
+- collection publish → `catalog`, `collection`, `search`, `sitemap`;
+- product publication → `catalog`, `product`, `category`, `collection`, `search`, `sitemap`, `media`;
+- unknown reason → conservatively all nine cache families.
+
+The rehearsal also proves targeted media invalidation increments media exactly once without changing catalog, idempotent replay stays single-effect, conflicting replay is rejected, audit/outbox/receipt evidence exists, and runtime cannot execute the internal cache-reason policy function.
+
+### Exact verified evidence
+
+Implementation head: `8666a1440d5139a132c5028f3b64ad0912855eaf`
+
+Storefront CI: `30726322406`
+
+Latest successful attempt jobs:
+
+- verify `91439163345` — passed;
+- PostgreSQL 17 rehearsal `91439153771` — passed;
+- browser/accessibility + bounded performance `91439153689` — passed;
+- Cloudflare preview/runtime/cleanup `91439153617` — passed after targeted rerun of an earlier transient local preview 502;
+- non-destructive Neon recovery `91439153353` — passed after targeted rerun of the earlier concurrency-cancelled job.
+
+No source guard, performance budget, or assertion was weakened to recover those external/transient jobs.
 
 ## Machine tracker and handoff
 
-`docs/architecture/storefront/status.yaml` is synchronized through H7 while preserving historical H0–H3 checkpoint evidence.
+`docs/architecture/storefront/status.yaml` preserves historical H0–H3 evidence and tracks H4–H7 blocked/verified slices.
 
-`docs/agent-handoffs/MOD-H-STOREFRONT-COMMERCE-PROGRESS.md` contains the current verified checkpoint ledger, fail-closed matrix, blockers and serial integration rules.
+`docs/agent-handoffs/MOD-H-STOREFRONT-COMMERCE-PROGRESS.md` contains the verified checkpoint ledger, fail-closed matrix, blockers and serial integration rules.
 
 ## Remaining H7 work
 
