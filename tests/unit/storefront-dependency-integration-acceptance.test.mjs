@@ -82,6 +82,9 @@ test("acceptance instructions do not authorize blocked runtime or private route 
     "domain-provider-bridge",
     "abuse-control-provider-bridge",
     "operational-sink-bridge",
+    "dependency-activation",
+    "evaluateStorefrontDependencyActivationV1",
+    "assertStorefrontDependencyActivationV1",
   ]) {
     assert.equal(combined.includes(forbidden), false, forbidden);
   }
