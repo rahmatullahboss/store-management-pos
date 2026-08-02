@@ -5,11 +5,22 @@ import test from "node:test";
 import {
   STOREFRONT_ACTIVATION_REQUIREMENTS,
   STOREFRONT_DEPENDENCY_ISSUES,
+  STOREFRONT_INTEGRATION_TARGET,
   assertStorefrontDependencyActivationV1,
   evaluateStorefrontDependencyActivationV1,
 } from "../../build/modules/storefront/src/dependency-activation.js";
 
 const repoRoot = new URL("../../", import.meta.url);
+const SHA_BY_ISSUE = new Map([
+  [97, "a"],
+  [98, "b"],
+  [100, "c"],
+  [101, "d"],
+  [102, "e"],
+  [104, "f"],
+  [107, "1"],
+  [108, "2"],
+]);
 
 async function manifest() {
   return JSON.parse(
@@ -23,10 +34,28 @@ async function manifest() {
   );
 }
 
+function evidence(issue, overrides = {}) {
+  const marker = SHA_BY_ISSUE.get(issue) ?? "9";
+  return {
+    issue,
+    integrationTarget: STOREFRONT_INTEGRATION_TARGET,
+    ownerDeliveryCommitSha: marker.repeat(40),
+    integrationCommitSha: "3".repeat(40),
+    storefrontVerificationCommitSha: "4".repeat(40),
+    storefrontCiRunId: 30_000_000_000 + issue,
+    ...overrides,
+  };
+}
+
+function evidenceFor(issues) {
+  return issues.map((issue) => evidence(issue));
+}
+
 test("activation policy preserves every blocker-to-surface association from the acceptance manifest", async () => {
   const value = await manifest();
   const manifestIssues = new Set(value.blockers.map((entry) => entry.issue));
 
+  assert.equal(STOREFRONT_INTEGRATION_TARGET, "program/integration-v1");
   assert.deepEqual([...STOREFRONT_DEPENDENCY_ISSUES], [
     97,
     98,
@@ -62,7 +91,7 @@ test("activation policy preserves every blocker-to-surface association from the 
   }
 });
 
-test("every protected surface denies activation when no dependency is verified", () => {
+test("every protected surface denies activation when no dependency evidence exists", () => {
   for (const surface of Object.keys(STOREFRONT_ACTIVATION_REQUIREMENTS)) {
     const decision = evaluateStorefrontDependencyActivationV1(surface, []);
     assert.equal(decision.allowed, false, surface);
@@ -70,13 +99,13 @@ test("every protected surface denies activation when no dependency is verified",
   }
 });
 
-test("every protected surface allows only when all of its required issues are verified", () => {
+test("every protected surface allows only when all required issues have structured verification evidence", () => {
   for (const [surface, requiredIssues] of Object.entries(
     STOREFRONT_ACTIVATION_REQUIREMENTS,
   )) {
     const allowed = evaluateStorefrontDependencyActivationV1(
       surface,
-      requiredIssues,
+      evidenceFor(requiredIssues),
     );
     assert.equal(allowed.allowed, true, surface);
     assert.deepEqual(allowed.missingIssues, [], surface);
@@ -85,7 +114,10 @@ test("every protected surface allows only when all of its required issues are ve
       const verified = STOREFRONT_DEPENDENCY_ISSUES.filter(
         (issue) => issue !== omitted,
       );
-      const denied = evaluateStorefrontDependencyActivationV1(surface, verified);
+      const denied = evaluateStorefrontDependencyActivationV1(
+        surface,
+        evidenceFor(verified),
+      );
       assert.equal(
         denied.allowed,
         false,
@@ -96,7 +128,7 @@ test("every protected surface allows only when all of its required issues are ve
   }
 });
 
-test("checkout capability and submit require price-shipping, payment and country policy together", () => {
+test("checkout capability and submit require price-shipping, payment and country policy evidence together", () => {
   assert.deepEqual(STOREFRONT_ACTIVATION_REQUIREMENTS.checkout_capabilities, [
     97,
     98,
@@ -119,21 +151,23 @@ test("checkout capability and submit require price-shipping, payment and country
     assert.equal(
       evaluateStorefrontDependencyActivationV1(
         "checkout_capabilities",
-        verified,
+        evidenceFor(verified),
       ).allowed,
       false,
       verified.join(","),
     );
     assert.equal(
-      evaluateStorefrontDependencyActivationV1("checkout_submit", verified)
-        .allowed,
+      evaluateStorefrontDependencyActivationV1(
+        "checkout_submit",
+        evidenceFor(verified),
+      ).allowed,
       false,
       verified.join(","),
     );
   }
 });
 
-test("buyer return and support require trusted customer binding plus buyer-safe return authority", () => {
+test("buyer return and support require trusted customer binding plus buyer-safe return authority evidence", () => {
   assert.deepEqual(STOREFRONT_ACTIVATION_REQUIREMENTS.buyer_return_request, [
     101,
     102,
@@ -145,42 +179,110 @@ test("buyer return and support require trusted customer binding plus buyer-safe 
 
   for (const surface of ["buyer_return_request", "buyer_support_request"]) {
     assert.equal(
-      evaluateStorefrontDependencyActivationV1(surface, [101]).allowed,
+      evaluateStorefrontDependencyActivationV1(surface, evidenceFor([101]))
+        .allowed,
       false,
     );
     assert.equal(
-      evaluateStorefrontDependencyActivationV1(surface, [102]).allowed,
+      evaluateStorefrontDependencyActivationV1(surface, evidenceFor([102]))
+        .allowed,
       false,
     );
     assert.equal(
-      evaluateStorefrontDependencyActivationV1(surface, [101, 102]).allowed,
+      evaluateStorefrontDependencyActivationV1(
+        surface,
+        evidenceFor([101, 102]),
+      ).allowed,
       true,
     );
   }
 });
 
+test("issue numbers alone cannot be used as activation evidence", () => {
+  assert.throws(
+    () => evaluateStorefrontDependencyActivationV1("public_cart_quote", [97]),
+    /expected a structured evidence object/u,
+  );
+});
+
 test("unknown issue numbers cannot be used as substitute activation evidence", () => {
   assert.throws(
-    () => evaluateStorefrontDependencyActivationV1("public_cart_quote", [999]),
-    /Unsupported storefront dependency issue: 999/u,
-  );
-  assert.throws(
     () =>
-      evaluateStorefrontDependencyActivationV1("checkout_capabilities", [
-        97,
-        98,
-        999,
+      evaluateStorefrontDependencyActivationV1("public_cart_quote", [
+        evidence(97, { issue: 999 }),
       ]),
     /Unsupported storefront dependency issue: 999/u,
   );
 });
 
-test("assertion helper fails closed with exact missing blockers and passes only after full readiness", () => {
+test("verification evidence is bound to the approved serial integration target", () => {
   assert.throws(
-    () => assertStorefrontDependencyActivationV1("checkout_submit", [97, 98]),
+    () =>
+      evaluateStorefrontDependencyActivationV1("public_cart_quote", [
+        evidence(97, { integrationTarget: "main" }),
+      ]),
+    /Invalid storefront dependency integration target: main/u,
+  );
+});
+
+test("verification evidence requires exact commit identities and a positive CI run id", () => {
+  for (const [field, invalid] of [
+    ["ownerDeliveryCommitSha", "abc"],
+    ["integrationCommitSha", "A".repeat(40)],
+    ["storefrontVerificationCommitSha", "4".repeat(39)],
+  ]) {
+    assert.throws(
+      () =>
+        evaluateStorefrontDependencyActivationV1("public_cart_quote", [
+          evidence(97, { [field]: invalid }),
+        ]),
+      new RegExp(`Invalid storefront dependency evidence ${field}`, "u"),
+    );
+  }
+
+  for (const storefrontCiRunId of [0, -1, 1.5, Number.MAX_SAFE_INTEGER + 1]) {
+    assert.throws(
+      () =>
+        evaluateStorefrontDependencyActivationV1("public_cart_quote", [
+          evidence(97, { storefrontCiRunId }),
+        ]),
+      /storefrontCiRunId: expected a positive safe integer/u,
+    );
+  }
+});
+
+test("verification evidence rejects duplicate issue records and arbitrary metadata", () => {
+  assert.throws(
+    () =>
+      evaluateStorefrontDependencyActivationV1("public_cart_quote", [
+        evidence(97),
+        evidence(97),
+      ]),
+    /Duplicate storefront dependency verification evidence for issue #97/u,
+  );
+
+  assert.throws(
+    () =>
+      evaluateStorefrontDependencyActivationV1("public_cart_quote", [
+        evidence(97, { providerToken: "must-not-be-accepted" }),
+      ]),
+    /Unsupported storefront dependency evidence field: providerToken/u,
+  );
+});
+
+test("assertion helper fails closed with exact missing blockers and passes only after full evidence readiness", () => {
+  assert.throws(
+    () =>
+      assertStorefrontDependencyActivationV1(
+        "checkout_submit",
+        evidenceFor([97, 98]),
+      ),
     /#100/u,
   );
   assert.doesNotThrow(() =>
-    assertStorefrontDependencyActivationV1("checkout_submit", [97, 98, 100]),
+    assertStorefrontDependencyActivationV1(
+      "checkout_submit",
+      evidenceFor([97, 98, 100]),
+    ),
   );
 });
