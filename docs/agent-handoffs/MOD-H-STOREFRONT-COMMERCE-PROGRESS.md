@@ -8,9 +8,9 @@ Integration target: `program/integration-v1`
 
 Draft PR: #48
 
-Latest fully verified implementation head: `8666a1440d5139a132c5028f3b64ad0912855eaf`
+Latest fully verified implementation head: `2f8569a2e47922bb5d77e584f605fac85dabeb5f`
 
-Latest fully verified Storefront CI: `30726322406`
+Latest fully verified Storefront CI: `30726829026`
 
 This document is a progress handoff, not a completion receipt. MOD-H must remain draft until the owning-module/runtime blockers and final H7 gates listed below are resolved and verified.
 
@@ -38,11 +38,26 @@ Delivered areas include Astro/Cloudflare storefront foundation, tenant/storefron
 
 Status: **blocker-independent boundaries complete; live authority blocked**
 
-Latest fully verified H4 code head: `db135e7c72ac418ee1158ab10cb3665ee88ab943`
+Original verified recovery code head: `db135e7c72ac418ee1158ab10cb3665ee88ab943`
 
-Storefront CI: `30710984952`
+Latest verified recovery refinement head: `2f8569a2e47922bb5d77e584f605fac85dabeb5f`
+
+Storefront CI: `30726829026`
 
 Implemented authority-free cart persistence, exact quantity/money contracts, strict buyer quote intent, publication/customer/multi-warehouse revalidation, MOD-C quote bridge without privilege synthesis, checkout capability/recovery contracts and submit freshness/idempotency preflight.
+
+Recovery derivation now consumes only the factual quote/capability fields it actually needs. Full production envelopes remain structurally compatible, while the synthetic evidence route no longer uses `as never` escape casts. No authority or route behavior changed.
+
+Latest exact-head evidence:
+
+- verify `91439948732` — passed;
+- PostgreSQL `91440010432` — passed;
+- browser/accessibility/performance `91440010415` — passed;
+- Cloudflare `91440010410` — passed;
+- Neon recovery `91440010607` — passed;
+- Astro **27 files, 0 errors, 0 warnings, 0 hints**;
+- buyer **5/5**, checkout recovery **4/4**, order tracking **4/4**, admin **4/4**;
+- bounded synthetic performance **64/64**, p95 **64.67 ms**, not a production SLA.
 
 Still deliberately unregistered/fail closed: public quote, checkout capability and checkout submission mutation routes.
 
@@ -119,33 +134,13 @@ Bounded local performance rehearsal:
 - synthetic evidence only, no customer/production data;
 - 64 requests, concurrency 8;
 - 64/64 passed;
-- p95 **86.31 ms**;
+- p95 **86.31 ms** on that checkpoint;
 - response budget <= 512 KiB;
 - report explicitly records `productionSla: false`.
 
-This is a regression/load rehearsal, not a production SLA claim.
+This is a regression/load rehearsal, not a production SLA claim. The newer exact head `2f8569a2…` reran the same gate at p95 **64.67 ms**.
 
-PostgreSQL cache invalidation evidence now verifies:
-
-- theme → content+sitemap;
-- category → catalog+category+search+sitemap;
-- collection → catalog+collection+search+sitemap;
-- product → catalog+product+category+collection+search+sitemap+media;
-- unknown reason → conservative all-nine-family invalidation;
-- targeted media advancement does not change catalog;
-- replay is single-effect, conflicting replay rejected;
-- audit/outbox/receipt evidence exists;
-- runtime cannot execute the internal reason→family policy function.
-
-Latest exact-head jobs after targeted recovery:
-
-- verify `91439163345` — passed;
-- PostgreSQL `91439153771` — passed;
-- browser/accessibility/performance `91439153689` — passed;
-- Cloudflare `91439153617` — passed after targeted rerun of a transient local preview 502;
-- Neon recovery `91439153353` — passed after targeted rerun of a concurrency-cancelled job.
-
-No source guard, budget or assertion was weakened.
+PostgreSQL cache invalidation evidence verifies theme/category/collection/product reason→family fan-out, conservative all-family fallback, targeted media isolation, replay/conflict behavior, audit/outbox/receipt evidence and internal-policy privilege restrictions.
 
 ## 3. Current cross-module/runtime blockers
 
