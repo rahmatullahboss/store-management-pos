@@ -8,9 +8,9 @@ Integration target: `program/integration-v1`
 
 Draft PR: #48
 
-Latest fully verified implementation head: `7485f4e80c468de328093fcc09fd22efdc25a110`
+Latest fully verified implementation head: `c52b688f28595cd41c5d735d038436670e638b68`
 
-Latest fully verified Storefront CI: `30727323408`
+Latest fully verified Storefront CI: `30727839962`
 
 This document is a progress handoff, not a completion receipt. MOD-H must remain draft until the owning-module/runtime blockers and final H7 gates listed below are resolved and verified.
 
@@ -62,17 +62,7 @@ Storefront CI: `30727323408`
 
 Implemented private profile/order contracts, authenticated-session-only principal, no browser-selected customer authority, strict tenant/legal-entity/store/customer/storefront/sales-channel revalidation, exact-money projection, privacy/internal-authority redaction, HTTPS/no-store clients, unregistered private handler, generic private 403 denial and multilingual read-only order tracking.
 
-`H5-PAGINATION-04` removes the incorrect assumption that a MOD-C order-history cursor must be a UUID. Request and response cursors are now bounded URL-safe opaque tokens up to 512 characters; UUID cursors remain valid. Slash/path syntax, whitespace/control characters and oversized cursors fail closed. Customer/order/product/variant identities remain UUID-only. The module forwards and projects the opaque cursor without interpreting it, and the typed private client round-trips it without sending customer identity.
-
-Exact pagination evidence:
-
-- verify `91441336353` — passed;
-- PostgreSQL `91441384231` — passed;
-- browser/accessibility/performance `91441384334` — passed;
-- Cloudflare `91441384267` — passed;
-- Neon recovery `91441384470` — passed.
-
-The first pagination head failed only the repository final-newline formatter before type/tests; the follow-up changed only those missing final newlines and preserved the opaque-cursor semantics.
+`H5-PAGINATION-04` treats MOD-C order-history cursors as bounded URL-safe opaque tokens instead of assuming UUID structure. Customer/order/product/variant identities remain UUID-only. The module forwards and validates opaque cursors without interpreting them, and the private client round-trips them without sending customer identity.
 
 Still deliberately unregistered: private profile, order history/detail and live private tracking routes.
 
@@ -80,15 +70,36 @@ Blockers: #101 and #102.
 
 ### H6 — custom-domain trust hardening
 
-Status: **local lifecycle safe; trusted provider integration blocked**
+Status: **MOD-H bridge ready; trusted provider transport/lifecycle still blocked**
 
-Latest fully verified H6 code head: `f0ed777350cc67145381ec02911ea53e9ab72c4d`
+Latest fully verified H6 head: `c52b688f28595cd41c5d735d038436670e638b68`
 
-Storefront CI: `30723955210`
+Storefront CI: `30727839962`
 
-Implemented tenant-scoped domain/verification schema/invariants, fail-closed public host resolution, external tenant/admin provider verification/certificate 503 guard, domain-registration intent and strict provider-secret-free read-only lifecycle projection.
+Implemented:
 
-Provider verification/certificate lifecycle remains blocked on #104.
+- tenant-scoped domain/verification schema and lifecycle invariants;
+- fail-closed public host resolution;
+- external tenant/admin provider verification/certificate 503 guard;
+- domain-registration intent;
+- provider-secret-free read-only lifecycle projection;
+- strict trusted-provider observation bridge for future MOD-G/shared control-plane integration.
+
+`H6-PROVIDER-BRIDGE-03` adds a pure trusted observation parser/mapper, not a provider client. Verification observations require `source: trusted-control-plane`, bounded observation/domain/challenge data, SHA-256 challenge digest and strict time ordering. Lifecycle observations require normalized provider-derived domain/certificate facts, and active state requires active certificate plus provider hostname ID.
+
+The bridge rejects raw provider tokens, free-form failure detail, tenant-style canonical authority and arbitrary metadata. Provider observations cannot assert local canonical state; canonical is supplied separately as a local MOD-H fact. Mapping produces the existing internal domain command inputs with deterministic idempotency keys.
+
+The fail-closed release matrix statically proves the bridge is not imported by the API root, tenant-facing storefront handler or buyer runtime. External provider verification/certificate routes therefore remain 503 until #104 supplies the approved transport/control-plane authority.
+
+Exact bridge evidence:
+
+- verify `91442940083` — passed;
+- PostgreSQL `91442990684` — passed;
+- browser/accessibility/performance `91442990692` — passed;
+- Cloudflare `91442789500` — passed;
+- Neon recovery `91442990854` — passed after targeted rerun of the concurrency-cancelled job.
+
+The integrated MOD-G release was inspected and contains generic connector/webhook/credential infrastructure, but no storefront custom-hostname lifecycle authority. #104 is therefore a real remaining capability gap, not a stale integration gap.
 
 ### H7 — hardening
 
@@ -130,7 +141,7 @@ Exact implementation head: `8666a1440d5139a132c5028f3b64ad0912855eaf`
 
 Storefront CI: `30726322406`
 
-Bounded local performance rehearsal uses only synthetic evidence, 64 requests at concurrency 8, a <=512 KiB response budget and explicitly records `productionSla: false`. The checkpoint passed 64/64 at p95 86.31 ms; the later recovery-refinement head reran the same gate at p95 64.67 ms. This is regression/load evidence, not a production SLA claim.
+Bounded local performance rehearsal uses only synthetic evidence, 64 requests at concurrency 8, a <=512 KiB response budget and explicitly records `productionSla: false`. The checkpoint passed 64/64 at p95 86.31 ms; later verified heads continue to rerun the same gate. This is regression/load evidence, not a production SLA claim.
 
 PostgreSQL cache invalidation evidence verifies theme/category/collection/product reason→family fan-out, conservative all-family fallback, targeted media isolation, replay/conflict behavior, audit/outbox/receipt evidence and internal-policy privilege restrictions.
 
@@ -141,7 +152,7 @@ PostgreSQL cache invalidation evidence verifies theme/category/collection/produc
 - #100 — typed MOD-F checkout country/address/contact policy;
 - #101 — trusted authenticated-session → canonical customer binding plus storefront/sales-channel scoped MOD-C order reads;
 - #102 — buyer-safe idempotent return/support request capability;
-- #104 — trusted MOD-G/shared Cloudflare custom-hostname provider lifecycle;
+- #104 — trusted MOD-G/shared Cloudflare custom-hostname transport/lifecycle implementation feeding the verified MOD-H bridge;
 - #107 — distributed/provider-backed storefront abuse/rate-limit runtime;
 - #108 — approved shared operational telemetry sink preserving the strict storefront envelope.
 
@@ -161,6 +172,7 @@ These blockers are not justification to create parallel authority inside MOD-H.
 | Domain registration intent | Available |
 | Tenant/admin provider verification mutation | 503 fail closed |
 | Tenant/admin certificate/provider transition | 503 fail closed |
+| Trusted provider bridge | Verified but unreachable from public/tenant roots |
 | Public custom-domain resolution | Requires verified local active/certificate-active state |
 | Distributed rate-limit enforcement | Not wired until #107 |
 | Operational event sink | Not wired until #108; strict envelope verified |
@@ -173,7 +185,7 @@ If an external lane is concurrency-cancelled or transiently fails while source g
 
 ## 6. Existing browser/performance evidence
 
-Representative evidence covers English, Bengali bounded-3G, Arabic RTL, Japanese/CJK, keyboard/focus, reduced motion, 200% text, Axe WCAG checks, overflow/clipping, buyer content/catalog/discovery/search, checkout recovery, order tracking, admin surfaces and the bounded 64-request performance rehearsal.
+Representative evidence covers English, Bengali bounded-3G, Arabic RTL, Japanese/CJK, keyboard/focus, reduced motion, 200% text, Axe WCAG checks, overflow/clipping, buyer content/catalog/discovery/search, checkout recovery, order tracking, admin surfaces and bounded local performance rehearsal.
 
 All fixtures are synthetic; no production/customer data is used.
 
@@ -185,7 +197,7 @@ MOD-H is **not complete** until, at minimum:
 2. retries/concurrency prove no duplicate order/reservation/payment/ledger effects;
 3. H5 trusted customer binding and scoped order read capability exist before private routes activate;
 4. buyer return/support entry point exists within owning-module policy;
-5. H6 trusted provider custom-domain lifecycle exists and exact conflict/takeover/certificate/offboarding evidence passes;
+5. H6 trusted provider transport/control-plane implementation feeds the verified bridge and exact conflict/takeover/certificate/offboarding evidence passes;
 6. H7 distributed abuse provider is integrated or an approved production alternative is supplied;
 7. H7 shared telemetry sink accepts only the verified privacy-safe envelope;
 8. fresh migration/recovery/Cloudflare/browser/performance evidence is recorded on the final exact head;
