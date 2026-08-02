@@ -188,4 +188,38 @@ END $test$;
 COMMIT;
 RESET ROLE;
 
+DO $policy$
+BEGIN
+  IF storefront.cache_families_for_reason('theme_publish') <>
+     ARRAY['content','sitemap']::text[] THEN
+    RAISE EXCEPTION 'theme invalidation family policy is invalid';
+  END IF;
+  IF storefront.cache_families_for_reason('category_publication:published') <>
+     ARRAY['catalog','category','search','sitemap']::text[] THEN
+    RAISE EXCEPTION 'category invalidation family policy is invalid';
+  END IF;
+  IF storefront.cache_families_for_reason('collection_publish') <>
+     ARRAY['catalog','collection','search','sitemap']::text[] THEN
+    RAISE EXCEPTION 'collection invalidation family policy is invalid';
+  END IF;
+  IF storefront.cache_families_for_reason('product_publication:published') <>
+     ARRAY['catalog','product','category','collection','search','sitemap','media']::text[] THEN
+    RAISE EXCEPTION 'product invalidation family policy is invalid';
+  END IF;
+  IF storefront.cache_families_for_reason('unknown_policy_reason') <>
+     ARRAY[
+       'bootstrap','content','catalog','product','category',
+       'collection','search','sitemap','media'
+     ]::text[] THEN
+    RAISE EXCEPTION 'unknown invalidation reason must conservatively advance all families';
+  END IF;
+  IF has_function_privilege(
+    'store_app_runtime',
+    'storefront.cache_families_for_reason(text)',
+    'EXECUTE'
+  ) THEN
+    RAISE EXCEPTION 'runtime can execute internal cache invalidation policy function';
+  END IF;
+END $policy$;
+
 SELECT 'storefront cache family rehearsal passed' AS result;
