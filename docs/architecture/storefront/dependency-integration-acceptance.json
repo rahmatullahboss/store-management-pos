@@ -1,0 +1,179 @@
+{
+  "schemaVersion": "storefront-dependency-integration-acceptance.v1",
+  "integrationTarget": "program/integration-v1",
+  "activationDefault": "fail_closed",
+  "blockers": [
+    {
+      "issue": 97,
+      "owner": "MOD-C with MOD-A authority input",
+      "capability": "lossless price-tax quote persistence and pre-order shipping option/rate authority",
+      "storefrontBoundaries": [
+        "modules/storefront/src/authoritative-quote.ts",
+        "modules/storefront/src/checkout-capabilities.ts",
+        "modules/storefront/src/checkout-submit.ts"
+      ],
+      "activationSurfaces": [
+        "public_cart_quote",
+        "checkout_capabilities",
+        "checkout_submit"
+      ],
+      "activationAllowed": false,
+      "requiredEvidence": [
+        "lossless multi-component inclusive compound exempt promotion price-tax semantics",
+        "shipping amount expiry and revision owned by MOD-C",
+        "stale quote shipping inventory and tax recovery",
+        "retry and concurrency evidence with no duplicate order reservation payment or ledger effect",
+        "fresh exact-head Storefront CI"
+      ]
+    },
+    {
+      "issue": 98,
+      "owner": "MOD-E",
+      "capability": "side-effect-free public checkout payment eligibility projection",
+      "storefrontBoundaries": [
+        "modules/storefront/src/checkout-capabilities.ts",
+        "modules/storefront/src/checkout-submit.ts"
+      ],
+      "activationSurfaces": [
+        "checkout_capabilities",
+        "checkout_submit"
+      ],
+      "activationAllowed": false,
+      "requiredEvidence": [
+        "safe payment capability references without provider secrets",
+        "eligibility lookup creates no payment intent or accounting side effect",
+        "revision and expiry revalidation",
+        "unknown provider outcome recovery remains MOD-E-owned",
+        "fresh exact-head Storefront CI"
+      ]
+    },
+    {
+      "issue": 100,
+      "owner": "MOD-F",
+      "capability": "typed checkout country address and contact policy",
+      "storefrontBoundaries": [
+        "modules/storefront/src/checkout-capabilities.ts",
+        "modules/storefront/src/checkout-submit.ts"
+      ],
+      "activationSurfaces": [
+        "checkout_capabilities",
+        "checkout_submit"
+      ],
+      "activationAllowed": false,
+      "requiredEvidence": [
+        "typed required and optional address/contact fields",
+        "country policy revision is canonical and revalidated",
+        "RTL and localization-safe buyer recovery",
+        "generic country capability keys are not interpreted by MOD-H",
+        "fresh exact-head Storefront CI"
+      ]
+    },
+    {
+      "issue": 101,
+      "owner": "authentication boundary plus MOD-C",
+      "capability": "trusted session to canonical customer binding and storefront-scoped order reads",
+      "storefrontBoundaries": [
+        "modules/storefront/src/customer-principal-adapter.ts",
+        "modules/storefront/src/customer-account.ts",
+        "apps/api/src/modules/storefront/customer-account-handler.ts"
+      ],
+      "activationSurfaces": [
+        "private_profile",
+        "private_order_history",
+        "private_order_detail",
+        "private_order_tracking"
+      ],
+      "activationAllowed": false,
+      "requiredEvidence": [
+        "no browser-selected customer identity",
+        "tenant legal-entity store customer storefront and channel scope revalidation",
+        "opaque pagination cursor pass-through",
+        "cross-customer and cross-tenant denial",
+        "fresh exact-head Storefront CI"
+      ]
+    },
+    {
+      "issue": 102,
+      "owner": "MOD-C",
+      "capability": "buyer-safe idempotent return and support request capability",
+      "storefrontBoundaries": [
+        "packages/storefront-contracts",
+        "modules/storefront"
+      ],
+      "activationSurfaces": [
+        "buyer_return_request",
+        "buyer_support_request"
+      ],
+      "activationAllowed": false,
+      "requiredEvidence": [
+        "canonical customer and order ownership checks",
+        "owning-module return eligibility and state machine",
+        "idempotent duplicate submission behavior",
+        "no refund inventory or accounting authority recreated in MOD-H",
+        "fresh exact-head Storefront CI"
+      ]
+    },
+    {
+      "issue": 104,
+      "owner": "MOD-G or approved shared Cloudflare control plane",
+      "capability": "trusted custom-hostname verification certificate and offboarding lifecycle",
+      "storefrontBoundaries": [
+        "modules/storefront/src/domain-provider-bridge.ts",
+        "apps/api/src/modules/storefront/handler.ts"
+      ],
+      "activationSurfaces": [
+        "tenant_domain_verification",
+        "tenant_domain_provider_transition",
+        "custom_domain_activation"
+      ],
+      "activationAllowed": false,
+      "requiredEvidence": [
+        "trusted provider observations feed the verified bridge",
+        "ownership challenge and certificate lifecycle are provider-derived",
+        "conflict takeover suspension deletion and ambiguous outcome recovery",
+        "provider credentials identifiers and free-form details remain redacted",
+        "fresh exact-head Storefront CI"
+      ]
+    },
+    {
+      "issue": 107,
+      "owner": "MOD-G or approved shared edge runtime",
+      "capability": "distributed storefront abuse and rate-limit provider",
+      "storefrontBoundaries": [
+        "modules/storefront/src/abuse-control.ts",
+        "modules/storefront/src/abuse-control-provider-bridge.ts"
+      ],
+      "activationSurfaces": [
+        "distributed_abuse_enforcement"
+      ],
+      "activationAllowed": false,
+      "requiredEvidence": [
+        "trusted-edge and authenticated-session opaque key derivation",
+        "cross-isolate or region shared state",
+        "concurrency expiry retry and threshold behavior",
+        "route-specific fail-open and fail-closed semantics preserved",
+        "fresh exact-head Storefront CI and load evidence"
+      ]
+    },
+    {
+      "issue": 108,
+      "owner": "approved shared telemetry runtime",
+      "capability": "privacy-safe operational event sink",
+      "storefrontBoundaries": [
+        "modules/storefront/src/observability.ts",
+        "modules/storefront/src/operational-sink-bridge.ts"
+      ],
+      "activationSurfaces": [
+        "operational_event_sink"
+      ],
+      "activationAllowed": false,
+      "requiredEvidence": [
+        "strict existing event envelope is not widened",
+        "retention redaction metric and trace mapping are approved",
+        "sink credentials and provider internals are never exposed",
+        "sink failure cannot mutate commerce or domain authority",
+        "fresh exact-head Storefront CI"
+      ]
+    }
+  ]
+}

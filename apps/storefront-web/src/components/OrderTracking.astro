@@ -1,0 +1,475 @@
+---
+import type { StorefrontOrderTrackingViewV1 } from "../../../../packages/storefront-client/src/order-tracking.js";
+
+interface Props {
+  tracking: StorefrontOrderTrackingViewV1;
+  locale: "en-GB" | "bn-BD" | "ar" | "ja-JP";
+}
+
+const { tracking, locale } = Astro.props;
+
+const copy = {
+  "en-GB": {
+    eyebrow: "Order status",
+    title: "Current order status",
+    intro: "This view shows the latest confirmed order facts available to the storefront. It does not estimate delivery or invent carrier events.",
+    updated: "Updated",
+    total: "Order total",
+    order: "Order",
+    payment: "Payment",
+    fulfillment: "Fulfilment",
+    returns: "Returns",
+    method: "Fulfilment method",
+    items: "Items",
+    quantity: "Quantity",
+    lineTotal: "Line total",
+    states: {
+      pending: "Pending",
+      in_progress: "In progress",
+      attention: "Needs attention",
+      complete: "Complete",
+      cancelled: "Cancelled",
+      returned: "Returned",
+      refunded: "Refunded",
+    },
+    orderStatuses: {
+      draft: "Draft",
+      confirmed: "Confirmed",
+      on_hold: "On hold",
+      cancelled: "Cancelled",
+      completed: "Completed",
+    },
+    paymentStatuses: {
+      unpaid: "Unpaid",
+      partially_paid: "Partially paid",
+      paid: "Paid",
+      partially_refunded: "Partially refunded",
+      refunded: "Refunded",
+    },
+    fulfillmentStatuses: {
+      unfulfilled: "Unfulfilled",
+      partially_fulfilled: "Partially fulfilled",
+      fulfilled: "Fulfilled",
+      cancelled: "Cancelled",
+    },
+    returnStatuses: {
+      not_returned: "Not returned",
+      partially_returned: "Partially returned",
+      returned: "Returned",
+    },
+    fulfillmentMethods: {
+      pickup: "Pickup",
+      local_delivery: "Local delivery",
+      ship_from_store: "Ship from store",
+      split: "Split fulfilment",
+    },
+  },
+  "bn-BD": {
+    eyebrow: "অর্ডারের অবস্থা",
+    title: "বর্তমান অর্ডার স্ট্যাটাস",
+    intro: "এখানে স্টোরফ্রন্টে পাওয়া সর্বশেষ নিশ্চিত অর্ডার তথ্য দেখানো হচ্ছে। ডেলিভারি সময় বা কুরিয়ার ইভেন্ট অনুমান করা হয় না।",
+    updated: "আপডেট হয়েছে",
+    total: "অর্ডার মোট",
+    order: "অর্ডার",
+    payment: "পেমেন্ট",
+    fulfillment: "ফুলফিলমেন্ট",
+    returns: "রিটার্ন",
+    method: "ফুলফিলমেন্ট পদ্ধতি",
+    items: "আইটেম",
+    quantity: "পরিমাণ",
+    lineTotal: "লাইন মোট",
+    states: {
+      pending: "অপেক্ষমাণ",
+      in_progress: "চলমান",
+      attention: "পর্যালোচনা প্রয়োজন",
+      complete: "সম্পন্ন",
+      cancelled: "বাতিল",
+      returned: "ফেরত হয়েছে",
+      refunded: "রিফান্ড হয়েছে",
+    },
+    orderStatuses: {
+      draft: "খসড়া",
+      confirmed: "নিশ্চিত",
+      on_hold: "হোল্ডে আছে",
+      cancelled: "বাতিল",
+      completed: "সম্পন্ন",
+    },
+    paymentStatuses: {
+      unpaid: "অপরিশোধিত",
+      partially_paid: "আংশিক পরিশোধিত",
+      paid: "পরিশোধিত",
+      partially_refunded: "আংশিক রিফান্ড",
+      refunded: "রিফান্ড হয়েছে",
+    },
+    fulfillmentStatuses: {
+      unfulfilled: "ফুলফিল হয়নি",
+      partially_fulfilled: "আংশিক ফুলফিল হয়েছে",
+      fulfilled: "ফুলফিল হয়েছে",
+      cancelled: "বাতিল",
+    },
+    returnStatuses: {
+      not_returned: "রিটার্ন হয়নি",
+      partially_returned: "আংশিক রিটার্ন",
+      returned: "রিটার্ন হয়েছে",
+    },
+    fulfillmentMethods: {
+      pickup: "পিকআপ",
+      local_delivery: "লোকাল ডেলিভারি",
+      ship_from_store: "স্টোর থেকে শিপিং",
+      split: "বিভক্ত ফুলফিলমেন্ট",
+    },
+  },
+  ar: {
+    eyebrow: "حالة الطلب",
+    title: "الحالة الحالية للطلب",
+    intro: "تعرض هذه الصفحة أحدث حقائق الطلب المؤكدة المتاحة للمتجر، من دون تقدير موعد التسليم أو اختلاق أحداث شركة الشحن.",
+    updated: "آخر تحديث",
+    total: "إجمالي الطلب",
+    order: "الطلب",
+    payment: "الدفع",
+    fulfillment: "التنفيذ",
+    returns: "المرتجعات",
+    method: "طريقة التنفيذ",
+    items: "العناصر",
+    quantity: "الكمية",
+    lineTotal: "إجمالي السطر",
+    states: {
+      pending: "قيد الانتظار",
+      in_progress: "قيد التنفيذ",
+      attention: "يتطلب مراجعة",
+      complete: "مكتمل",
+      cancelled: "ملغي",
+      returned: "تم الإرجاع",
+      refunded: "تم رد المبلغ",
+    },
+    orderStatuses: {
+      draft: "مسودة",
+      confirmed: "مؤكد",
+      on_hold: "معلق",
+      cancelled: "ملغي",
+      completed: "مكتمل",
+    },
+    paymentStatuses: {
+      unpaid: "غير مدفوع",
+      partially_paid: "مدفوع جزئياً",
+      paid: "مدفوع",
+      partially_refunded: "مسترد جزئياً",
+      refunded: "مسترد",
+    },
+    fulfillmentStatuses: {
+      unfulfilled: "غير منفذ",
+      partially_fulfilled: "منفذ جزئياً",
+      fulfilled: "منفذ",
+      cancelled: "ملغي",
+    },
+    returnStatuses: {
+      not_returned: "غير مرتجع",
+      partially_returned: "مرتجع جزئياً",
+      returned: "مرتجع",
+    },
+    fulfillmentMethods: {
+      pickup: "استلام",
+      local_delivery: "توصيل محلي",
+      ship_from_store: "شحن من المتجر",
+      split: "تنفيذ مقسم",
+    },
+  },
+  "ja-JP": {
+    eyebrow: "注文状況",
+    title: "現在の注文ステータス",
+    intro: "ストアフロントで確認できる最新の確定済み注文情報のみを表示します。配送予定や配送業者のイベントは推測しません。",
+    updated: "更新日時",
+    total: "注文合計",
+    order: "注文",
+    payment: "支払い",
+    fulfillment: "フルフィルメント",
+    returns: "返品",
+    method: "フルフィルメント方法",
+    items: "商品",
+    quantity: "数量",
+    lineTotal: "小計",
+    states: {
+      pending: "保留中",
+      in_progress: "処理中",
+      attention: "確認が必要",
+      complete: "完了",
+      cancelled: "キャンセル済み",
+      returned: "返品済み",
+      refunded: "返金済み",
+    },
+    orderStatuses: {
+      draft: "下書き",
+      confirmed: "確認済み",
+      on_hold: "保留",
+      cancelled: "キャンセル済み",
+      completed: "完了",
+    },
+    paymentStatuses: {
+      unpaid: "未払い",
+      partially_paid: "一部支払い済み",
+      paid: "支払い済み",
+      partially_refunded: "一部返金済み",
+      refunded: "返金済み",
+    },
+    fulfillmentStatuses: {
+      unfulfilled: "未処理",
+      partially_fulfilled: "一部処理済み",
+      fulfilled: "処理済み",
+      cancelled: "キャンセル済み",
+    },
+    returnStatuses: {
+      not_returned: "返品なし",
+      partially_returned: "一部返品済み",
+      returned: "返品済み",
+    },
+    fulfillmentMethods: {
+      pickup: "店頭受取",
+      local_delivery: "地域配送",
+      ship_from_store: "店舗から発送",
+      split: "分割フルフィルメント",
+    },
+  },
+}[locale];
+---
+
+<section class="order-tracking" aria-labelledby="order-tracking-title" data-tracking-state={tracking.state}>
+  <header class="order-tracking__header">
+    <div>
+      <p class="order-tracking__eyebrow">{copy.eyebrow}</p>
+      <h2 id="order-tracking-title">{copy.title}</h2>
+      <p class="order-tracking__intro">{copy.intro}</p>
+    </div>
+    <div class="order-tracking__summary" aria-live="polite">
+      <strong class="order-tracking__state">{copy.states[tracking.state]}</strong>
+      <span>{tracking.documentNumber}</span>
+    </div>
+  </header>
+
+  <div class="order-tracking__meta">
+    <p><span>{copy.updated}</span><time datetime={tracking.updatedAt}>{tracking.updatedAt}</time></p>
+    <p><span>{copy.total}</span><strong>{tracking.totalLabel}</strong></p>
+  </div>
+
+  <dl class="order-tracking__facts">
+    <div>
+      <dt>{copy.order}</dt>
+      <dd data-order-status={tracking.orderStatus}>{copy.orderStatuses[tracking.orderStatus]}</dd>
+    </div>
+    <div>
+      <dt>{copy.payment}</dt>
+      <dd data-payment-status={tracking.paymentStatus}>{copy.paymentStatuses[tracking.paymentStatus]}</dd>
+    </div>
+    <div>
+      <dt>{copy.fulfillment}</dt>
+      <dd data-fulfillment-status={tracking.fulfillmentStatus}>{copy.fulfillmentStatuses[tracking.fulfillmentStatus]}</dd>
+    </div>
+    <div>
+      <dt>{copy.returns}</dt>
+      <dd data-return-status={tracking.returnStatus}>{copy.returnStatuses[tracking.returnStatus]}</dd>
+    </div>
+    <div>
+      <dt>{copy.method}</dt>
+      <dd data-fulfillment-method={tracking.fulfillmentMethod}>{copy.fulfillmentMethods[tracking.fulfillmentMethod]}</dd>
+    </div>
+  </dl>
+
+  <section class="order-tracking__items" aria-labelledby="order-tracking-items">
+    <h3 id="order-tracking-items">{copy.items}</h3>
+    <ol>
+      {tracking.lines.map((line) => (
+        <li data-order-line={line.lineId}>
+          <div class="order-tracking__item-main">
+            <strong>{line.label}</strong>
+            {line.sku && <span>{line.sku}</span>}
+          </div>
+          <dl>
+            <div>
+              <dt>{copy.quantity}</dt>
+              <dd>{line.quantityLabel}</dd>
+            </div>
+            <div>
+              <dt>{copy.lineTotal}</dt>
+              <dd>{line.totalLabel}</dd>
+            </div>
+          </dl>
+        </li>
+      ))}
+    </ol>
+  </section>
+</section>
+
+<style>
+  .order-tracking {
+    display: grid;
+    gap: clamp(1.25rem, 3vw, 2rem);
+    margin-block: 2rem;
+    padding: clamp(1.25rem, 3vw, 2rem);
+    border: 1px solid var(--storefront-border);
+    border-radius: var(--storefront-radius);
+    background: var(--storefront-surface);
+    box-shadow: 0 1rem 2.5rem color-mix(in srgb, var(--storefront-foreground) 7%, transparent);
+  }
+  .order-tracking__header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 1.5rem;
+  }
+  .order-tracking__eyebrow {
+    margin: 0 0 .5rem;
+    color: var(--storefront-primary);
+    font-size: .78rem;
+    font-weight: 800;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+  }
+  .order-tracking h2,
+  .order-tracking h3,
+  .order-tracking p,
+  .order-tracking dl,
+  .order-tracking ol {
+    margin: 0;
+  }
+  .order-tracking h2 {
+    font-size: clamp(1.65rem, 5vw, 2.7rem);
+    line-height: 1.05;
+    letter-spacing: -.035em;
+  }
+  .order-tracking__intro {
+    max-width: 48rem;
+    margin-block-start: .75rem !important;
+    color: color-mix(in srgb, var(--storefront-foreground) 72%, transparent);
+  }
+  .order-tracking__summary {
+    display: grid;
+    min-width: 10rem;
+    gap: .35rem;
+    justify-items: end;
+    text-align: end;
+  }
+  .order-tracking__state {
+    display: inline-flex;
+    min-height: 2rem;
+    align-items: center;
+    padding-inline: .75rem;
+    border: 1px solid var(--storefront-border);
+    border-radius: 999px;
+    background: var(--storefront-surface-muted);
+  }
+  .order-tracking[data-tracking-state="attention"] .order-tracking__state,
+  .order-tracking[data-tracking-state="cancelled"] .order-tracking__state,
+  .order-tracking[data-tracking-state="returned"] .order-tracking__state,
+  .order-tracking[data-tracking-state="refunded"] .order-tracking__state {
+    border-color: color-mix(in srgb, var(--storefront-danger) 42%, var(--storefront-border));
+  }
+  .order-tracking__meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .75rem;
+  }
+  .order-tracking__meta p,
+  .order-tracking__facts > div {
+    display: grid;
+    gap: .25rem;
+    padding: .9rem 1rem;
+    border: 1px solid var(--storefront-border);
+    border-radius: var(--storefront-radius);
+    background: var(--storefront-background);
+  }
+  .order-tracking__meta span,
+  .order-tracking__facts dt,
+  .order-tracking__items dt {
+    color: color-mix(in srgb, var(--storefront-foreground) 64%, transparent);
+    font-size: .78rem;
+    font-weight: 700;
+  }
+  .order-tracking__meta time,
+  .order-tracking__meta strong,
+  .order-tracking__facts dd,
+  .order-tracking__items dd {
+    overflow-wrap: anywhere;
+    font-variant-numeric: tabular-nums;
+  }
+  .order-tracking__facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
+    gap: .75rem;
+  }
+  .order-tracking__facts dd {
+    margin: 0;
+    font-weight: 750;
+  }
+  .order-tracking__items {
+    display: grid;
+    gap: 1rem;
+  }
+  .order-tracking__items h3 {
+    font-size: 1.1rem;
+  }
+  .order-tracking__items ol {
+    display: grid;
+    gap: .75rem;
+    padding: 0;
+    list-style: none;
+  }
+  .order-tracking__items li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(14rem, auto);
+    gap: 1rem;
+    align-items: center;
+    padding: 1rem;
+    border-block-start: 1px solid var(--storefront-border);
+  }
+  .order-tracking__item-main {
+    display: grid;
+    gap: .2rem;
+    min-width: 0;
+  }
+  .order-tracking__item-main strong,
+  .order-tracking__item-main span {
+    overflow-wrap: anywhere;
+  }
+  .order-tracking__item-main span {
+    color: color-mix(in srgb, var(--storefront-foreground) 64%, transparent);
+    font-size: .82rem;
+  }
+  .order-tracking__items li > dl {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .75rem;
+  }
+  .order-tracking__items li > dl > div {
+    display: grid;
+    gap: .2rem;
+  }
+  .order-tracking__items dd {
+    margin: 0;
+    font-weight: 700;
+  }
+  @media (max-width: 44rem) {
+    .order-tracking__header,
+    .order-tracking__items li {
+      grid-template-columns: 1fr;
+    }
+    .order-tracking__summary {
+      min-width: 0;
+      justify-items: start;
+      text-align: start;
+    }
+    .order-tracking__meta {
+      grid-template-columns: 1fr;
+    }
+    .order-tracking__items li > dl {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .order-tracking,
+    .order-tracking * {
+      scroll-behavior: auto !important;
+      transition-duration: .01ms !important;
+      animation-duration: .01ms !important;
+      animation-iteration-count: 1 !important;
+    }
+  }
+</style>

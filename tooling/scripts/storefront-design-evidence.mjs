@@ -20,6 +20,15 @@ const chromePath =
 const axePath = path.join(root, "node_modules", "axe-core", "axe.min.js");
 const origin = "http://127.0.0.1:4322";
 
+const lowBandwidth3g = Object.freeze({
+  id: "bounded-3g",
+  offline: false,
+  latency: 150,
+  downloadThroughput: Math.floor((750 * 1024) / 8),
+  uploadThroughput: Math.floor((250 * 1024) / 8),
+  connectionType: "cellular3g",
+});
+
 const scenarios = [
   {
     id: "storefront-en-desktop",
@@ -41,6 +50,21 @@ const scenarios = [
     direction: "rtl",
     width: 820,
     height: 1000,
+  },
+  {
+    id: "storefront-bn-low-bandwidth-mobile",
+    locale: "bn-BD",
+    direction: "ltr",
+    width: 360,
+    height: 800,
+    network: lowBandwidth3g,
+  },
+  {
+    id: "storefront-ja-cjk-tablet",
+    locale: "ja-JP",
+    direction: "ltr",
+    width: 768,
+    height: 900,
   },
 ];
 
@@ -133,14 +157,31 @@ async function runDetector() {
 
 function scenarioUrl(scenario) {
   const url = new URL("/evidence/storefront", origin);
-  if (scenario.locale === "ar") url.searchParams.set("locale", "ar");
+  if (scenario.locale !== "en-GB") {
+    url.searchParams.set("locale", scenario.locale);
+  }
   return url.toString();
+}
+
+async function applyNetworkProfile(page, scenario) {
+  if (!scenario.network) return null;
+  const session = await page.createCDPSession();
+  await session.send("Network.enable");
+  await session.send("Network.emulateNetworkConditions", {
+    offline: scenario.network.offline,
+    latency: scenario.network.latency,
+    downloadThroughput: scenario.network.downloadThroughput,
+    uploadThroughput: scenario.network.uploadThroughput,
+    connectionType: scenario.network.connectionType,
+  });
+  return session;
 }
 
 async function collectScenario(browser, axeSource, scenario) {
   const page = await browser.newPage();
-  page.setDefaultTimeout(15_000);
-  page.setDefaultNavigationTimeout(30_000);
+  let networkSession = null;
+  page.setDefaultTimeout(20_000);
+  page.setDefaultNavigationTimeout(45_000);
   try {
     await page.setViewport({
       width: scenario.width,
@@ -150,14 +191,17 @@ async function collectScenario(browser, axeSource, scenario) {
     await page.emulateMediaFeatures([
       { name: "prefers-reduced-motion", value: "reduce" },
     ]);
+    networkSession = await applyNetworkProfile(page, scenario);
+    const navigationStartedAt = Date.now();
     await page.goto(scenarioUrl(scenario), {
       waitUntil: "domcontentloaded",
-      timeout: 30_000,
+      timeout: 45_000,
     });
     await page.waitForFunction(
       () => document.querySelectorAll("article.product-card").length === 4,
-      { timeout: 15_000 },
+      { timeout: 20_000 },
     );
+    const navigationDurationMs = Date.now() - navigationStartedAt;
     await page.addScriptTag({ content: axeSource });
 
     const accessibility = await withTimeout(
@@ -221,6 +265,7 @@ async function collectScenario(browser, axeSource, scenario) {
       scrollTo(10000, 0);
       const rootScrollX = scrollX;
       scrollTo(0, 0);
+      const resources = performance.getEntriesByType("resource");
       return {
         viewportOverflow: rootScrollX > 2,
         rootScrollX,
@@ -238,6 +283,7 @@ async function collectScenario(browser, axeSource, scenario) {
         language: rootElement.lang,
         direction: rootElement.dir,
         upstreamBrandFound: /scalius/i.test(document.body.innerText),
+        resourceCount: resources.length,
       };
     });
 
@@ -310,6 +356,16 @@ async function collectScenario(browser, axeSource, scenario) {
 
     return {
       ...scenario,
+      network: scenario.network
+        ? {
+            id: scenario.network.id,
+            latencyMs: scenario.network.latency,
+            downloadKbps: 750,
+            uploadKbps: 250,
+            applied: networkSession !== null,
+          }
+        : { id: "unthrottled", applied: false },
+      navigationDurationMs,
       screenshot: path.relative(root, screenshotPath),
       violations,
       layout,
@@ -317,6 +373,9 @@ async function collectScenario(browser, axeSource, scenario) {
       passed,
     };
   } finally {
+    if (networkSession) {
+      await networkSession.detach().catch(() => undefined);
+    }
     await page.close();
   }
 }
@@ -342,7 +401,7 @@ try {
     results.push(
       await withTimeout(
         collectScenario(browser, axeSource, scenario),
-        90_000,
+        120_000,
         `${scenario.id} complete evidence`,
       ),
     );
@@ -373,6 +432,10 @@ const report = {
       0,
     ),
     detectorFindings: detectorFindings.length,
+    lowBandwidthScenarios: results.filter(
+      (result) => result.network.id !== "unthrottled" && result.network.applied,
+    ).length,
+    locales: [...new Set(results.map((result) => result.locale))],
   },
 };
 
@@ -383,7 +446,7 @@ await writeFile(
 const rows = results
   .map(
     (result) =>
-      `| ${result.id} | ${result.width}×${result.height} | ${result.locale}/${result.direction} | ${result.violations.length} | ${result.layout.viewportOverflow ? "yes" : "no"} | ${result.layout.clipped.length} | ${result.passed ? "Pass" : "Fail"} |`,
+      `| ${result.id} | ${result.width}×${result.height} | ${result.locale}/${result.direction} | ${result.network.id} | ${result.violations.length} | ${result.layout.viewportOverflow ? "yes" : "no"} | ${result.layout.clipped.length} | ${result.passed ? "Pass" : "Fail"} |`,
   )
   .join("\n");
 const screenshots = results
@@ -392,18 +455,21 @@ const screenshots = results
       `- [${result.id}](${path.basename(result.screenshot)})`,
   )
   .join("\n");
-const markdown = `# Storefront Design Evidence\n\n**Generated:** ${report.generatedAt}\n\nSynthetic fixtures only. The evidence route returns 404 unless \`STOREFRONT_EVIDENCE_MODE=1\`. No production credentials or customer data were used.\n\n| Scenario | Viewport | Locale | Axe violations | Viewport overflow | Unexpected clipping | Result |\n|---|---:|---|---:|---|---:|---|\n${rows}\n\n## Summary\n\n- Browser scenarios passed: ${report.summary.passed}/${report.summary.total}\n- WCAG axe violations: ${report.summary.axeViolations}\n- Impeccable deterministic findings: ${report.summary.detectorFindings}\n- Four published product cards render in every scenario.\n- First Tab focuses the visible skip link; Enter moves focus to the main landmark.\n- English desktop/mobile and Arabic RTL tablet layouts are checked.\n- Every scenario is rechecked at 200% root text size and reduced-motion mode.\n- Upstream product branding is absent from rendered content.\n\n## Screenshot evidence\n\n${screenshots}\n\nExact machine-readable results are in [report.json](report.json).\n`;
+const markdown = `# Storefront Design Evidence\n\n**Generated:** ${report.generatedAt}\n\nSynthetic fixtures only. The evidence route returns 404 unless \`STOREFRONT_EVIDENCE_MODE=1\`. No production credentials or customer data were used.\n\n| Scenario | Viewport | Locale | Network | Axe violations | Viewport overflow | Unexpected clipping | Result |\n|---|---:|---|---|---:|---|---:|---|\n${rows}\n\n## Summary\n\n- Browser scenarios passed: ${report.summary.passed}/${report.summary.total}\n- WCAG axe violations: ${report.summary.axeViolations}\n- Impeccable deterministic findings: ${report.summary.detectorFindings}\n- Low-bandwidth browser scenarios: ${report.summary.lowBandwidthScenarios}\n- Locales exercised: ${report.summary.locales.join(", ")}\n- Four published product cards render in every scenario.\n- First Tab focuses the visible skip link; Enter moves focus to the main landmark.\n- English desktop/mobile, Bengali low-bandwidth mobile, Arabic RTL tablet and Japanese/CJK tablet layouts are checked.\n- Bengali mobile evidence runs under bounded 3G emulation at 750 Kbps down, 250 Kbps up and 150 ms latency.\n- Every scenario is rechecked at 200% root text size and reduced-motion mode.\n- Upstream product branding is absent from rendered content.\n\n## Screenshot evidence\n\n${screenshots}\n\nExact machine-readable results are in [report.json](report.json).\n`;
 await writeFile(path.join(outputDir, "README.md"), markdown);
 
 if (
   report.summary.passed !== report.summary.total ||
   report.summary.axeViolations > 0 ||
-  report.summary.detectorFindings > 0
+  report.summary.detectorFindings > 0 ||
+  report.summary.lowBandwidthScenarios < 1 ||
+  !report.summary.locales.includes("bn-BD") ||
+  !report.summary.locales.includes("ja-JP")
 ) {
   console.error(JSON.stringify(report.summary));
   process.exit(1);
 }
 
 console.log(
-  `Storefront design evidence passed ${report.summary.passed}/${report.summary.total} browser scenarios`,
+  `Storefront design evidence passed ${report.summary.passed}/${report.summary.total} browser scenarios across ${report.summary.locales.length} locales with ${report.summary.lowBandwidthScenarios} low-bandwidth scenario`,
 );

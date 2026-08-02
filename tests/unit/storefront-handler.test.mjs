@@ -143,21 +143,64 @@ test("publication route uses path identities and serializes bigint results", asy
   });
 });
 
-test("domain transition defaults canonical to false without losing explicit values", async () => {
+test("domain registration remains available while external provider observations fail closed", async () => {
+  const storefrontId = "018f0000-0000-4000-8000-000000000010";
   const domainId = "018f0000-0000-4000-8000-000000000014";
   const fake = fakeCommands();
-  await handle(`/v1/storefront/domains/${domainId}/transition`, "POST", {
-    status: "certificate_pending",
-    certificateStatus: "pending",
-  }, fake);
-  await handle(`/v1/storefront/domains/${domainId}/transition`, "POST", {
-    status: "active",
-    certificateStatus: "active",
-    canonical: true,
-  }, fake);
 
-  assert.equal(fake.calls[0].input.canonical, false);
-  assert.equal(fake.calls[1].input.canonical, true);
+  const registration = await handle(
+    `/v1/storefront/storefronts/${storefrontId}/domains`,
+    "POST",
+    {
+      hostname: "shop.example.com",
+      kind: "custom",
+      verificationMethod: "dns_txt",
+    },
+    fake,
+  );
+  assert.equal(registration.response.status, 201);
+  assert.equal(fake.calls.length, 1);
+  assert.equal(fake.calls[0].method, "registerDomain");
+
+  const verification = await handle(
+    `/v1/storefront/domains/${domainId}/verifications`,
+    "POST",
+    {
+      attempt: 1,
+      challengeType: "dns_txt",
+      challengeName: "_verify.shop.example.com",
+      challengeValueHash: "a".repeat(64),
+      resultStatus: "verified",
+      providerReference: "forged-provider-reference",
+      observedAt: "2026-08-01T10:00:00.000Z",
+      expiresAt: "2026-08-01T11:00:00.000Z",
+    },
+    fake,
+  );
+  assert.equal(verification.response.status, 503);
+  assert.deepEqual(await verification.response.json(), {
+    error: { code: "DOMAIN_PROVIDER_CONTROL_UNAVAILABLE" },
+  });
+  assert.equal(verification.response.headers.get("cache-control"), "no-store");
+
+  const transition = await handle(
+    `/v1/storefront/domains/${domainId}/transition`,
+    "POST",
+    {
+      status: "active",
+      certificateStatus: "active",
+      providerHostnameId: "forged-provider-hostname",
+      canonical: true,
+    },
+    fake,
+  );
+  assert.equal(transition.response.status, 503);
+  assert.deepEqual(await transition.response.json(), {
+    error: { code: "DOMAIN_PROVIDER_CONTROL_UNAVAILABLE" },
+  });
+  assert.equal(transition.response.headers.get("cache-control"), "no-store");
+
+  assert.equal(fake.calls.length, 1);
 });
 
 test("theme publication requires an object and serializes revisions", async () => {

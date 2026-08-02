@@ -2,8 +2,8 @@ workpack:
   id: MOD-H
   title: Storefront Commerce and Custom Domains
   status: active
-  current_checkpoint: H1
-  updated_at: 2026-07-30
+  current_checkpoint: H7
+  updated_at: 2026-08-02
   owner_model: one_agent_complete_workpack
   pull_request: 48
   pull_request_state: draft
@@ -11,6 +11,9 @@ workpack:
 coordinates:
   repository: rahmatullahboss/store-management-pos
   base_branch: program/integration-v1
+  integration_base_sha: fd63dfde4d5940112a9c77c2743b281e49ff6b55
+  integration_sync_pr: 53
+  integration_sync_merge: e9dc992ded901452b3633b3d20a261e50668bc88
   branch: module/storefront-commerce-v1
   worktree: .worktrees/storefront-commerce
   neon_project: twilight-boat-26805962
@@ -27,88 +30,496 @@ upstream:
   product_branding_reuse: prohibited
   provenance_recording: required
   wholesale_import: prohibited
-  imported_source_batches: 3
-  latest_import_batch: SF-UP-003
+  imported_source_batches: 5
+  latest_import_batch: SF-UP-005
 
 checkpoints:
   H0:
     title: Activation and provenance
-    status: active_with_external_neon_quota_blocker
+    status: complete_with_external_neon_quota_blocker
     completed:
-      - git_branch_created
-      - draft_pr_48_created
-      - workpack_created
-      - initial_repository_audit_completed
-      - adaptation_categories_defined
-      - continuation_hub_created
-      - programme_board_updated
-      - agent_policy_updated
-      - execution_appendix_created
-      - product_scope_updated
-      - storefront_delivery_roadmap_created
-      - storefront_implementation_backlog_created
-      - reuse_register_OSS_0006_created
-      - internal_source_adaptation_notice_created
-      - upstream_file_manifest_baseline_created
+      - git_branch_and_draft_pr_created
+      - workpack_continuation_hub_programme_board_and_execution_policy_created
+      - product_scope_delivery_roadmap_and_implementation_backlog_created
+      - reuse_register_OSS_0006_and_internal_notice_created
+      - file_level_adaptation_manifests_SF_UP_001_to_SF_UP_005
       - module_boundary_registered
-      - file_level_adaptation_manifests_SF_UP_001_SF_UP_002_and_SF_UP_003
+      - latest_integration_baseline_merged_by_sync_PR_53
+      - integration_conflicts_resolved_additively_and_validated
     remaining:
       - create_or_verify_dev_module_storefront_commerce_when_neon_branch_slot_available
     blockers:
       - neon_nonproduction_project_has_10_branches_and_limit_is_10
     safety_decision:
       - no_existing_neon_branch_deleted_reset_or_repurposed
-      - proceed_with_repository_owned_migrations_and_run_scoped_validation_until_slot_exists
+      - use_repository_owned_migrations_PostgreSQL_17_and_non_destructive_Neon_recovery_until_slot_exists
+
   H1:
     title: Storefront foundation
-    status: verification_pending
+    status: complete
     completed:
-      - storefront_exact_money_and_bootstrap_contracts
-      - strict_hostname_parser
-      - bounded_public_bootstrap_client
-      - safe_transport_error_boundary
-      - original_semantic_theme_contract_and_defaults
-      - adapted_reviewed_theme_colour_sanitisation_SF_UP_001
-      - runtime_environment_schema_and_safe_origin_validation
-      - tenant_storefront_host_locale_currency_price_revision_publication_build_cache_scope
-      - fail_closed_request_runtime
-      - health_not_found_and_temporary_outage_responses
-      - host_resolution_service_binding_and_HTTP_adapter
-      - canonical_hostname_redirect
-      - secure_accessible_Worker_rendered_synthetic_storefront_shell
-      - tenant_scoped_hashed_ETag_and_cache_policy
-      - GET_HEAD_only_public_runtime
-      - storefront_foundation_runtime_and_worker_tests
-      - exact_Astro_Cloudflare_package_versions
-      - exact_npm_workspace_lockfile
-      - Astro_SSR_Cloudflare_adapter_configuration
-      - Astro_catch_all_bridge_to_local_Worker_runtime
-      - safe_Wrangler_config_without_upstream_IDs_domains_or_service_names
-      - Storefront_Lockfile_run_30488126211_reproducible_install_root_build_Astro_build_pass
-      - reviewed_public_product_card_adaptation_SF_UP_003
-      - publication_only_product_card_contract_with_exact_money
-      - storefront_specific_CI_verify_PostgreSQL_and_browser_jobs
-      - synthetic_English_desktop_mobile_and_Arabic_RTL_evidence_harness
-    remaining:
-      - complete_H1_exact_head_storefront_CI_foundation_design_cloudflare_and_neon_recovery_evidence
+      - storefront_exact_money_hostname_bootstrap_and_transport_contracts
+      - runtime_environment_safe_origin_and_fail_closed_request_boundary
+      - tenant_storefront_channel_host_locale_currency_price_publication_build_cache_scope
+      - service_binding_and_HTTP_host_resolution_adapters
+      - canonical_hostname_redirect_and_GET_HEAD_only_runtime
+      - secure_accessible_Worker_rendered_storefront_shell
+      - semantic_theme_contract_and_SF_UP_001_sanitisation
+      - exact_Astro_7_1_3_and_Cloudflare_adapter_14_1_4_workspace
+      - Wrangler_4_115_0_security_patch_and_exact_lockfile
+      - SF_UP_002_Cloudflare_Astro_shell
+      - SF_UP_003_public_product_card_with_publication_only_exact_money_contract
+      - bounded_browser_evidence_process_lifecycle
+      - English_desktop_mobile_and_Arabic_RTL_browser_matrix
+      - axe_zero_keyboard_skip_link_200_percent_text_and_overflow_checks
+      - upstream_product_branding_absent
+    exact_head_evidence:
+      head: ae2c44d6306ac8ec31211b04c276bdcce9882cc7
+      storefront_ci_run: 30502115957
+      storefront_verify_job: 90743801326
+      postgres_rehearsal_job: 90743920815
+      browser_evidence_job: 90743920881
+      cloudflare_preview_job: 90743920901
+      neon_recovery_job: 90743921243
+      foundation_design_run: 30502115949
+      storefront_lockfile_run: 30502115940
+      foundation_ci_run: 30502115992
+      foundation_verify_job: 90743799527
+      foundation_cloudflare_job: 90743888954
+      foundation_neon_recovery_job: 90743889104
+      foundation_neon_preview_job: 90743964476
+      foundation_neon_preview_result: external_branch_quota_failure_only
+
   H2:
     title: Storefront domain and publishing
-    status: blocked_by_H1_verification
+    status: complete
+    completed:
+      - STF_0001_storefront_domain_publication_content_and_cache_schema
+      - forced_RLS_and_runtime_direct_write_denial
+      - STF_0002_idempotent_command_receipt_audit_outbox_and_cache_generation_layer
+      - storefront_and_sales_channel_lifecycle_commands
+      - product_publication_command
+      - domain_registration_verification_certificate_and_transition_commands
+      - immutable_theme_publication_command
+      - STF_0003_domain_to_sales_channel_binding
+      - active_only_context_free_public_hostname_bootstrap_resolver
+      - authoritative_MOD_A_price_list_revision_in_public_bootstrap
+      - public_bootstrap_API_before_authentication
+      - authenticated_storefront_command_API
+      - tenant_scoped_management_read_repository_service_and_API
+      - deterministic_UUID_pagination_and_exact_bigint_serialisation
+      - STF_0004_qualified_status_reference_hotfix
+      - STF_0005_variant_category_collection_navigation_content_and_homepage_commands
+      - idempotent_publication_service_and_authenticated_API
+      - tenant_scoped_variant_category_collection_content_and_revision_reads
+      - storefront_operations_admin_surface_and_permission_gating
+      - PostgreSQL_17_H2_replay_conflict_RLS_audit_outbox_and_cache_generation_rehearsal
+      - buyer_and_admin_accessibility_RTL_mobile_and_200_percent_text_evidence
+      - Cloudflare_preview_runtime_metrics_and_cleanup
+      - non_destructive_Neon_recovery
+    exact_head_evidence:
+      head: 899c73512a5337f52dc5809e6df03877e96f1ef9
+      storefront_ci_run: 30505139609
+      storefront_verify_job: 90753143254
+      postgres_rehearsal_job: 90753284394
+      browser_evidence_job: 90753284422
+      cloudflare_preview_job: 90753284391
+      neon_recovery_job: 90753284761
+      foundation_design_run: 30505139614
+      storefront_lockfile_run: 30505139612
+      foundation_ci_run: 30505139644
+      foundation_ci_result: external_neon_preview_branch_quota_failure_only
+      H1_validation_run: 30505140254
+      H1_validation_result: superseded_validation_harness_failure_not_storefront_source_gate
+      repository_tests: 423
+      buyer_browser_scenarios: 3
+      admin_browser_scenarios: 4
+    remaining: []
+
   H3:
     title: Public catalog and content
-    status: blocked_by_H2
+    status: complete
+    completed_slices:
+      H3-CONTENT-01:
+        status: complete
+        completed:
+          - STF_0006_published_only_public_content_resolver
+          - versioned_storefront_public_content_v1_contract
+          - host_scoped_public_content_API_and_typed_client
+          - bootstrap_content_scope_reconciliation_and_fail_closed_Worker
+          - published_navigation_homepage_and_CMS_rendering
+          - bounded_JSON_safe_navigation_CSP_canonical_and_SEO_projection
+          - hidden_scheduled_unknown_host_and_scope_mismatch_denial
+          - STF_0007_variant_parent_product_reference_qualification
+          - STF_0008_remaining_publication_command_reference_qualification
+          - Cloudflare_preview_subdomain_eventual_consistency_retry
+          - PostgreSQL_browser_Cloudflare_and_recovery_evidence
+        exact_head_evidence:
+          head: b5fa25cc6e197c9bb9893ac0194028408fe89940
+          storefront_ci_run: 30513418700
+          storefront_verify_job: 90778058213
+          postgres_rehearsal_job: 90778179295
+          browser_evidence_job: 90778179223
+          cloudflare_preview_job: 90778179203
+          neon_recovery_job: 90778179526
+          repository_tests: 429
+          buyer_browser_scenarios: 3
+          admin_browser_scenarios: 4
+          public_content_browser_scenarios: 3
+          storefront_migrations: 8
+          storefront_tables: 16
+          forced_RLS_tables: 16
+          audit_events: 35
+          outbox_events: 35
+          command_receipts: 23
+          Cloudflare_requests: 42
+          Cloudflare_errors: 0
+          checkpoint_doc: docs/architecture/storefront/public-content-checkpoint.md
+      H3-CATALOG-02:
+        status: complete
+        completed:
+          - versioned_storefront_public_catalog_and_product_contracts
+          - STF_0009_authoritative_MOD_A_catalog_pricing_and_MOD_B_availability_composition
+          - STF_0010_host_scoped_listing_and_product_detail_resolvers
+          - exact_integer_minor_money_and_exact_decimal_quantity_projection
+          - published_selection_active_price_rule_and_warehouse_scope_enforcement
+          - active_reservation_subtraction_and_unknown_preorder_unavailable_states
+          - public_catalog_and_product_API_routes
+          - typed_client_and_buyer_Worker_catalog_resolvers
+          - responsive_product_listing_and_detail_rendering
+          - checkout_time_tax_and_promotion_revalidation_notice
+          - unpublished_archived_unpriced_unknown_host_and_scope_mismatch_denial
+          - compare_at_price_accessibility_contrast_correction
+          - PostgreSQL_browser_Cloudflare_and_recovery_evidence
+        exact_head_evidence:
+          implementation_head: e5092766ff625e1bbf0f9cff191296e1fb1851a8
+          storefront_ci_run: 30519058955
+          storefront_verify_job: 90795225080
+          postgres_rehearsal_job: 90795311940
+          browser_evidence_job: 90795311932
+          cloudflare_preview_job: 90795311951
+          neon_recovery_job: 90795312040
+          repository_tests: 435
+          buyer_browser_scenarios: 3
+          admin_browser_scenarios: 4
+          public_content_browser_scenarios: 3
+          public_catalog_browser_scenarios: 3
+          public_catalog_axe_violations: 0
+          storefront_migrations: 10
+          storefront_tables: 16
+          forced_RLS_tables: 16
+          audit_events: 37
+          outbox_events: 37
+          command_receipts: 23
+          cache_generation_rows: 1
+          Cloudflare_requests: 3
+          Cloudflare_errors: 0
+          quota_safe_validation_head: f4b9e93a50d60e22e98c5ef80a1542279000095a
+          validation_storefront_ci_run: 30519327515
+          validation_storefront_verify_job: 90796054506
+          validation_postgres_rehearsal_job: 90796166102
+          validation_browser_evidence_job: 90796166119
+          validation_cloudflare_preview_job: 90796166055
+          validation_neon_recovery_job: 90796166135
+          validation_foundation_ci_run: 30519327519
+          validation_foundation_verify_job: 90796102893
+          validation_foundation_cloudflare_job: 90796180051
+          validation_foundation_neon_recovery_job: 90796180328
+          validation_generic_neon_preview_job: 90796340548
+          validation_generic_neon_preview_result: skipped_quota_safe
+          validation_foundation_design_run: 30519327509
+          validation_storefront_lockfile_run: 30519327510
+          checkpoint_doc: docs/architecture/storefront/public-catalog-checkpoint.md
+      H3-DISCOVERY-03:
+        status: complete
+        completed:
+          - versioned_public_category_collection_and_search_contracts
+          - STF_0011_host_scoped_category_and_collection_resolution
+          - STF_0012_published_only_literal_and_full_text_search
+          - STF_0013_authoritative_category_and_availability_filter_application
+          - category_breadcrumb_child_navigation_and_bounded_pagination
+          - deterministic_collection_member_order_and_public_product_intersection
+          - retained_search_filter_state_clear_action_facets_and_no_result_page
+          - wildcard_safe_search_and_SQL_bounded_category_facets
+          - bootstrap_discovery_scope_reconciliation_and_fail_closed_routes
+          - SF_UP_004_category_collection_and_search_page_composition_adaptation
+          - PostgreSQL_pipefail_and_disjoint_fixture_truth_correction
+          - owner_safe_Cloudflare_preview_quota_recovery
+          - PostgreSQL_browser_Cloudflare_and_recovery_evidence
+        exact_head_evidence:
+          head: bad50da86831d1392e77d0263f978220356a36d6
+          storefront_ci_run: 30534413388
+          storefront_verify_job: 90844121062
+          postgres_rehearsal_job: 90844265607
+          browser_evidence_job: 90844265594
+          cloudflare_preview_job: 90844265639
+          neon_recovery_job: 90844265994
+          repository_tests: 450
+          buyer_browser_scenarios: 3
+          admin_browser_scenarios: 4
+          public_content_browser_scenarios: 3
+          public_catalog_browser_scenarios: 3
+          public_discovery_browser_scenarios: 3
+          public_discovery_axe_violations: 0
+          applied_search_filter_evidence: passed_zero_axe
+          storefront_migrations: 13
+          storefront_tables: 16
+          forced_RLS_tables: 16
+          audit_events: 42
+          outbox_events: 42
+          command_receipts: 23
+          cache_generation_rows: 1
+          PostgreSQL_raw_errors: 0
+          Cloudflare_owned_stale_workers_pruned: 20
+          Cloudflare_requests: 1
+          Cloudflare_errors: 0
+          checkpoint_doc: docs/architecture/storefront/public-discovery-checkpoint.md
+      H3-SEO-MEDIA-04:
+        status: complete
+        completed:
+          - published_only_robots_sitemap_canonical_and_structured_product_metadata
+          - STF_0014_public_SEO_resolution
+          - bounded_public_product_media_projection_and_STF_0015_media_resolution
+          - exact_cache_generation_families_STF_0016_and_STF_0017
+          - fail_closed_generation_lookup_and_scope_isolation
+          - safe_public_media_and_cache_API_base_path_joining
+          - safe_cache_resource_token_normalisation
+          - SF_UP_005_selective_SEO_media_cache_adaptation
+          - Bengali_bounded_3G_and_Japanese_CJK_browser_evidence
+          - PostgreSQL_17_Cloudflare_and_non_destructive_Neon_evidence
+        exact_head_evidence:
+          head: d5e5c6a0b0a780a89c9702f0ade6f632c0dc60ab
+          storefront_ci_run: 30693905643
+          storefront_verify_job: 91353332834
+          postgres_rehearsal_job: 91353407634
+          browser_evidence_job: 91353407632
+          cloudflare_preview_job: 91353407633
+          neon_recovery_job: 91353407734
+          repository_tests: 486
+          buyer_browser_scenarios: 5
+          buyer_browser_locales: 4
+          bounded_3g_scenarios: 1
+          public_content_browser_scenarios: 3
+          public_catalog_browser_scenarios: 3
+          public_discovery_browser_scenarios: 3
+          storefront_migrations: 17
+          storefront_tables: 17
+          forced_RLS_tables: 17
+          audit_events: 95
+          outbox_events: 95
+          command_receipts: 24
+          cache_generation_rows: 1
+          cache_generation_families: 9
+          Cloudflare_requests: 5
+          Cloudflare_errors: 0
+          checkpoint_doc: docs/architecture/storefront/public-seo-media-checkpoint.md
+    remaining: []
+
   H4:
     title: Exact cart and checkout
-    status: blocked_by_H3
+    status: blocked_on_cross_module_authority
+    completed_slices:
+      H4-QUOTE-01:
+        status: complete_verified
+        completed:
+          - strict_authority_free_cart_draft_and_quote_request_contract
+          - exact_quantity_coupon_country_and_revision_validation
+          - browser_commercial_authority_rejection
+          - deterministic_cart_draft_to_quote_request_projection
+      H4-QUOTE-02:
+        status: boundary_complete_activation_blocked
+        completed:
+          - trusted_authenticated_customer_principal_boundary
+          - published_product_variant_revalidation
+          - full_sales_channel_multi_warehouse_MOD_B_availability_revalidation
+          - exact_trusted_RequestContext_forwarding_to_MOD_C_quote_service
+          - canonical_quote_scope_item_snapshot_revision_and_expiry_revalidation
+          - unregistered_no_store_quote_handler_and_client
+      H4-CHECKOUT-03:
+        status: contract_boundary_complete_activation_blocked
+        completed:
+          - strict_checkout_capability_request_without_browser_amount_authority
+          - versioned_shipping_and_payment_capability_references
+          - quote_country_shipping_payment_revision_and_expiry_reconciliation
+          - ready_changed_unavailable_recovery_state
+          - unregistered_no_store_checkout_capability_handler_and_client
+      H4-SUBMIT-04:
+        status: pre_side_effect_complete_activation_blocked
+        completed:
+          - strict_submission_intent_without_totals_tax_payment_amount_or_warehouse_authority
+          - exact_quote_country_shipping_payment_freshness_preflight
+          - deterministic_SHA_256_idempotency_request_hash
+          - no_MOD_C_order_MOD_B_reservation_MOD_E_payment_or_accounting_side_effect_wired
+      H4-RECOVERY-05:
+        status: complete_verified
+        completed:
+          - typed_cart_quote_country_shipping_payment_recovery_model
+          - English_Bengali_Arabic_RTL_and_Japanese_server_rendered_recovery_UI
+          - bounded_3G_keyboard_Axe_200_percent_text_and_reduced_motion_evidence
+    exact_head_evidence:
+      head: db135e7c72ac418ee1158ab10cb3665ee88ab943
+      storefront_ci_run: 30710984952
+      result: all_storefront_CI_lanes_passed
+    blockers:
+      - issue_97_lossless_MOD_A_price_tax_into_MOD_C_and_pre_order_shipping
+      - issue_98_MOD_E_side_effect_free_public_payment_capability
+      - issue_100_MOD_F_typed_checkout_country_address_contact_policy
+    remaining:
+      - integrate_issue_97_98_100_owning_module_capabilities
+      - activate_and_verify_public_quote_checkout_and_submit_routes_only_after_authority_exists
+      - prove_retry_concurrency_no_duplicate_order_reservation_payment_or_ledger_effects
+
   H5:
     title: Customer and order experience
-    status: blocked_by_H4
+    status: blocked_on_trusted_customer_order_and_return_capabilities
+    completed_slices:
+      H5-ACCOUNT-01:
+        status: complete_verified_boundary_unregistered
+        completed:
+          - versioned_private_customer_profile_order_history_and_order_detail_contracts
+          - authenticated_session_only_principal_boundary
+          - no_browser_selected_customer_identity_or_permission_synthesis
+          - tenant_legal_entity_store_customer_storefront_sales_channel_revalidation
+          - buyer_safe_profile_and_order_projection_with_internal_authority_redaction
+          - credentialed_HTTPS_no_store_private_clients
+          - unregistered_private_account_handler
+      H5-TRACKING-02:
+        status: complete_verified
+        completed:
+          - canonical_buyer_safe_read_only_order_tracking_view
+          - exact_integer_string_money_and_quantity_rendering
+          - no_synthetic_carrier_event_tracking_URL_ETA_return_or_refund_authority
+          - English_Bengali_Arabic_RTL_and_Japanese_tracking_evidence
+      H5-PRIVATE-HARDEN-03:
+        status: complete_verified
+        completed:
+          - generic_ACCOUNT_ACCESS_DENIED_403_without_scope_or_ownership_detail_leakage
+          - private_no_store_cache_headers_preserved
+      H5-PAGINATION-04:
+        status: complete_verified_boundary_unregistered
+        completed:
+          - order_history_cursor_treated_as_bounded_URL_safe_opaque_token
+          - UUID_cursors_remain_valid_subset_without_constraining_MOD_C_pagination_scheme
+          - unsafe_path_whitespace_control_and_oversized_cursors_fail_closed
+          - customer_order_product_variant_identities_remain_UUID_only
+          - client_and_module_round_trip_cursor_without_browser_customer_identity
+          - private_routes_remain_unregistered_pending_issue_101
+    exact_head_evidence:
+      head: 7485f4e80c468de328093fcc09fd22efdc25a110
+      storefront_ci_run: 30727323408
+      storefront_verify_job: 91441336353
+      postgres_rehearsal_job: 91441384231
+      browser_evidence_job: 91441384334
+      cloudflare_preview_job: 91441384267
+      neon_recovery_job: 91441384470
+      result: all_storefront_CI_lanes_passed
+    blockers:
+      - issue_101_trusted_session_to_canonical_customer_binding_and_storefront_scoped_MOD_C_order_reads
+      - issue_102_buyer_safe_idempotent_return_support_request_capability
+    remaining:
+      - integrate_issue_101_before_registering_private_routes
+      - integrate_issue_102_before_buyer_return_support_actions
+
   H6:
     title: Custom domains and SaaS operations
-    status: blocked_by_H2_and_shared_control_plane_contract
+    status: blocked_on_trusted_provider_control_plane
+    completed_slices:
+      H6-PROVIDER-TRUST-01:
+        status: complete_verified
+        completed:
+          - external_tenant_admin_provider_verification_and_certificate_mutations_fail_closed_503
+          - forged_verified_certificate_active_provider_IDs_cannot_reach_domain_command_service
+          - domain_registration_intent_remains_available
+      H6-DOMAIN-READ-02:
+        status: complete_verified
+        completed:
+          - provider_secret_free_read_only_domain_lifecycle_projection
+          - strict_provider_reference_challenge_and_failure_detail_rejection
+          - active_phase_requires_domain_active_verification_verified_and_certificate_active
+          - provider_availability_changes_guidance_not_authority_facts
+    exact_head_evidence:
+      head: f0ed777350cc67145381ec02911ea53e9ab72c4d
+      storefront_ci_run: 30723955210
+      result: all_storefront_CI_lanes_passed_after_targeted_Neon_rerun
+    blockers:
+      - issue_104_trusted_MOD_G_shared_Cloudflare_custom_hostname_provider_lifecycle
+    remaining:
+      - integrate_provider_create_challenge_verification_certificate_suspend_delete_reconcile_capability
+      - verify_conflict_takeover_certificate_and_offboarding_evidence
+
   H7:
     title: Hardening and handoff
-    status: blocked_by_H1_to_H6
+    status: active_with_external_runtime_blockers
+    completed_slices:
+      H7-CACHE-ISOLATION-01:
+        status: complete_verified
+        completed:
+          - pairwise_tenant_storefront_channel_hostname_locale_currency_commercial_revision_cache_isolation
+          - delimiter_collision_resistance
+          - private_cart_checkout_account_and_evidence_route_public_cache_bypass
+          - unsafe_cache_scope_and_resource_tokens_fail_closed
+        exact_head: 0f4c14bfddad9e69ac1b51976f6a6fe262c9ae43
+        storefront_ci_run: 30724190935
+      H7-ABUSE-CONTRACT-02:
+        status: complete_verified_runtime_provider_blocked
+        completed:
+          - public_private_checkout_and_admin_policy_classification
+          - trusted_edge_and_authenticated_session_opaque_key_contracts
+          - spoofed_forwarding_header_resistance
+          - strict_allow_deny_unavailable_decision_contract
+          - safe_429_retry_after_no_store_and_503_fail_closed_semantics
+          - no_Worker_isolate_memory_limiter_faked_as_production_control
+        exact_head: 967a66e58ae89c408a5b3e75afc3a95a2d13fad4
+        storefront_ci_run: 30724380521
+      H7-OBS-RUNBOOK-03:
+        status: complete_verified_sink_integration_blocked
+        completed:
+          - strict_privacy_safe_storefront_operational_event_v1_envelope
+          - fixed_low_cardinality_cache_public_host_private_access_abuse_domain_checkout_taxonomy
+          - customer_hostname_IP_abuse_provider_payment_storage_and_free_form_metadata_rejection
+          - operational_runbook_for_cache_private_domain_checkout_abuse_Cloudflare_PostgreSQL_Neon_and_return_support_incidents
+          - progress_handoff_with_verified_checkpoint_ledger_and_fail_closed_matrix
+        exact_head: a4030ef44814b740538bb3d8a2b7a192bf44ba2a
+        storefront_ci_run: 30724857648
+      H7-FAIL-CLOSED-MATRIX-04:
+        status: complete_verified
+        completed:
+          - blocked_commerce_and_private_handlers_absent_from_live_API_root
+          - domain_provider_guard_precedes_provider_observation_command_path
+          - abuse_and_operational_sink_not_silently_wired
+          - machine_tracker_blocker_state_enforced_by_CI
+          - future_safe_non_H3_verified_head_assertion
+        exact_head: 7b858b601cc83fc7bd65d3847ebaa7d9e5998cdc
+        storefront_ci_run: 30726144155
+      H7-PERF-CACHE-05:
+        status: complete_verified
+        completed:
+          - bounded_local_synthetic_performance_rehearsal_64_requests_concurrency_8
+          - performance_report_explicit_productionSla_false
+          - performance_64_of_64_success_p95_86_31_ms
+          - reason_to_cache_family_invalidation_policy_rehearsal
+          - unknown_invalidation_reason_conservatively_advances_all_nine_families
+          - targeted_media_invalidation_does_not_advance_catalog
+          - cache_invalidation_replay_conflict_audit_outbox_and_privilege_evidence
+        exact_head: 8666a1440d5139a132c5028f3b64ad0912855eaf
+        storefront_ci_run: 30726322406
+        storefront_verify_job: 91439163345
+        postgres_rehearsal_job: 91439153771
+        browser_evidence_job: 91439153689
+        cloudflare_preview_job: 91439153617
+        neon_recovery_job: 91439153353
+        cloudflare_first_attempt_result: transient_local_preview_502_then_targeted_rerun_passed
+        neon_first_attempt_result: concurrency_cancelled_then_targeted_rerun_passed
+        result: all_storefront_CI_lanes_passed_without_weakening_source_guards_or_budgets
+    blockers:
+      - issue_107_distributed_storefront_abuse_rate_limit_provider
+      - issue_108_approved_shared_operational_telemetry_sink
+      - inherited_issue_97_98_100_101_102_104_completion_dependencies
+    remaining:
+      - integrate_issue_107_distributed_runtime_abuse_provider
+      - integrate_issue_108_shared_telemetry_sink_without_widening_event_envelope
+      - rerun_fresh_final_exact_head_CI_after_all_owning_module_integrations
+      - replace_progress_handoff_with_final_completion_receipt
 
 module_authority:
   catalog_pricing_tax: MOD-A
@@ -120,32 +531,64 @@ module_authority:
   storefront_publication_presentation_domains: MOD-H
 
 next_action:
-  id: H1-VERIFY-05
-  description: Run exact-head storefront verify, local PostgreSQL migration rehearsal and browser accessibility evidence; then close H1 and activate H2 without deleting or repurposing any Neon branch.
+  id: H7-DEPENDENCY-INTEGRATION
+  description: Keep verified MOD-H boundaries fail closed while integrating Issues 97, 98, 100, 101, 102, 104, 107 and 108 through their owning modules or approved shared runtime adapters; then run fresh final exact-head Storefront CI and produce the final handoff.
+  documentation_first: docs/agent-handoffs/MOD-H-STOREFRONT-COMMERCE-PROGRESS.md
 
 last_commits:
-  - sha: d339573024c94e5db32739888469f89d04f8efa9
-    purpose: Worker shell and host isolation tests
-  - sha: 9708cdf44f5b3801d282b4f600e8f8a3e0bfa15e
-    purpose: lockfile reconciliation workflow
-  - sha: 2fa53d30558241a401d5fca5ed9abfca7e330511
-    purpose: CI generated exact package lockfile after root and Astro build verification
-  - sha: de87422284a7a0e4aa500991f9bb3d7abb0bc285
-    purpose: SF-UP-002 Astro Cloudflare provenance
-  - sha: 4756b3a4913c4ad47492891e6a71e166ce086082
-    purpose: SF-UP-003 reviewed product-card provenance
+  - sha: e9dc992ded901452b3633b3d20a261e50668bc88
+    purpose: latest integration baseline merged with reviewed conflict resolution
+  - sha: 899c73512a5337f52dc5809e6df03877e96f1ef9
+    purpose: H2 publishing management admin and full storefront CI checkpoint
+  - sha: b5fa25cc6e197c9bb9893ac0194028408fe89940
+    purpose: H3 published public content and compatibility migration checkpoint
+  - sha: e5092766ff625e1bbf0f9cff191296e1fb1851a8
+    purpose: H3 authoritative public listing and product detail implementation checkpoint
+  - sha: f4b9e93a50d60e22e98c5ef80a1542279000095a
+    purpose: quota-safe full validation of the H3 catalog checkpoint
+  - sha: bad50da86831d1392e77d0263f978220356a36d6
+    purpose: H3 category collection search filters PostgreSQL truth Cloudflare retention and exact-head evidence
+  - sha: d5e5c6a0b0a780a89c9702f0ade6f632c0dc60ab
+    purpose: H3 SEO media cache and multilingual low-bandwidth exact-head evidence
+  - sha: db135e7c72ac418ee1158ab10cb3665ee88ab943
+    purpose: H4 exact cart checkout recovery verified code checkpoint
+  - sha: 2f8569a2e47922bb5d77e584f605fac85dabeb5f
+    purpose: H4 recovery factual input refinement without evidence escape casts
+  - sha: b35b0e260abdcfd882240437f47f59f98a2e7548
+    purpose: H5 private customer order read tracking and access hardening verified checkpoint
+  - sha: 7485f4e80c468de328093fcc09fd22efdc25a110
+    purpose: H5 bounded opaque MOD_C order history pagination verified checkpoint
+  - sha: f0ed777350cc67145381ec02911ea53e9ab72c4d
+    purpose: H6 custom domain provider trust and read-only lifecycle verified checkpoint
+  - sha: 0f4c14bfddad9e69ac1b51976f6a6fe262c9ae43
+    purpose: H7 cache isolation hardening verified checkpoint
+  - sha: 967a66e58ae89c408a5b3e75afc3a95a2d13fad4
+    purpose: H7 abuse control contract verified checkpoint
+  - sha: a4030ef44814b740538bb3d8a2b7a192bf44ba2a
+    purpose: H7 privacy safe observability runbook and progress handoff exact-head verified checkpoint
+  - sha: 7b858b601cc83fc7bd65d3847ebaa7d9e5998cdc
+    purpose: H7 future-safe fail-closed release matrix verified checkpoint
+  - sha: 8666a1440d5139a132c5028f3b64ad0912855eaf
+    purpose: H7 bounded performance and cache invalidation policy verified checkpoint
 
 evidence:
   github:
     pr: 48
-    base_sha: 7c552a6c55844c6437ed4cc60ab85db3d8f8bb76
-    worker_shell_verified_head: d339573024c94e5db32739888469f89d04f8efa9
-    worker_shell_foundation_ci_run: 30487642640
-    worker_shell_foundation_verify_job: 90697289708
-    lockfile_generation_run: 30488126211
-    lockfile_generation_job: 90698848850
-    lockfile_generated_head: 2fa53d30558241a401d5fca5ed9abfca7e330511
-    current_exact_head_ci: pending_after_H1_provenance_reconciliation
+    base_sha: fd63dfde4d5940112a9c77c2743b281e49ff6b55
+    verified_implementation_head: 7485f4e80c468de328093fcc09fd22efdc25a110
+    verified_validation_head: 7485f4e80c468de328093fcc09fd22efdc25a110
+    latest_storefront_ci_run: 30727323408
+    latest_storefront_verify_job: 91441336353
+    latest_postgres_rehearsal_job: 91441384231
+    latest_browser_evidence_job: 91441384334
+    latest_cloudflare_preview_job: 91441384267
+    latest_neon_recovery_job: 91441384470
+    bounded_performance_requests: 64
+    bounded_performance_concurrency: 8
+    bounded_performance_p95_ms: 86.31
+    bounded_performance_production_sla: false
+    integration_sync_pr: 53
+    integration_sync_report: docs/architecture/storefront/integration-conflicts.txt
   neon:
     project_id: twilight-boat-26805962
     postgres_version: 17
@@ -153,25 +596,22 @@ evidence:
     branch_limit: 10
     requested_branch: dev/module-storefront-commerce
     result: not_created_to_preserve_existing_work
+    generic_preview_policy: skipped_for_MOD_H_until_safe_quota_slot
+    required_evidence: PostgreSQL_17_full_replay_plus_non_destructive_Neon_recovery
   adaptation:
-    latest_batch: SF-UP-003
-    upstream_paths:
-      - apps/storefront/src/components/cards/ProductCard.astro
-    upstream_blob_shas:
-      apps/storefront/src/components/cards/ProductCard.astro: 68bc025696a3e36dbf316d64f2e026ac719ddcf9
-    local_paths:
-      - apps/storefront-web/src/components/ProductCard.astro
-      - apps/storefront-web/src/pages/evidence/storefront.astro
-      - apps/storefront-web/public/evidence/linen-shirt.svg
-      - packages/storefront-contracts/src/index.ts
-      - tests/unit/storefront-product-card-contract.test.mjs
-      - tooling/scripts/storefront-design-evidence.mjs
-      - .github/workflows/storefront-ci.yml
+    latest_batch: SF-UP-005
+    upstream_product_card_blob: 68bc025696a3e36dbf316d64f2e026ac719ddcf9
+    upstream_discovery_blobs:
+      category_page: fb8c87c5828766d9a63f149e1bac3692384a1f79
+      collection_page: 110a72dd675ab282ae5efa656529844b3a8aabba
+      search_page: 9a8bf2f1c8876d57875209791dd2c0a878c2c385
+    seo_media_cache_provenance: docs/architecture/storefront/SF-UP-005-SEO-CACHE.yaml
     product_facing_upstream_branding: none
     upstream_business_authority_imported: false
   known_risks:
-    - multi_tenant_domain_control_plane_not_present_upstream
-    - sales_channel_publication_model_not_present_upstream
-    - customer_auth_and_checkout_contract_rewrite_required
-    - source_rights_and_provenance_must_remain_auditable
     - dedicated_neon_branch_waiting_for_safe_quota_slot
+    - issue_97_98_100_keep_live_checkout_authority_fail_closed
+    - issue_101_102_keep_private_customer_order_and_return_mutations_fail_closed
+    - issue_104_keeps_external_provider_verification_and_certificate_mutation_fail_closed
+    - issue_107_keeps_distributed_abuse_enforcement_unwired
+    - issue_108_keeps_operational_event_envelope_unwired_to_shared_sink

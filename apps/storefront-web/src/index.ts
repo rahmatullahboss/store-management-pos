@@ -3,6 +3,22 @@ export {
   StorefrontCacheScopeError,
 } from "./cache-scope.js";
 export {
+  createStorefrontCatalogResolver,
+  createStorefrontCatalogTransportResolver,
+  type StorefrontCatalogResolver,
+} from "./catalog-resolver.js";
+export {
+  createStorefrontContentResolver,
+  createStorefrontContentTransportResolver,
+  type StorefrontContentResolveOptions,
+  type StorefrontContentResolver,
+} from "./content-resolver.js";
+export {
+  renderStorefrontDiscovery,
+  type StorefrontDiscoveryRenderInput,
+  type StorefrontDiscoveryRenderModel,
+} from "./discovery-render.js";
+export {
   parseStorefrontRuntimeEnvironment,
   StorefrontEnvironmentError,
   type StorefrontRuntimeEnvironment,
@@ -21,7 +37,11 @@ export {
 } from "./render.js";
 export {
   resolveStorefrontRequest,
+  storefrontCategoryNotFoundResponse,
+  storefrontCollectionNotFoundResponse,
+  storefrontContentNotFoundResponse,
   storefrontHealthResponse,
+  storefrontProductNotFoundResponse,
   storefrontRequestHostname,
   storefrontServiceUnavailableResponse,
   storefrontUnavailableResponse,
@@ -29,6 +49,8 @@ export {
 } from "./runtime.js";
 export {
   createStorefrontWorker,
+  type StorefrontCatalogResolverFactory,
+  type StorefrontContentResolverFactory,
   type StorefrontResolverFactory,
   type StorefrontWorker,
   type StorefrontWorkerBindings,

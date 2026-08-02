@@ -52,6 +52,19 @@ function unavailableHeaders(): HeadersInit {
   };
 }
 
+function publicNotFoundResponse(code: string, message: string): Response {
+  return Response.json(
+    { error: { code, message } },
+    {
+      status: 404,
+      headers: {
+        ...unavailableHeaders(),
+        "Cache-Control": "public, max-age=0, s-maxage=30, stale-while-revalidate=60",
+      },
+    },
+  );
+}
+
 export function storefrontUnavailableResponse(): Response {
   return Response.json(
     {
@@ -64,6 +77,34 @@ export function storefrontUnavailableResponse(): Response {
       status: 404,
       headers: unavailableHeaders(),
     },
+  );
+}
+
+export function storefrontContentNotFoundResponse(): Response {
+  return publicNotFoundResponse(
+    "CONTENT_NOT_FOUND",
+    "Published content was not found.",
+  );
+}
+
+export function storefrontProductNotFoundResponse(): Response {
+  return publicNotFoundResponse(
+    "PRODUCT_NOT_FOUND",
+    "Published product was not found.",
+  );
+}
+
+export function storefrontCategoryNotFoundResponse(): Response {
+  return publicNotFoundResponse(
+    "CATEGORY_NOT_FOUND",
+    "Published category was not found.",
+  );
+}
+
+export function storefrontCollectionNotFoundResponse(): Response {
+  return publicNotFoundResponse(
+    "COLLECTION_NOT_FOUND",
+    "Published collection was not found.",
   );
 }
 

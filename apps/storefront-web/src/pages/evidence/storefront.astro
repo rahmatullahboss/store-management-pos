@@ -10,28 +10,71 @@ if (import.meta.env.STOREFRONT_EVIDENCE_MODE !== "1") {
   });
 }
 
-const arabic = Astro.url.searchParams.get("locale") === "ar";
-const locale = arabic ? "ar" : "en-GB";
-const direction = arabic ? "rtl" : "ltr";
-const copy = arabic
-  ? {
-      title: "منتجات المتجر المنشورة",
-      description: "بيانات تركيبية لاختبار العرض المتجاوب وإمكانية الوصول فقط.",
-      skip: "انتقل إلى المحتوى",
-      home: "الرئيسية",
-      browse: "تصفح",
-      cart: "السلة",
-      section: "مختارات هذا الأسبوع",
-    }
-  : {
-      title: "Published storefront products",
-      description: "Synthetic fixtures used only for responsive and accessibility evidence.",
-      skip: "Skip to content",
-      home: "Home",
-      browse: "Browse",
-      cart: "Cart",
-      section: "This week’s selection",
-    };
+const supportedLocales = ["en-GB", "bn-BD", "ar", "ja-JP"] as const;
+type EvidenceLocale = (typeof supportedLocales)[number];
+const requestedLocale = Astro.url.searchParams.get("locale");
+const locale: EvidenceLocale = supportedLocales.includes(
+  requestedLocale as EvidenceLocale,
+)
+  ? (requestedLocale as EvidenceLocale)
+  : "en-GB";
+const direction = locale === "ar" ? "rtl" : "ltr";
+const copy = {
+  "en-GB": {
+    title: "Published storefront products",
+    description: "Synthetic fixtures used only for responsive and accessibility evidence.",
+    skip: "Skip to content",
+    home: "Home",
+    browse: "Browse",
+    cart: "Cart",
+    section: "This week’s selection",
+    navLabel: "Primary navigation",
+    evidence: "Storefront evidence",
+    publishedCount: "published products",
+    footer: "Synthetic evidence only. No customer or production data.",
+  },
+  "bn-BD": {
+    title: "প্রকাশিত স্টোরফ্রন্ট পণ্য",
+    description: "শুধু রেসপনসিভ লেআউট ও অ্যাক্সেসিবিলিটি যাচাইয়ের জন্য কৃত্রিম ডেটা।",
+    skip: "মূল কনটেন্টে যান",
+    home: "হোম",
+    browse: "পণ্য দেখুন",
+    cart: "কার্ট",
+    section: "এই সপ্তাহের নির্বাচন",
+    navLabel: "প্রধান নেভিগেশন",
+    evidence: "স্টোরফ্রন্ট যাচাই",
+    publishedCount: "টি প্রকাশিত পণ্য",
+    footer: "শুধু কৃত্রিম যাচাই ডেটা। কোনো গ্রাহক বা প্রোডাকশন ডেটা নয়।",
+  },
+  ar: {
+    title: "منتجات المتجر المنشورة",
+    description: "بيانات تركيبية لاختبار العرض المتجاوب وإمكانية الوصول فقط.",
+    skip: "انتقل إلى المحتوى",
+    home: "الرئيسية",
+    browse: "تصفح",
+    cart: "السلة",
+    section: "مختارات هذا الأسبوع",
+    navLabel: "التنقل الرئيسي",
+    evidence: "اختبار واجهة المتجر",
+    publishedCount: "منتجات منشورة",
+    footer: "بيانات اختبار تركيبية فقط. لا توجد بيانات عملاء أو إنتاج.",
+  },
+  "ja-JP": {
+    title: "公開済みストアフロント商品",
+    description: "レスポンシブ表示とアクセシビリティ検証専用の合成データです。",
+    skip: "メインコンテンツへ移動",
+    home: "ホーム",
+    browse: "商品を見る",
+    cart: "カート",
+    section: "今週のセレクション",
+    navLabel: "メインナビゲーション",
+    evidence: "ストアフロント検証",
+    publishedCount: "件の公開商品",
+    footer: "合成された検証データのみです。顧客データや本番データは含みません。",
+  },
+}[locale];
+
+const localised = <T,>(values: Record<EvidenceLocale, T>): T => values[locale];
 
 const products = [
   parseStorefrontProductCardV1({
@@ -39,7 +82,12 @@ const products = [
     productId: "product-linen-shirt",
     variantId: "variant-natural-medium",
     slug: "linen-shirt",
-    name: arabic ? "قميص كتان طبيعي" : "Natural Linen Shirt",
+    name: localised({
+      "en-GB": "Natural Linen Shirt",
+      "bn-BD": "প্রাকৃতিক লিনেন শার্ট",
+      ar: "قميص كتان طبيعي",
+      "ja-JP": "ナチュラルリネンシャツ",
+    }),
     publicationState: "published",
     availability: "available",
     pricePrefix: "none",
@@ -47,18 +95,33 @@ const products = [
     compareAtPrice: { currency: "GBP", minor: "150000", scale: 2 },
     media: {
       src: "/evidence/linen-shirt.svg",
-      alt: arabic ? "رسم توضيحي لقميص كتان" : "Illustration of a linen shirt",
+      alt: localised({
+        "en-GB": "Illustration of a linen shirt",
+        "bn-BD": "লিনেন শার্টের চিত্র",
+        ar: "رسم توضيحي لقميص كتان",
+        "ja-JP": "リネンシャツのイラスト",
+      }),
       width: 800,
       height: 1000,
     },
-    badge: arabic ? "جديد" : "New",
+    badge: localised({
+      "en-GB": "New",
+      "bn-BD": "নতুন",
+      ar: "جديد",
+      "ja-JP": "新着",
+    }),
   }),
   parseStorefrontProductCardV1({
     contractVersion: "storefront-product-card.v1",
     productId: "product-storage-basket",
     variantId: null,
     slug: "woven-storage-basket",
-    name: arabic ? "سلة تخزين منسوجة" : "Woven Storage Basket",
+    name: localised({
+      "en-GB": "Woven Storage Basket",
+      "bn-BD": "বোনা স্টোরেজ ঝুড়ি",
+      ar: "سلة تخزين منسوجة",
+      "ja-JP": "編み込み収納バスケット",
+    }),
     publicationState: "published",
     availability: "limited",
     pricePrefix: "from",
@@ -72,21 +135,36 @@ const products = [
     productId: "product-desk-lamp",
     variantId: "variant-brass",
     slug: "adjustable-desk-lamp",
-    name: arabic ? "مصباح مكتب قابل للتعديل" : "Adjustable Desk Lamp",
+    name: localised({
+      "en-GB": "Adjustable Desk Lamp",
+      "bn-BD": "সমন্বয়যোগ্য ডেস্ক ল্যাম্প",
+      ar: "مصباح مكتب قابل للتعديل",
+      "ja-JP": "調整可能なデスクランプ",
+    }),
     publicationState: "published",
     availability: "preorder",
     pricePrefix: "none",
     price: { currency: "GBP", minor: "8450", scale: 2 },
     compareAtPrice: null,
     media: null,
-    badge: arabic ? "قريباً" : "Coming soon",
+    badge: localised({
+      "en-GB": "Coming soon",
+      "bn-BD": "শীঘ্রই আসছে",
+      ar: "قريباً",
+      "ja-JP": "近日公開",
+    }),
   }),
   parseStorefrontProductCardV1({
     contractVersion: "storefront-product-card.v1",
     productId: "product-tea-set",
     variantId: "variant-four-cup",
     slug: "stoneware-tea-set",
-    name: arabic ? "طقم شاي خزفي بأربع أكواب" : "Four-cup Stoneware Tea Set",
+    name: localised({
+      "en-GB": "Four-cup Stoneware Tea Set",
+      "bn-BD": "চার-কাপ স্টোনওয়্যার টি সেট",
+      ar: "طقم شاي خزفي بأربع أكواب",
+      "ja-JP": "4客用ストーンウェアティーセット",
+    }),
     publicationState: "published",
     availability: "unavailable",
     pricePrefix: "none",
@@ -131,7 +209,7 @@ const themeStyle = Object.entries(theme)
     <header>
       <div class="container header-row">
         <a class="brand" href="/" aria-label={copy.home}>Synthetic Goods</a>
-        <nav aria-label="Primary navigation">
+        <nav aria-label={copy.navLabel}>
           <a href="/">{copy.home}</a>
           <a href="/search">{copy.browse}</a>
           <a href="/cart">{copy.cart}</a>
@@ -140,14 +218,14 @@ const themeStyle = Object.entries(theme)
     </header>
     <main id="main-content" class="container" tabindex="-1">
       <section class="intro" aria-labelledby="evidence-title">
-        <p class="eyebrow">Storefront evidence</p>
+        <p class="eyebrow">{copy.evidence}</p>
         <h1 id="evidence-title">{copy.title}</h1>
         <p>{copy.description}</p>
       </section>
       <section aria-labelledby="product-grid-heading">
         <div class="section-heading">
           <h2 id="product-grid-heading">{copy.section}</h2>
-          <p>{products.length} published products</p>
+          <p>{products.length} {copy.publishedCount}</p>
         </div>
         <div class="product-grid">
           {products.map((product, index) => (
@@ -157,7 +235,7 @@ const themeStyle = Object.entries(theme)
       </section>
     </main>
     <footer>
-      <div class="container">Synthetic evidence only. No customer or production data.</div>
+      <div class="container">{copy.footer}</div>
     </footer>
   </body>
 </html>

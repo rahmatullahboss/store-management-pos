@@ -4,6 +4,24 @@ import {
   parseStorefrontBootstrapV1,
   type StorefrontBootstrapV1,
 } from "../../../packages/storefront-contracts/src/index.js";
+import {
+  parseStorefrontPublicCatalogPageV1,
+  parseStorefrontPublicProductDetailV1,
+  type StorefrontPublicCatalogPageV1,
+  type StorefrontPublicProductDetailV1,
+} from "../../../packages/storefront-contracts/src/public-catalog.js";
+import {
+  parseStorefrontPublicContentBundleV1,
+  type StorefrontPublicContentBundleV1,
+} from "../../../packages/storefront-contracts/src/public-content.js";
+import {
+  parseStorefrontPublicCategoryPageV1,
+  parseStorefrontPublicCollectionPageV1,
+  parseStorefrontPublicSearchPageV1,
+  type StorefrontPublicCategoryPageV1,
+  type StorefrontPublicCollectionPageV1,
+  type StorefrontPublicSearchPageV1,
+} from "../../../packages/storefront-contracts/src/public-discovery.js";
 
 interface PublicHostRow extends Record<string, unknown> {
   readonly tenantId: string;
@@ -20,8 +38,136 @@ interface PublicHostRow extends Record<string, unknown> {
   readonly capabilities: readonly string[];
 }
 
+interface PublicContentRow extends PublicHostRow {
+  readonly themeDocument: Readonly<Record<string, unknown>>;
+  readonly navigationDocument: Readonly<Record<string, unknown>>;
+  readonly homepageDocument: Readonly<Record<string, unknown>>;
+  readonly homepageSeoDocument: Readonly<Record<string, unknown>>;
+  readonly contentPageSlug: string | null;
+  readonly contentPageTitle: string | null;
+  readonly contentPageRevision: string | null;
+  readonly contentPageDocument: Readonly<Record<string, unknown>> | null;
+  readonly contentPageSeoDocument: Readonly<Record<string, unknown>> | null;
+}
+
+interface PublicCatalogRow extends PublicHostRow {
+  readonly productDocuments: readonly unknown[];
+  readonly nextCursor: string | null;
+  readonly hasMore: boolean;
+}
+
+interface PublicProductRow extends PublicHostRow {
+  readonly productDocument: unknown;
+}
+
+interface PublicCategoryRow extends PublicCatalogRow {
+  readonly categoryDocument: unknown;
+}
+
+interface PublicCollectionRow extends PublicCatalogRow {
+  readonly collectionDocument: unknown;
+}
+
+interface PublicSearchRow extends PublicCatalogRow {
+  readonly normalizedQuery: string;
+  readonly facetsDocument: unknown;
+}
+
 export interface StorefrontPublicRepository {
   resolveBootstrap(hostname: string): Promise<StorefrontBootstrapV1 | null>;
+  resolveContentBundle(
+    hostname: string,
+    contentSlug?: string,
+  ): Promise<StorefrontPublicContentBundleV1 | null>;
+  resolveCatalog(
+    hostname: string,
+    options?: { readonly limit?: number; readonly cursor?: string },
+  ): Promise<StorefrontPublicCatalogPageV1 | null>;
+  resolveProduct(
+    hostname: string,
+    publicSlug: string,
+  ): Promise<StorefrontPublicProductDetailV1 | null>;
+  resolveCategory(
+    hostname: string,
+    publicSlug: string,
+    options?: { readonly limit?: number; readonly cursor?: string },
+  ): Promise<StorefrontPublicCategoryPageV1 | null>;
+  resolveCollection(
+    hostname: string,
+    publicSlug: string,
+    options?: { readonly limit?: number; readonly cursor?: string },
+  ): Promise<StorefrontPublicCollectionPageV1 | null>;
+  resolveSearch(
+    hostname: string,
+    query: string,
+    options?: { readonly limit?: number; readonly cursor?: string },
+  ): Promise<StorefrontPublicSearchPageV1 | null>;
+}
+
+const PUBLIC_SLUG = /^[a-z0-9](?:[a-z0-9._~-]{0,178}[a-z0-9])?$/u;
+const UUID =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+
+function normalizePublicSlug(value: string | undefined, label: string): string | null {
+  if (value === undefined) return null;
+  const normalized = value.trim().toLowerCase();
+  if (!PUBLIC_SLUG.test(normalized) || normalized === "." || normalized === "..") {
+    throw new TypeError(`${label} is invalid.`);
+  }
+  return normalized;
+}
+
+function normalizeSearchQuery(value: string): string {
+  const normalized = value.trim();
+  if (
+    normalized.length < 2 ||
+    normalized.length > 120 ||
+    /[\u0000-\u001f\u007f]/u.test(normalized)
+  ) {
+    throw new TypeError("Public search query is invalid.");
+  }
+  return normalized;
+}
+
+function normalizeCatalogLimit(value: number | undefined): number {
+  if (value === undefined) return 24;
+  if (!Number.isInteger(value) || value < 1 || value > 48) {
+    throw new RangeError("Public catalog limit must be between 1 and 48.");
+  }
+  return value;
+}
+
+function normalizeCatalogCursor(value: string | undefined): string | null {
+  if (value === undefined) return null;
+  const normalized = value.trim().toLowerCase();
+  if (!UUID.test(normalized)) {
+    throw new TypeError("Public catalog cursor is invalid.");
+  }
+  return normalized;
+}
+
+function context(row: PublicHostRow): Record<string, string> {
+  return {
+    tenantId: row.tenantId,
+    storefrontId: row.storefrontId,
+    salesChannelId: row.salesChannelId,
+    requestHostname: row.requestHostname,
+    canonicalHostname: row.canonicalHostname,
+    locale: row.locale,
+    currency: row.currency,
+    priceListRevision: row.priceListRevision,
+    publicationGeneration: row.publicationGeneration,
+  };
+}
+
+function assertHostname(
+  actual: { readonly context: { readonly requestHostname: string } },
+  expected: string,
+  label: string,
+): void {
+  if (actual.context.requestHostname !== expected) {
+    throw new Error(`Public storefront ${label} resolution returned a mismatched hostname.`);
+  }
 }
 
 export class SqlStorefrontPublicRepository implements StorefrontPublicRepository {
@@ -50,24 +196,265 @@ export class SqlStorefrontPublicRepository implements StorefrontPublicRepository
     if (!row) return null;
     const bootstrap = parseStorefrontBootstrapV1({
       contractVersion: "storefront-bootstrap.v1",
-      context: {
-        tenantId: row.tenantId,
-        storefrontId: row.storefrontId,
-        salesChannelId: row.salesChannelId,
-        requestHostname: row.requestHostname,
-        canonicalHostname: row.canonicalHostname,
-        locale: row.locale,
-        currency: row.currency,
-        priceListRevision: row.priceListRevision,
-        publicationGeneration: row.publicationGeneration,
-      },
+      context: context(row),
       themeRevision: row.themeRevision,
       layoutRevision: row.layoutRevision,
-      capabilities: row.capabilities,
+      capabilities: [...new Set([...row.capabilities, "content.read", "catalog.read"])],
     });
-    if (bootstrap.context.requestHostname !== normalized) {
-      throw new Error("Public storefront host resolution returned a mismatched hostname.");
-    }
+    assertHostname(bootstrap, normalized, "host");
     return bootstrap;
+  }
+
+  public async resolveContentBundle(
+    hostname: string,
+    contentSlug?: string,
+  ): Promise<StorefrontPublicContentBundleV1 | null> {
+    const normalized = normalizeStorefrontHostname(hostname);
+    const normalizedSlug = normalizePublicSlug(contentSlug, "Public content slug");
+    const rows = await this.database.httpQuery<PublicContentRow>(
+      `SELECT
+        tenant_id AS "tenantId",
+        storefront_id AS "storefrontId",
+        sales_channel_id AS "salesChannelId",
+        request_hostname AS "requestHostname",
+        canonical_hostname AS "canonicalHostname",
+        locale,
+        currency,
+        price_list_revision AS "priceListRevision",
+        publication_generation AS "publicationGeneration",
+        theme_revision AS "themeRevision",
+        layout_revision AS "layoutRevision",
+        theme_document AS "themeDocument",
+        navigation_document AS "navigationDocument",
+        homepage_document AS "homepageDocument",
+        homepage_seo_document AS "homepageSeoDocument",
+        content_page_slug AS "contentPageSlug",
+        content_page_title AS "contentPageTitle",
+        content_page_revision AS "contentPageRevision",
+        content_page_document AS "contentPageDocument",
+        content_page_seo_document AS "contentPageSeoDocument"
+      FROM storefront.resolve_public_content_bundle($1::text, $2::text)`,
+      [normalized, normalizedSlug],
+    );
+    const row = rows[0];
+    if (!row) return null;
+    const bundle = parseStorefrontPublicContentBundleV1({
+      contractVersion: "storefront-public-content.v1",
+      context: context(row),
+      themeRevision: row.themeRevision,
+      layoutRevision: row.layoutRevision,
+      theme: row.themeDocument,
+      navigation: row.navigationDocument,
+      homepage: row.homepageDocument,
+      homepageSeo: row.homepageSeoDocument,
+      page: row.contentPageSlug === null
+        ? null
+        : {
+            slug: row.contentPageSlug,
+            title: row.contentPageTitle,
+            revision: row.contentPageRevision,
+            content: row.contentPageDocument,
+            seo: row.contentPageSeoDocument ?? {},
+          },
+    });
+    assertHostname(bundle, normalized, "content");
+    return bundle;
+  }
+
+  public async resolveCatalog(
+    hostname: string,
+    options: { readonly limit?: number; readonly cursor?: string } = {},
+  ): Promise<StorefrontPublicCatalogPageV1 | null> {
+    const normalized = normalizeStorefrontHostname(hostname);
+    const limit = normalizeCatalogLimit(options.limit);
+    const cursor = normalizeCatalogCursor(options.cursor);
+    const rows = await this.database.httpQuery<PublicCatalogRow>(
+      `SELECT
+        tenant_id AS "tenantId",
+        storefront_id AS "storefrontId",
+        sales_channel_id AS "salesChannelId",
+        request_hostname AS "requestHostname",
+        canonical_hostname AS "canonicalHostname",
+        locale,
+        currency,
+        price_list_revision AS "priceListRevision",
+        publication_generation AS "publicationGeneration",
+        product_documents AS "productDocuments",
+        next_cursor::text AS "nextCursor",
+        has_more AS "hasMore"
+      FROM storefront.resolve_public_catalog($1::text, $2::integer, $3::uuid)`,
+      [normalized, limit, cursor],
+    );
+    const row = rows[0];
+    if (!row) return null;
+    const catalog = parseStorefrontPublicCatalogPageV1({
+      contractVersion: "storefront-public-catalog.v1",
+      context: context(row),
+      items: row.productDocuments,
+      nextCursor: row.nextCursor,
+      hasMore: row.hasMore,
+    });
+    assertHostname(catalog, normalized, "catalog");
+    return catalog;
+  }
+
+  public async resolveProduct(
+    hostname: string,
+    publicSlug: string,
+  ): Promise<StorefrontPublicProductDetailV1 | null> {
+    const normalized = normalizeStorefrontHostname(hostname);
+    const slug = normalizePublicSlug(publicSlug, "Public product slug");
+    if (slug === null) throw new TypeError("Public product slug is required.");
+    const rows = await this.database.httpQuery<PublicProductRow>(
+      `SELECT
+        tenant_id AS "tenantId",
+        storefront_id AS "storefrontId",
+        sales_channel_id AS "salesChannelId",
+        request_hostname AS "requestHostname",
+        canonical_hostname AS "canonicalHostname",
+        locale,
+        currency,
+        price_list_revision AS "priceListRevision",
+        publication_generation AS "publicationGeneration",
+        product_document AS "productDocument"
+      FROM storefront.resolve_public_product($1::text, $2::text)`,
+      [normalized, slug],
+    );
+    const row = rows[0];
+    if (!row) return null;
+    const detail = parseStorefrontPublicProductDetailV1({
+      contractVersion: "storefront-public-product.v1",
+      context: context(row),
+      product: row.productDocument,
+    });
+    assertHostname(detail, normalized, "product");
+    return detail;
+  }
+
+  public async resolveCategory(
+    hostname: string,
+    publicSlug: string,
+    options: { readonly limit?: number; readonly cursor?: string } = {},
+  ): Promise<StorefrontPublicCategoryPageV1 | null> {
+    const normalized = normalizeStorefrontHostname(hostname);
+    const slug = normalizePublicSlug(publicSlug, "Public category slug");
+    if (slug === null) throw new TypeError("Public category slug is required.");
+    const limit = normalizeCatalogLimit(options.limit);
+    const cursor = normalizeCatalogCursor(options.cursor);
+    const rows = await this.database.httpQuery<PublicCategoryRow>(
+      `SELECT
+        tenant_id AS "tenantId",
+        storefront_id AS "storefrontId",
+        sales_channel_id AS "salesChannelId",
+        request_hostname AS "requestHostname",
+        canonical_hostname AS "canonicalHostname",
+        locale,
+        currency,
+        price_list_revision AS "priceListRevision",
+        publication_generation AS "publicationGeneration",
+        category_document AS "categoryDocument",
+        product_documents AS "productDocuments",
+        next_cursor::text AS "nextCursor",
+        has_more AS "hasMore"
+      FROM storefront.resolve_public_category($1::text, $2::text, $3::integer, $4::uuid)`,
+      [normalized, slug, limit, cursor],
+    );
+    const row = rows[0];
+    if (!row) return null;
+    const page = parseStorefrontPublicCategoryPageV1({
+      contractVersion: "storefront-public-category.v1",
+      context: context(row),
+      category: row.categoryDocument,
+      items: row.productDocuments,
+      nextCursor: row.nextCursor,
+      hasMore: row.hasMore,
+    });
+    assertHostname(page, normalized, "category");
+    return page;
+  }
+
+  public async resolveCollection(
+    hostname: string,
+    publicSlug: string,
+    options: { readonly limit?: number; readonly cursor?: string } = {},
+  ): Promise<StorefrontPublicCollectionPageV1 | null> {
+    const normalized = normalizeStorefrontHostname(hostname);
+    const slug = normalizePublicSlug(publicSlug, "Public collection slug");
+    if (slug === null) throw new TypeError("Public collection slug is required.");
+    const limit = normalizeCatalogLimit(options.limit);
+    const cursor = normalizeCatalogCursor(options.cursor);
+    const rows = await this.database.httpQuery<PublicCollectionRow>(
+      `SELECT
+        tenant_id AS "tenantId",
+        storefront_id AS "storefrontId",
+        sales_channel_id AS "salesChannelId",
+        request_hostname AS "requestHostname",
+        canonical_hostname AS "canonicalHostname",
+        locale,
+        currency,
+        price_list_revision AS "priceListRevision",
+        publication_generation AS "publicationGeneration",
+        collection_document AS "collectionDocument",
+        product_documents AS "productDocuments",
+        next_cursor::text AS "nextCursor",
+        has_more AS "hasMore"
+      FROM storefront.resolve_public_collection($1::text, $2::text, $3::integer, $4::uuid)`,
+      [normalized, slug, limit, cursor],
+    );
+    const row = rows[0];
+    if (!row) return null;
+    const page = parseStorefrontPublicCollectionPageV1({
+      contractVersion: "storefront-public-collection.v1",
+      context: context(row),
+      collection: row.collectionDocument,
+      items: row.productDocuments,
+      nextCursor: row.nextCursor,
+      hasMore: row.hasMore,
+    });
+    assertHostname(page, normalized, "collection");
+    return page;
+  }
+
+  public async resolveSearch(
+    hostname: string,
+    query: string,
+    options: { readonly limit?: number; readonly cursor?: string } = {},
+  ): Promise<StorefrontPublicSearchPageV1 | null> {
+    const normalized = normalizeStorefrontHostname(hostname);
+    const normalizedQuery = normalizeSearchQuery(query);
+    const limit = normalizeCatalogLimit(options.limit);
+    const cursor = normalizeCatalogCursor(options.cursor);
+    const rows = await this.database.httpQuery<PublicSearchRow>(
+      `SELECT
+        tenant_id AS "tenantId",
+        storefront_id AS "storefrontId",
+        sales_channel_id AS "salesChannelId",
+        request_hostname AS "requestHostname",
+        canonical_hostname AS "canonicalHostname",
+        locale,
+        currency,
+        price_list_revision AS "priceListRevision",
+        publication_generation AS "publicationGeneration",
+        normalized_query AS "normalizedQuery",
+        product_documents AS "productDocuments",
+        facets_document AS "facetsDocument",
+        next_cursor::text AS "nextCursor",
+        has_more AS "hasMore"
+      FROM storefront.resolve_public_search($1::text, $2::text, $3::integer, $4::uuid)`,
+      [normalized, normalizedQuery, limit, cursor],
+    );
+    const row = rows[0];
+    if (!row) return null;
+    const page = parseStorefrontPublicSearchPageV1({
+      contractVersion: "storefront-public-search.v1",
+      context: context(row),
+      query: row.normalizedQuery,
+      items: row.productDocuments,
+      facets: row.facetsDocument,
+      nextCursor: row.nextCursor,
+      hasMore: row.hasMore,
+    });
+    assertHostname(page, normalized, "search");
+    return page;
   }
 }

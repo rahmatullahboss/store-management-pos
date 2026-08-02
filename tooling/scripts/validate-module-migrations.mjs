@@ -120,4 +120,67 @@ if (!/GRANT EXECUTE ON FUNCTION storefront\.set_product_publication/u.test(store
 if (!/REVOKE INSERT, UPDATE, DELETE ON storefront\.command_receipts FROM store_app_runtime/u.test(storefrontCommands)) {
   throw new Error("Storefront runtime command receipt writes must be revoked");
 }
+
+const storefrontPublishing = await readFile(
+  path.join(root, "database/modules/storefront/migrations/STF-0005-publication-content-commands.sql"),
+  "utf8",
+);
+for (const command of [
+  "set_variant_publication",
+  "set_category_publication",
+  "set_collection",
+  "replace_collection_members",
+  "publish_navigation_revision",
+  "publish_content_page_revision",
+  "publish_homepage_revision",
+]) {
+  if (!storefrontPublishing.includes(`FUNCTION storefront.${command}`)) {
+    throw new Error(`Storefront STF-0005 command ${command} is missing`);
+  }
+  if (!storefrontPublishing.includes(`GRANT EXECUTE ON FUNCTION storefront.${command}`)) {
+    throw new Error(`Storefront STF-0005 command ${command} is not granted to runtime`);
+  }
+  if (!storefrontPublishing.includes(`REVOKE ALL ON FUNCTION storefront.${command}`)) {
+    throw new Error(`Storefront STF-0005 command ${command} is publicly executable`);
+  }
+}
+if ((storefrontPublishing.match(/pg_advisory_xact_lock/gu) ?? []).length < 7) {
+  throw new Error("Storefront STF-0005 publication commands are not sufficiently serialized");
+}
+for (const guard of [
+  "published variant requires a published product",
+  "parent category publication not found",
+  "published collection requires published members",
+  "archived collection members cannot change",
+  "publishing content requires an active storefront",
+  "publishing homepage requires an active storefront",
+]) {
+  if (!storefrontPublishing.includes(guard)) throw new Error(`Storefront STF-0005 guard is missing: ${guard}`);
+}
+for (const trigger of [
+  "variant_publications_evidence",
+  "category_publications_evidence",
+  "collections_evidence",
+  "navigation_documents_evidence",
+  "content_pages_evidence",
+  "homepage_revisions_evidence",
+]) {
+  if (!storefrontPublishing.includes(trigger)) throw new Error(`Storefront STF-0005 evidence trigger ${trigger} is missing`);
+}
+for (const event of [
+  "storefront.variant.publication_changed.v1",
+  "storefront.category.publication_changed.v1",
+  "storefront.collection.updated.v1",
+  "storefront.navigation.published.v1",
+  "storefront.content_page.revision_created.v1",
+  "storefront.homepage.revision_created.v1",
+]) {
+  if (!storefrontPublishing.includes(event)) throw new Error(`Storefront STF-0005 outbox event ${event} is missing`);
+}
+if (!/advance_storefront_cache_generations_internal/u.test(storefrontPublishing)) {
+  throw new Error("Storefront STF-0005 storefront-wide cache generation helper is missing");
+}
+if (!/collection member limit exceeded/u.test(storefrontPublishing) || !/collection member document contains duplicates/u.test(storefrontPublishing)) {
+  throw new Error("Storefront STF-0005 collection membership bounds are incomplete");
+}
 console.log(`validated ${ids.size} module migrations across ${counts.size} workpack groups`);

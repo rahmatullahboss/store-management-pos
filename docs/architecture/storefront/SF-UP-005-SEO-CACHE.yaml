@@ -1,0 +1,148 @@
+batch:
+  id: SF-UP-005
+  status: complete
+  source:
+    repository: https://github.com/scaliuslabs/scalius-commerce-lite
+    branch: mono-repo
+    commit: 4cb83aecb6d27483951618dcf8398592e662f241
+  purpose: Selectively adapt public SEO discovery, canonical-path, responsive-media and cache-generation patterns while preserving local PostgreSQL authority and exact commerce contracts.
+  upstream_files:
+    - path: apps/storefront/src/pages/robots.txt.ts
+      blob_sha: 06fa8b291cabb4784db378822f71e229463067a0
+      mode: adapt
+      reused_concepts:
+        - canonical_sitemap_directive
+        - explicit_indexing_policy
+        - text_plain_response_shape
+    - path: apps/storefront/src/pages/sitemap.xml.ts
+      blob_sha: 05fd6f0b247f79fa03f0d32eff4a0462e721b4e7
+      mode: adapt
+      reused_concepts:
+        - deterministic_public_entry_composition
+        - XML_response_shape
+        - bounded_last_modified_projection
+    - path: apps/storefront/src/lib/sitemap-utils.ts
+      blob_sha: 569fab640cbe8fa28977ec4a07784f8ab9c235f2
+      mode: adapt
+      reused_concepts:
+        - XML_escaping
+        - sitemap_date_normalisation
+        - safe_URL_composition
+    - path: packages/shared/src/seo-canonical.ts
+      blob_sha: 715c66db4e6933e45f48801f80d2bf4402352bb1
+      mode: adapt
+      reused_concepts:
+        - canonical_path_sanitation
+        - reserved_path_denial
+        - traversal_and_protocol_relative_rejection
+    - path: apps/storefront/src/lib/public-discovery-cache.ts
+      blob_sha: 66cc6052692fbbeb30e9ca170201c151869cdfb2
+      mode: adapt
+      reused_concepts:
+        - discovery_only_cache_policy
+        - cookie_stripping_for_public_cache
+        - fail_closed_private_route_bypass
+    - path: apps/storefront/src/lib/cache-generations.ts
+      blob_sha: 4e3fdf881b91a9824a9d502aed84df2e699456f5
+      mode: adapt
+      reused_concepts:
+        - cache_family_generation_keys
+        - generation_lookup_timeout
+        - explicit_generation_bump_boundaries
+    - path: apps/storefront/src/lib/product-media.ts
+      blob_sha: 0c0a7d28d060fd7615baca8704ff1109817b942d
+      mode: adapt
+      reused_concepts:
+        - deterministic_product_media_fallback
+        - non_resizable_SVG_bypass
+        - responsive_srcset_composition
+    - path: packages/shared/src/image-optimizer.ts
+      blob_sha: 6d2cdaa43182499746c4f940d331f6f7f3ddd710
+      mode: adapt
+      reused_concepts:
+        - Cloudflare_onerror_redirect_transform
+        - allowlisted_CDN_host_rewrite
+        - bounded_width_quality_format_and_fit_options
+        - graceful_original_asset_fallback
+  local_files:
+    - packages/storefront-contracts/src/public-seo.ts
+    - apps/storefront-web/src/seo.ts
+    - modules/storefront/src/public-seo.ts
+    - apps/api/src/modules/storefront/public-handler.ts
+    - database/modules/storefront/migrations/STF-0014-public-seo-resolution.sql
+    - apps/storefront-web/src/product-media.ts
+    - apps/storefront-web/src/cache-family.ts
+    - tests/unit/storefront-public-seo.test.mjs
+    - tests/unit/storefront-public-seo-api.test.mjs
+    - tests/unit/storefront-media-cache.test.mjs
+    - tests/integration/storefront-public-seo-rehearsal.sql
+    - docs/architecture/storefront/public-seo-media-plan.md
+    - docs/architecture/storefront/public-seo-media-checkpoint.md
+  modifications:
+    - replaced upstream hostname and store discovery with active local canonical-host resolution
+    - replaced upstream D1 and KV authority with PostgreSQL security-definer read projections and generation rows
+    - restricted sitemap entries to locally published products categories collections and content pages
+    - required products to pass the verified exact-price and availability public composition
+    - added bounded contract validation duplicate rejection and encoded-traversal denial
+    - added exact integer-minor to decimal-string product structured-data formatting
+    - escaped XML and JSON script-termination characters
+    - adapted responsive media transforms only for safe relative assets or explicitly allowlisted HTTPS CDN hosts
+    - retained original asset delivery for foreign HTTPS hosts and non-resizable SVG or icon media
+    - added local width quality format and fit bounds plus deterministic low-bandwidth widths
+    - classified bootstrap content catalog product category collection search sitemap and media cache families
+    - isolated cache-family keys by tenant storefront channel request and canonical host locale currency price revision publication generation build family generation and resource
+    - changed missing malformed or timed-out cache generation lookup from upstream default-generation fallback to local fail-closed bypass
+    - normalised API base-path joins and cache resource tokens so trailing slashes cannot create malformed public URLs or family keys
+    - added Bengali bounded-3G and Japanese CJK browser evidence alongside English and Arabic RTL
+    - removed upstream branding analytics demo data fixed IDs and environment constants
+  rejected:
+    - D1_and_Drizzle_persistence
+    - upstream_API_and_core_business_services
+    - global_or_cross_tenant_cache_keys
+    - browser_authoritative_price_tax_stock_or_checkout_logic
+    - floating_point_money
+    - upstream_media_CDN_authority
+    - automatic_rewrite_of_unapproved_foreign_media_hosts
+    - fabricated_intrinsic_media_dimensions
+  authority_boundary:
+    - MOD_A_owns_product_category_media_price_promotion_and_tax_inputs
+    - MOD_B_owns_stock_availability_and_reservations
+    - MOD_H_owns_public_slugs_crawler_policy_presentation_and_cache_generations
+    - PostgreSQL_Neon_remains_canonical
+    - Cloudflare_cache_KV_R2_and_image_resizing_are_delivery_infrastructure_only
+  required_evidence:
+    - root_format_type_boundary_migration_build_and_unit_gates
+    - PostgreSQL_17_published_only_SEO_media_generation_rehearsal
+    - robots_sitemap_canonical_structured_data_and_media_security_tests
+    - cache_family_isolation_timeout_and_malformed_generation_tests
+    - Worker_GET_HEAD_content_type_and_scope_reconciliation
+    - low_bandwidth_mobile_RTL_and_200_percent_text_browser_evidence
+    - Cloudflare_preview_runtime_cleanup
+    - non_destructive_Neon_recovery
+  exact_head_evidence:
+    source_head: d5e5c6a0b0a780a89c9702f0ade6f632c0dc60ab
+    storefront_ci_run: 30693905643
+    storefront_verify_job: 91353332834
+    postgres_rehearsal_job: 91353407634
+    browser_evidence_job: 91353407632
+    cloudflare_preview_job: 91353407633
+    neon_recovery_job: 91353407734
+    repository_tests: 486
+    browser_scenarios: 5
+    locales:
+      - en-GB
+      - bn-BD
+      - ar
+      - ja-JP
+    bounded_3g_scenarios: 1
+    cloudflare_requests: 5
+    cloudflare_errors: 0
+    storefront_migrations: 17
+    storefront_tables: 17
+    forced_rls_tables: 17
+    audit_events: 95
+    outbox_events: 95
+    command_receipts: 24
+    cache_generation_rows: 1
+    cache_generation_families: 9
+  local_owner: MOD-H-storefront-commerce

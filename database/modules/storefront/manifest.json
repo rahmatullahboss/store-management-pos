@@ -16,6 +16,76 @@
       "id": "STF-0003",
       "file": "STF-0003-public-host-resolution.sql",
       "sha256": "00c5758425767fb076b6d670df12f5aa4403b2c65684c43b61d77a3135ddbd4a"
+    },
+    {
+      "id": "STF-0004",
+      "file": "STF-0004-qualified-status-references.sql",
+      "sha256": "bdc00609f85afba7740740da6dcd3c3145f50bbc9c0bc848399a9fc8a5a25a6f"
+    },
+    {
+      "id": "STF-0005",
+      "file": "STF-0005-publication-content-commands.sql",
+      "sha256": "b6a287c089d30ae2d9fd45231772dce6eaf062fdbdbe6ce55cc612134561e6a7"
+    },
+    {
+      "id": "STF-0006",
+      "file": "STF-0006-public-content-resolution.sql",
+      "sha256": "8507fc7f369fd784bf2e28729df3f73125550c8350c9fa891e5226285659e51a"
+    },
+    {
+      "id": "STF-0007",
+      "file": "STF-0007-qualified-product-publication-reference.sql",
+      "sha256": "3b86d46eb6107ae4dd42b05bf7944b46b80502234aaaa721dec16fd2644655bb"
+    },
+    {
+      "id": "STF-0008",
+      "file": "STF-0008-qualified-publication-command-references.sql",
+      "sha256": "7599c938eb5e6adf834ba3919d8ed4a16e2b016216ef7db2ca7d25f64b62be42"
+    },
+    {
+      "id": "STF-0009",
+      "file": "STF-0009-public-catalog-resolution.sql",
+      "sha256": "f8e8f36b57c6739bcd11ae9e834df8c4970fa23a2d56f60982bc5b0bcf224ed6"
+    },
+    {
+      "id": "STF-0010",
+      "file": "STF-0010-public-catalog-endpoints.sql",
+      "sha256": "2a63259759f536f816c3e498a429c5836c178d872100395cddfe824083b95572"
+    },
+    {
+      "id": "STF-0011",
+      "file": "STF-0011-public-category-collection-resolution.sql",
+      "sha256": "ad85824b052f358d26c1571f65d0e30a8178c27190b5e5a99762fe34978fa153"
+    },
+    {
+      "id": "STF-0012",
+      "file": "STF-0012-public-search-resolution.sql",
+      "sha256": "4e58c06628b1d14bb00d445f4ca937c0951b6193bd21e17d64f5cb5408b057b1"
+    },
+    {
+      "id": "STF-0013",
+      "file": "STF-0013-public-search-filters.sql",
+      "sha256": "a8eb6a04efd02afddcb75c8ae184f2eb7c29ae7faa2adc4023fe6a8fd1ae7000"
+    },
+    {
+      "id": "STF-0014",
+      "file": "STF-0014-public-seo-resolution.sql",
+      "sha256": "b3ad4b2d770ea9c0f98867225040637bf80c197ea6c0f998d447534785f4ae76"
+    },
+    {
+      "id": "STF-0015",
+      "file": "STF-0015-public-media-resolution.sql",
+      "sha256": "fe038688bb6fc88e17c15a2228aff5990dc40f8dc5a5cf3c80be87e8eff9139d"
+    },
+    {
+      "id": "STF-0016",
+      "file": "STF-0016-cache-generation-families.sql",
+      "sha256": "42ee4f36ebce0d701ce96919f9bb4be3087f3100d4ed3e18ae0e12753783b8dd"
+    },
+    {
+      "id": "STF-0017",
+      "file": "STF-0017-cache-family-initialization.sql",
+      "sha256": "704a89cf9f72e5cd680cab477d231d818c764f6f08b12051d349abb7b1e5be6b"
     }
   ]
 }

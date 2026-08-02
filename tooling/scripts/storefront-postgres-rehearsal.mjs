@@ -24,6 +24,10 @@ const sources = [
     directory: "database/migrations/pricing",
   },
   {
+    manifest: "database/modules/inventory/manifest.json",
+    directory: "database/modules/inventory/migrations",
+  },
+  {
     manifest: "database/modules/storefront/manifest.json",
     directory: "database/modules/storefront/migrations",
   },
@@ -64,6 +68,14 @@ for (const source of sources) {
 for (const fixture of [
   "tests/integration/storefront-postgres-rehearsal.sql",
   "tests/integration/storefront-public-host-rehearsal.sql",
+  "tests/integration/storefront-publishing-postgres-rehearsal.sql",
+  "tests/integration/storefront-public-content-rehearsal.sql",
+  "tests/integration/storefront-public-catalog-rehearsal.sql",
+  "tests/integration/storefront-public-discovery-rehearsal.sql",
+  "tests/integration/storefront-public-search-filter-rehearsal.sql",
+  "tests/integration/storefront-public-seo-rehearsal.sql",
+  "tests/integration/storefront-public-media-rehearsal.sql",
+  "tests/integration/storefront-cache-family-rehearsal.sql",
 ]) {
   await psql(["--file", path.join(root, fixture)]);
 }
@@ -84,18 +96,28 @@ const { stdout } = await execFileAsync(
         WHERE n.nspname = 'storefront' AND c.relkind = 'r' AND c.relrowsecurity AND c.relforcerowsecurity
       ),
       'auditEvents', (SELECT count(*) FROM platform.audit_events WHERE event_type LIKE 'storefront.%'),
-      'outboxEvents', (SELECT count(*) FROM platform.outbox_events WHERE event_type LIKE 'storefront.%')
+      'outboxEvents', (SELECT count(*) FROM platform.outbox_events WHERE event_type LIKE 'storefront.%'),
+      'commandReceipts', (SELECT count(*) FROM storefront.command_receipts),
+      'cacheGenerations', (SELECT count(*) FROM storefront.cache_generations),
+      'cacheGenerationFamilies', (SELECT count(*) FROM storefront.cache_generation_families)
     )::text;`,
   ],
   { cwd: root, maxBuffer: 1024 * 1024 },
 );
 const summary = JSON.parse(stdout.trim());
-if (summary.migrations !== 3) throw new Error("Storefront migration count is invalid");
-if (summary.tables < 16) throw new Error("Storefront table count is incomplete");
+if (summary.migrations !== 17) throw new Error("Storefront migration count is invalid");
+if (summary.tables < 17) throw new Error("Storefront table count is incomplete");
 if (summary.forcedRlsTables !== summary.tables) {
   throw new Error("Not every storefront table has forced RLS");
 }
-if (summary.auditEvents < 12 || summary.outboxEvents < 12) {
+if (summary.auditEvents < 20 || summary.outboxEvents < 20) {
   throw new Error("Storefront audit/outbox evidence is incomplete");
+}
+if (
+  summary.commandReceipts < 18 ||
+  summary.cacheGenerations < 1 ||
+  summary.cacheGenerationFamilies < 9
+) {
+  throw new Error("Storefront command or cache-family evidence is incomplete");
 }
 console.log(JSON.stringify(summary));

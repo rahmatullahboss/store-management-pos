@@ -1,0 +1,233 @@
+---
+import CheckoutRecovery from "../../components/CheckoutRecovery.astro";
+import { deriveStorefrontCheckoutRecoveryV1 } from "../../../../../packages/storefront-client/src/checkout-recovery.js";
+import { buildStorefrontThemeTokensV1 } from "../../../../../packages/storefront-theme/src/index.js";
+
+if (import.meta.env.STOREFRONT_EVIDENCE_MODE !== "1") {
+  return new Response(null, {
+    status: 404,
+    headers: { "Cache-Control": "no-store" },
+  });
+}
+
+const supportedLocales = ["en-GB", "bn-BD", "ar", "ja-JP"] as const;
+type EvidenceLocale = (typeof supportedLocales)[number];
+const requestedLocale = Astro.url.searchParams.get("locale");
+const locale: EvidenceLocale = supportedLocales.includes(
+  requestedLocale as EvidenceLocale,
+)
+  ? (requestedLocale as EvidenceLocale)
+  : "en-GB";
+const direction = locale === "ar" ? "rtl" : "ltr";
+
+const copy = {
+  "en-GB": {
+    title: "Checkout recovery evidence",
+    intro: "Synthetic stale-commerce states used only for accessibility and recovery-flow evidence.",
+    skip: "Skip to recovery",
+    home: "Home",
+    cart: "Cart",
+    checkout: "Checkout",
+    footer: "Synthetic recovery evidence only. No customer or production data.",
+  },
+  "bn-BD": {
+    title: "চেকআউট রিকভারি যাচাই",
+    intro: "শুধু অ্যাক্সেসিবিলিটি ও রিকভারি ফ্লো যাচাইয়ের জন্য কৃত্রিম পুরোনো কমার্স স্টেট।",
+    skip: "রিকভারি অংশে যান",
+    home: "হোম",
+    cart: "কার্ট",
+    checkout: "চেকআউট",
+    footer: "শুধু কৃত্রিম রিকভারি যাচাই। কোনো গ্রাহক বা প্রোডাকশন ডেটা নয়।",
+  },
+  ar: {
+    title: "اختبار استعادة عملية الدفع",
+    intro: "حالات تجارة قديمة تركيبية لاختبار إمكانية الوصول ومسار الاستعادة فقط.",
+    skip: "انتقل إلى الاستعادة",
+    home: "الرئيسية",
+    cart: "السلة",
+    checkout: "الدفع",
+    footer: "بيانات استعادة تركيبية فقط. لا توجد بيانات عملاء أو إنتاج.",
+  },
+  "ja-JP": {
+    title: "チェックアウト復旧の検証",
+    intro: "アクセシビリティと復旧フロー検証専用の合成された古いコマース状態です。",
+    skip: "復旧内容へ移動",
+    home: "ホーム",
+    cart: "カート",
+    checkout: "チェックアウト",
+    footer: "合成された復旧検証データのみです。顧客データや本番データは含みません。",
+  },
+}[locale];
+
+const syntheticQuote = {
+  state: "changed",
+  quote: { expiresAt: "2030-08-01T19:00:00.000Z" },
+} as const;
+const syntheticCapabilities = {
+  state: "changed",
+  quoteExpiresAt: "2030-08-01T19:00:00.000Z",
+  changedReasons: ["country_policy", "shipping", "payment"] as const,
+} as const;
+const recovery = deriveStorefrontCheckoutRecoveryV1({
+  cartRecovered: true,
+  quote: syntheticQuote,
+  capabilities: syntheticCapabilities,
+  now: () => "2030-08-01T18:00:00.000Z",
+});
+const actionHrefs = {
+  review_cart: "#cart-review",
+  refresh_quote: "#quote-refresh",
+  review_destination: "#destination-review",
+  select_shipping: "#shipping-review",
+  select_payment: "#payment-review",
+} as const;
+
+const theme = buildStorefrontThemeTokensV1({
+  colors: {
+    background: "#f7f5ee",
+    foreground: "#17231e",
+    surface: "#fffefa",
+    surfaceMuted: "#edf2ee",
+    primary: "#1f6a51",
+    primaryForeground: "#ffffff",
+    border: "#cbd5ce",
+    danger: "#8f2929",
+    focus: "#9a6200",
+  },
+  density: "comfortable",
+  corner: "subtle",
+  container: "wide",
+});
+const themeStyle = Object.entries(theme)
+  .map(([key, value]) => `${key}:${value}`)
+  .join(";");
+---
+
+<!doctype html>
+<html lang={locale} dir={direction} style={themeStyle}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex,nofollow" />
+    <title>{copy.title}</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#checkout-recovery">{copy.skip}</a>
+    <header>
+      <div class="container header-row">
+        <a class="brand" href="/" aria-label={copy.home}>Synthetic Goods</a>
+        <nav aria-label="Evidence navigation">
+          <a href="/">{copy.home}</a>
+          <a href="#cart-review">{copy.cart}</a>
+          <a href="#checkout-recovery">{copy.checkout}</a>
+        </nav>
+      </div>
+    </header>
+    <main id="checkout-recovery" class="container" tabindex="-1">
+      <section class="intro" aria-labelledby="recovery-evidence-title">
+        <p class="eyebrow">H4 recovery</p>
+        <h1 id="recovery-evidence-title">{copy.title}</h1>
+        <p>{copy.intro}</p>
+      </section>
+      <CheckoutRecovery recovery={recovery} locale={locale} actionHrefs={actionHrefs} />
+      <div class="safe-targets" aria-hidden="true">
+        <span id="cart-review"></span>
+        <span id="quote-refresh"></span>
+        <span id="destination-review"></span>
+        <span id="shipping-review"></span>
+        <span id="payment-review"></span>
+      </div>
+    </main>
+    <footer><div class="container">{copy.footer}</div></footer>
+  </body>
+</html>
+
+<style>
+  *,
+  *::before,
+  *::after { box-sizing: border-box; }
+  html {
+    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--storefront-background);
+    color: var(--storefront-foreground);
+  }
+  body {
+    min-width: 20rem;
+    min-height: 100vh;
+    margin: 0;
+    background: linear-gradient(180deg, var(--storefront-surface-muted), var(--storefront-background) 28rem);
+    font-size: calc(1rem * var(--storefront-density));
+    line-height: 1.5;
+  }
+  .container {
+    width: min(calc(100% - 2rem), var(--storefront-container));
+    margin-inline: auto;
+  }
+  .skip-link {
+    position: fixed;
+    inset-block-start: -6rem;
+    inset-inline-start: 1rem;
+    z-index: 20;
+    padding: .75rem 1rem;
+    border-radius: var(--storefront-radius);
+    background: var(--storefront-foreground);
+    color: var(--storefront-background);
+    font-weight: 750;
+  }
+  .skip-link:focus {
+    inset-block-start: 1rem;
+    outline: 3px solid var(--storefront-focus);
+    outline-offset: 3px;
+  }
+  header {
+    border-bottom: 1px solid var(--storefront-border);
+    background: var(--storefront-surface);
+  }
+  .header-row {
+    display: flex;
+    min-height: 4.5rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .brand { font-weight: 750; text-decoration: none; }
+  nav { display: flex; gap: .5rem; flex-wrap: wrap; }
+  nav a {
+    padding: .55rem;
+    border-radius: var(--storefront-radius);
+    color: inherit;
+  }
+  nav a:focus-visible {
+    outline: 3px solid var(--storefront-focus);
+    outline-offset: 3px;
+  }
+  main { padding-block: clamp(2.5rem, 7vw, 5rem); }
+  .intro { display: grid; gap: .8rem; max-width: 50rem; }
+  .intro h1, .intro p { margin: 0; }
+  .intro h1 { font-size: clamp(2rem, 7vw, 4.5rem); line-height: 1; letter-spacing: -.045em; }
+  .intro p:last-child { color: color-mix(in srgb, var(--storefront-foreground) 72%, transparent); }
+  .eyebrow { color: var(--storefront-primary); font-size: .78rem; font-weight: 750; letter-spacing: .1em; text-transform: uppercase; }
+  .safe-targets {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+  footer {
+    padding-block: 2rem;
+    border-top: 1px solid var(--storefront-border);
+    color: color-mix(in srgb, var(--storefront-foreground) 65%, transparent);
+  }
+  @media (max-width: 40rem) {
+    .header-row { align-items: flex-start; flex-direction: column; padding-block: 1rem; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      scroll-behavior: auto !important;
+      transition-duration: .01ms !important;
+      animation-duration: .01ms !important;
+      animation-iteration-count: 1 !important;
+    }
+  }
+</style>

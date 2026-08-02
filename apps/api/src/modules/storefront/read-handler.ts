@@ -1,6 +1,7 @@
 import type { RequestContext } from "../../../../../packages/foundation/src/context.js";
 import type { NeonDatabase } from "../../../../../packages/foundation/src/db.js";
 import { PlatformError } from "../../../../../packages/foundation/src/errors.js";
+import { handleStorefrontPublishingReadRequest } from "./publishing-read-handler.js";
 import type {
   ProductPublicationListFilter,
   ProductPublicationSummary,
@@ -202,6 +203,14 @@ export async function handleStorefrontReadRequest(
   readService: StorefrontReads = reads(database),
 ): Promise<Response | null> {
   if (request.method !== "GET") return null;
+
+  const publishingResponse = await handleStorefrontPublishingReadRequest(
+    request,
+    url,
+    context,
+    database,
+  );
+  if (publishingResponse) return publishingResponse;
 
   if (url.pathname === "/v1/storefront/storefronts") {
     return await listStorefronts(url, context, readService);
