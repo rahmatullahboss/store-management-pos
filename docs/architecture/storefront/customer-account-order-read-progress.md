@@ -2,11 +2,11 @@
 
 Status: **active, contract-first**
 
-Completed slices: `H5-ACCOUNT-01`, `H5-TRACKING-02`, `H5-PRIVATE-HARDEN-03`
+Completed slices: `H5-ACCOUNT-01`, `H5-TRACKING-02`, `H5-PRIVATE-HARDEN-03`, `H5-PAGINATION-04`
 
-Latest fully verified implementation head: `b35b0e260abdcfd882240437f47f59f98a2e7548`
+Latest fully verified implementation head: `7485f4e80c468de328093fcc09fd22efdc25a110`
 
-Storefront CI: `30723499435`
+Storefront CI: `30727323408`
 
 ## Objective
 
@@ -45,19 +45,40 @@ H5-TRACKING-02 was fully verified at exact head `5d7e8bfb4958d7ab53d2abb50192cef
 
 ## H5-PRIVATE-HARDEN-03 — complete and verified
 
-- Private 403 access-denial responses now return only `{ error: { code: "ACCOUNT_ACCESS_DENIED" } }`.
-- Canonical customer, ownership, legal-entity, storefront, sales-channel or permission mismatch details are no longer reflected to an untrusted buyer.
+- Private 403 access-denial responses return only `{ error: { code: "ACCOUNT_ACCESS_DENIED" } }`.
+- Canonical customer, ownership, legal-entity, storefront, sales-channel or permission mismatch details are not reflected to an untrusted buyer.
 - 400 malformed-request responses may retain bounded validation detail; authentication absence remains 401 and unknown order remains 404.
-- Added a regression test proving a mismatched canonical customer produces a generic 403 without ownership/scope detail leakage.
+- A regression test proves a mismatched canonical customer produces a generic 403 without ownership/scope detail leakage.
 
-Exact head `b35b0e260abdcfd882240437f47f59f98a2e7548`, Storefront CI `30723499435`:
+H5-PRIVATE-HARDEN-03 was fully verified at exact head `b35b0e260abdcfd882240437f47f59f98a2e7548`, Storefront CI `30723499435`.
 
-- root format, lint, boundaries, TypeScript, database validation, full tests and security/dependency gates: **passed**;
-- Astro Cloudflare build: **passed**;
-- PostgreSQL 17 storefront rehearsal: **passed**;
-- buyer/recovery/order-tracking/admin browser and accessibility gates: **passed**;
-- Cloudflare preview deploy, runtime metrics and cleanup: **passed**;
-- non-destructive Neon recovery: **passed**.
+## H5-PAGINATION-04 — complete and verified
+
+Order-history pagination no longer assumes that an owning-module cursor is a UUID.
+
+- `StorefrontOrderHistoryRequestV1.cursor` and `StorefrontOrderHistoryPageV1.nextCursor` remain `string | null` but are validated as bounded URL-safe opaque tokens.
+- MOD-H accepts up to 512 characters from `[A-Za-z0-9._~:=-]`; UUID cursors continue to work because they are a valid subset.
+- Slash/path syntax, whitespace/control characters and over-512-character cursor values fail closed.
+- Customer IDs, order IDs, product IDs, variant IDs and other canonical identities remain UUID-only; only pagination cursor semantics changed.
+- `StorefrontCustomerOrderReadPort` forwards the opaque cursor without interpreting its internal structure.
+- MOD-H revalidates the owning-module `nextCursor` before returning it to a buyer; unsafe provider/adapter cursor output fails closed.
+- The credentialed private client transports the cursor via `URLSearchParams`, preserves it round-trip and still never sends browser-selected customer identity.
+- Added direct module-boundary tests using an empty order page so pagination behavior is verified independently of a synthetic `SalesOrder` fixture.
+- Private account/order routes remain deliberately unregistered pending Issue #101; this refinement does not activate a live private surface.
+
+### Exact verified evidence
+
+Implementation head: `7485f4e80c468de328093fcc09fd22efdc25a110`
+
+Storefront CI: `30727323408`
+
+- verify `91441336353` — **passed**;
+- PostgreSQL 17 rehearsal `91441384231` — **passed**;
+- buyer/admin browser, accessibility and bounded performance `91441384334` — **passed**;
+- Cloudflare preview/runtime/cleanup `91441384267` — **passed**;
+- non-destructive Neon recovery `91441384470` — **passed**.
+
+The initial cursor head `6886754439884c31d26e2f77f141d2c549df0ac4` failed before type/tests only because the two edited TypeScript files were missing their final newline. The follow-up commit added only the missing newlines; cursor semantics were not weakened or reverted.
 
 ## Deliberately not exposed yet
 
@@ -84,6 +105,6 @@ Issue #102 tracks the required customer-safe, idempotent, ownership-scoped retur
 - Issue #101 — H5 trusted customer binding and storefront-scoped MOD-C order reads.
 - Issue #102 — H5 buyer-safe return/support request capability.
 
-## Remaining safe H5 refinement
+## Next safe posture
 
-Order-history pagination cursor should become a bounded opaque token rather than assuming an owning-module UUID cursor format. This refinement is deferred until it can be patched without destructive replacement of the larger strict contract file; it is not a live-route blocker because the private route remains unregistered.
+Keep all live private customer/order routes fail closed until Issue #101 has concrete owning-module adapters and exact integration evidence. No additional pagination semantics should be inferred inside MOD-H beyond treating the cursor as a bounded opaque transport token.
