@@ -35,13 +35,24 @@ export interface StorefrontCheckoutRecoveryModelV1 {
   readonly canSubmit: boolean;
 }
 
+export interface StorefrontCheckoutRecoveryQuoteFactsV1 {
+  readonly state: StorefrontCartQuoteEnvelopeV1["state"];
+  readonly quote: Pick<StorefrontCartQuoteEnvelopeV1["quote"], "expiresAt">;
+}
+
+export interface StorefrontCheckoutRecoveryCapabilityFactsV1 {
+  readonly state: StorefrontCheckoutCapabilityEnvelopeV1["state"];
+  readonly quoteExpiresAt: StorefrontCheckoutCapabilityEnvelopeV1["quoteExpiresAt"];
+  readonly changedReasons: StorefrontCheckoutCapabilityEnvelopeV1["changedReasons"];
+}
+
 function isExpired(value: string, now: number): boolean {
   const parsed = Date.parse(value);
   return !Number.isFinite(parsed) || parsed <= now;
 }
 
 function quoteRecovery(
-  quote: StorefrontCartQuoteEnvelopeV1 | null | undefined,
+  quote: StorefrontCheckoutRecoveryQuoteFactsV1 | null | undefined,
   now: number,
 ): StorefrontCheckoutRecoveryItemV1 | null {
   if (!quote) return null;
@@ -129,8 +140,8 @@ function dedupe(
 
 export function deriveStorefrontCheckoutRecoveryV1(input: {
   readonly cartRecovered?: boolean;
-  readonly quote?: StorefrontCartQuoteEnvelopeV1 | null;
-  readonly capabilities?: StorefrontCheckoutCapabilityEnvelopeV1 | null;
+  readonly quote?: StorefrontCheckoutRecoveryQuoteFactsV1 | null;
+  readonly capabilities?: StorefrontCheckoutRecoveryCapabilityFactsV1 | null;
   readonly now?: () => string;
 }): StorefrontCheckoutRecoveryModelV1 {
   const nowValue = input.now?.() ?? new Date().toISOString();
