@@ -2,11 +2,11 @@
 
 Status: **active**
 
-Completed slice: `H7-CACHE-ISOLATION-01`
+Completed slices: `H7-CACHE-ISOLATION-01`, `H7-ABUSE-CONTRACT-02`
 
-Latest fully verified implementation head: `0f4c14bfddad9e69ac1b51976f6a6fe262c9ae43`
+Latest fully verified implementation head: `967a66e58ae89c408a5b3e75afc3a95a2d13fad4`
 
-Storefront CI: `30724190935`
+Storefront CI: `30724380521`
 
 ## Objective
 
@@ -41,11 +41,37 @@ New evidence proves:
 5. evidence routes also stay outside public cache families;
 6. unsafe scope tokens and path-like resources fail closed instead of being normalized into another cache key.
 
-This supplements the earlier media/cache tests and makes the H7 multi-tenant cache-isolation acceptance criterion explicit.
+H7-CACHE-ISOLATION-01 was fully verified at exact head `0f4c14bfddad9e69ac1b51976f6a6fe262c9ae43`, Storefront CI `30724190935`.
 
-## Verified evidence
+## H7-ABUSE-CONTRACT-02 — complete and verified
 
-Exact head `0f4c14bfddad9e69ac1b51976f6a6fe262c9ae43`, Storefront CI `30724190935`:
+No storefront-specific production distributed limiter was found. MOD-H deliberately did **not** add a Worker-isolate in-memory counter and call it production abuse protection.
+
+Issue #107 tracks the shared/runtime distributed rate-limit capability.
+
+Provider-independent hardening now exists in `modules/storefront/src/abuse-control.ts`:
+
+- route policy classes are explicit: `public_read`, `public_search`, `public_media`, `private_read`, `checkout_quote`, `checkout_submit`, `admin_mutation`;
+- public/search/media/private reads declare `fail_open_observe` for limiter-provider unavailability;
+- checkout quote/submit and admin mutation policies declare `fail_closed` for limiter-provider unavailability;
+- anonymous requests require a `trusted_edge` opaque abuse key;
+- authenticated private/sensitive requests require an `authenticated_session` opaque abuse key;
+- opaque keys are bounded base64url-like tokens; raw IP strings and arbitrary forwarding-header key sources are rejected;
+- spoofed `X-Forwarded-For`, `CF-Connecting-IP` and `True-Client-IP` request headers are not used to select the abuse key;
+- provider decisions are strict `allow | deny | unavailable` contracts with bounded safe reason categories, policy revision and optional Retry-After seconds;
+- inconsistent provider decisions fail contract validation;
+- deny returns HTTP 429 with `Cache-Control: no-store`, `X-Content-Type-Options: nosniff` and bounded `Retry-After` when supplied;
+- policy/provider revision and opaque abuse-key details are not reflected in 429 responses;
+- fail-closed provider unavailability returns HTTP 503 `STOREFRONT_ABUSE_CONTROL_UNAVAILABLE`;
+- fail-open read paths return no synthetic allow/limit result and remain observable by the future provider integration.
+
+Unit coverage in `tests/unit/storefront-abuse-control.test.mjs` proves route separation, trusted-key source enforcement, spoofed forwarding-header resistance, fail-open/fail-closed semantics, 429 response safety and strict provider-output validation.
+
+Runtime counting/enforcement is intentionally not wired yet. It remains blocked on Issue #107 because the production state must be distributed/provider-backed across Worker isolates/regions.
+
+## Latest verified evidence
+
+Exact head `967a66e58ae89c408a5b3e75afc3a95a2d13fad4`, Storefront CI `30724380521`:
 
 - root format, lint, boundaries, TypeScript, database validation, complete test gate and security/dependency gates: **passed**;
 - Astro Cloudflare build: **passed**;
@@ -54,12 +80,19 @@ Exact head `0f4c14bfddad9e69ac1b51976f6a6fe262c9ae43`, Storefront CI `3072419093
 - Cloudflare preview deploy, runtime metrics and cleanup: **passed**;
 - non-destructive Neon recovery: **passed**.
 
-## Abuse/rate-limit gap
+## Remaining H7 work
 
-No storefront-specific production distributed limiter was found. MOD-H will not add a Worker-isolate in-memory counter and call it production abuse protection.
+1. integrate the distributed runtime abuse provider once Issue #107 is available;
+2. add storefront-specific operational observability/runbook evidence for cache, public host/domain failures, private route safety and abuse-control decisions without sensitive-key leakage;
+3. consolidate final migration/recovery, Cloudflare evidence, known blockers and serial integration instructions into the MOD-H handoff;
+4. keep provider/domain, customer/order and H4 commerce mutation routes fail closed until their owning-module blockers are resolved.
 
-Issue #107 tracks the shared/runtime distributed rate-limit capability. It must support separate public-read/search/private/checkout/admin policy classes, trusted edge-normalized opaque abuse keys, privacy-safe observability, 429 + bounded Retry-After, explicit unavailable behavior and cross-isolate/provider-backed state.
+## Current blockers carried into hardening
 
-## Next safe slice
-
-`H7-ABUSE-CONTRACT-02`: add provider-independent route classification, strict trusted abuse-key/decision contracts and safe 429 response semantics. Do not wire a fake local counter. Runtime enforcement remains blocked on Issue #107.
+- #97 — lossless MOD-A price/tax + MOD-C pre-order shipping;
+- #98 — MOD-E public payment capability;
+- #100 — MOD-F typed checkout country/address/contact policy;
+- #101 — trusted customer binding + storefront-scoped MOD-C order reads;
+- #102 — buyer-safe return/support request capability;
+- #104 — trusted custom-hostname verification/certificate provider lifecycle;
+- #107 — distributed storefront abuse/rate-limit provider.
