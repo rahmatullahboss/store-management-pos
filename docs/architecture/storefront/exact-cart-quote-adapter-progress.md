@@ -4,7 +4,9 @@ Status: **active**
 
 Current slices: `H4-QUOTE-02` + `H4-CHECKOUT-03` + pre-side-effect `H4-SUBMIT-04` + verified buyer recovery
 
-Latest fully verified code head: `db135e7c72ac418ee1158ab10cb3665ee88ab943`
+Latest fully verified branch head containing H4 recovery refinement: `2f8569a2e47922bb5d77e584f605fac85dabeb5f`
+
+Latest Storefront CI: `30726829026`
 
 ## Completed safely
 
@@ -57,20 +59,33 @@ Latest fully verified code head: `db135e7c72ac418ee1158ab10cb3665ee88ab943`
 - Recovery browser gate validates WCAG axe results, locale/direction, exact recovery reason sequence, safe action targets, viewport/clipping, upstream-brand leakage, skip-link keyboard behavior, reduced motion and 200% text.
 - Bengali recovery evidence runs under bounded 3G; Arabic runs RTL; Japanese covers CJK presentation.
 
+### Recovery type-safety refinement
+
+- `deriveStorefrontCheckoutRecoveryV1` now depends only on the quote facts it actually consumes: `state` and `quote.expiresAt`.
+- Capability recovery now depends only on `state`, `quoteExpiresAt` and `changedReasons`.
+- Full production quote/capability envelopes remain structurally compatible with these narrower factual interfaces.
+- Synthetic recovery evidence no longer uses `as never` escape casts to impersonate full production envelopes.
+- This refinement changes no checkout authority, recovery semantics or route activation. It removes a test/evidence type escape while preserving the same fail-closed behavior.
+
 ## Verified evidence
 
-Exact code head `db135e7c72ac418ee1158ab10cb3665ee88ab943` passed Storefront CI run `30710984952`:
+Original H4 recovery code head `db135e7c72ac418ee1158ab10cb3665ee88ab943` passed Storefront CI `30710984952`.
 
-- root format, lint, module boundaries, TypeScript, database validation, build, complete repository test gate and security gates: **passed**;
-- PostgreSQL 17 storefront rehearsal: **passed**;
-- existing buyer browser/accessibility evidence: **5 / 5 scenarios passed**;
-- new checkout recovery browser/accessibility evidence: **4 / 4 scenarios passed**, **0 axe violations**;
-- admin browser/accessibility evidence: **4 / 4 scenarios passed**;
-- Astro check during browser evidence: **25 files, 0 errors, 0 warnings, 0 hints**;
-- Cloudflare preview deploy, runtime metrics and cleanup: **passed**;
-- non-destructive Neon recovery: **passed directly on the exact head**.
+The recovery type-safety refinement is fully verified at exact branch head `2f8569a2e47922bb5d77e584f605fac85dabeb5f`, Storefront CI `30726829026`:
 
-The earlier fully counted H4 baseline at `400cfb00e78db334c903a298bc560f05c31ee526` passed **549 / 549** tests. The exact head above contains additional submit/idempotency/cart-state/recovery suites and its full root test gate passed; no new aggregate numeric count is inferred here without a directly surfaced total.
+- verify job `91439948732`: root format, lint, module boundaries, TypeScript, database validation, complete test gate, Astro build and security/dependency gates — **passed**;
+- PostgreSQL 17 rehearsal job `91440010432` — **passed**;
+- browser/accessibility/performance job `91440010415` — **passed**;
+- Cloudflare preview/runtime/cleanup job `91440010410` — **passed**;
+- non-destructive Neon recovery job `91440010607` — **passed**;
+- Astro check: **27 files, 0 errors, 0 warnings, 0 hints**;
+- buyer browser/accessibility evidence: **5/5**;
+- checkout recovery evidence: **4/4**;
+- order tracking evidence: **4/4**;
+- admin evidence: **4/4**;
+- bounded synthetic performance rehearsal: **64/64**, p95 **64.67 ms**, explicitly not a production SLA.
+
+The earlier fully counted H4 baseline at `400cfb00e78db334c903a298bc560f05c31ee526` passed **549 / 549** tests. Later exact heads contain additional suites and their full root test gates passed; no newer repository aggregate test count is inferred without a directly surfaced total.
 
 ## Deliberately not exposed yet
 
