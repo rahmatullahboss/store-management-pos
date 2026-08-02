@@ -15,6 +15,7 @@ const orderId = "018f0000-0000-4000-8000-000000000403";
 const lineId = "018f0000-0000-4000-8000-000000000404";
 const productId = "018f0000-0000-4000-8000-000000000405";
 const variantId = "018f0000-0000-4000-8000-000000000406";
+const opaqueCursor = "modc:v2:page_00017.sig-abc_123";
 
 const context = Object.freeze({
   tenantId: "tenant-1",
@@ -147,23 +148,23 @@ test("customer account client is credentialed no-store and never sends customer 
   assert.equal(call.init.body, undefined);
 });
 
-test("order history client validates page options and sends only cursor/limit/hostname", async () => {
-  const cursor = "018f0000-0000-4000-8000-000000000499";
-  const captured = captureTransport(() => json(history()));
-  await requestStorefrontCustomerOrders(
+test("order history client validates page options and transports opaque cursor without customer identity", async () => {
+  const captured = captureTransport(() => json(history({ nextCursor: opaqueCursor })));
+  const result = await requestStorefrontCustomerOrders(
     { baseUrl: "https://api.example.com/", transport: captured.transport },
     hostname,
-    { cursor, limit: 25 },
+    { cursor: opaqueCursor, limit: 25 },
   );
 
   const url = new URL(captured.calls[0].url);
   assert.equal(url.pathname, "/v1/storefront/account/orders");
   assert.equal(url.searchParams.get("hostname"), hostname);
-  assert.equal(url.searchParams.get("cursor"), cursor);
+  assert.equal(url.searchParams.get("cursor"), opaqueCursor);
   assert.equal(url.searchParams.get("limit"), "25");
   assert.equal(url.searchParams.has("customerId"), false);
   assert.equal(captured.calls[0].init.cache, "no-store");
   assert.equal(captured.calls[0].init.credentials, "include");
+  assert.equal(result.nextCursor, opaqueCursor);
 
   await assert.rejects(
     requestStorefrontCustomerOrders(
@@ -172,6 +173,14 @@ test("order history client validates page options and sends only cursor/limit/ho
       { limit: 51 },
     ),
     /between 1 and 50/u,
+  );
+  await assert.rejects(
+    requestStorefrontCustomerOrders(
+      { baseUrl: "https://api.example.com/", transport: captured.transport },
+      hostname,
+      { cursor: "unsafe/cursor", limit: 20 },
+    ),
+    /cursor/u,
   );
 });
 
