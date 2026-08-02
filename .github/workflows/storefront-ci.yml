@@ -19,6 +19,7 @@ on:
       - "tooling/scripts/storefront-checkout-recovery-design-evidence.mjs"
       - "tooling/scripts/storefront-checkout-recovery-design-evidence-runner.mjs"
       - "tooling/scripts/storefront-order-tracking-design-evidence.mjs"
+      - "tooling/scripts/storefront-performance-rehearsal.mjs"
       - "tooling/scripts/storefront-admin-design-evidence.mjs"
       - "tooling/scripts/storefront-public-content-design-evidence.mjs"
       - "tooling/scripts/storefront-public-catalog-design-evidence.mjs"
@@ -50,6 +51,7 @@ on:
       - "tooling/scripts/storefront-checkout-recovery-design-evidence.mjs"
       - "tooling/scripts/storefront-checkout-recovery-design-evidence-runner.mjs"
       - "tooling/scripts/storefront-order-tracking-design-evidence.mjs"
+      - "tooling/scripts/storefront-performance-rehearsal.mjs"
       - "tooling/scripts/storefront-admin-design-evidence.mjs"
       - "tooling/scripts/storefront-public-content-design-evidence.mjs"
       - "tooling/scripts/storefront-public-catalog-design-evidence.mjs"
@@ -172,6 +174,8 @@ jobs:
           npm run storefront:design:verify
           node tooling/scripts/storefront-checkout-recovery-design-evidence-runner.mjs
           node tooling/scripts/storefront-order-tracking-design-evidence.mjs
+      - name: Run bounded storefront performance rehearsal
+        run: node tooling/scripts/storefront-performance-rehearsal.mjs
       - name: Run admin browser and accessibility evidence
         run: |
           npm run build
@@ -189,6 +193,7 @@ jobs:
             docs/architecture/storefront/design-evidence/
             docs/architecture/storefront/checkout-recovery-design-evidence/
             docs/architecture/storefront/order-tracking-design-evidence/
+            docs/architecture/storefront/performance-evidence/
             docs/architecture/storefront/admin-design-evidence/
           if-no-files-found: warn
           retention-days: 14
