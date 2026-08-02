@@ -2,11 +2,11 @@
 
 Status: **active**
 
-Completed slices: `H7-CACHE-ISOLATION-01`, `H7-ABUSE-CONTRACT-02`
+Completed slices: `H7-CACHE-ISOLATION-01`, `H7-ABUSE-CONTRACT-02`, `H7-OBS-RUNBOOK-03`
 
-Latest fully verified implementation head: `967a66e58ae89c408a5b3e75afc3a95a2d13fad4`
+Latest fully verified implementation head: `a4030ef44814b740538bb3d8a2b7a192bf44ba2a`
 
-Storefront CI: `30724380521`
+Storefront CI: `30724857648`
 
 ## Objective
 
@@ -49,43 +49,86 @@ No storefront-specific production distributed limiter was found. MOD-H deliberat
 
 Issue #107 tracks the shared/runtime distributed rate-limit capability.
 
-Provider-independent hardening now exists in `modules/storefront/src/abuse-control.ts`:
+Provider-independent hardening exists in `modules/storefront/src/abuse-control.ts`:
 
-- route policy classes are explicit: `public_read`, `public_search`, `public_media`, `private_read`, `checkout_quote`, `checkout_submit`, `admin_mutation`;
+- explicit route policy classes: `public_read`, `public_search`, `public_media`, `private_read`, `checkout_quote`, `checkout_submit`, `admin_mutation`;
 - public/search/media/private reads declare `fail_open_observe` for limiter-provider unavailability;
 - checkout quote/submit and admin mutation policies declare `fail_closed` for limiter-provider unavailability;
 - anonymous requests require a `trusted_edge` opaque abuse key;
 - authenticated private/sensitive requests require an `authenticated_session` opaque abuse key;
-- opaque keys are bounded base64url-like tokens; raw IP strings and arbitrary forwarding-header key sources are rejected;
-- spoofed `X-Forwarded-For`, `CF-Connecting-IP` and `True-Client-IP` request headers are not used to select the abuse key;
-- provider decisions are strict `allow | deny | unavailable` contracts with bounded safe reason categories, policy revision and optional Retry-After seconds;
-- inconsistent provider decisions fail contract validation;
-- deny returns HTTP 429 with `Cache-Control: no-store`, `X-Content-Type-Options: nosniff` and bounded `Retry-After` when supplied;
-- policy/provider revision and opaque abuse-key details are not reflected in 429 responses;
-- fail-closed provider unavailability returns HTTP 503 `STOREFRONT_ABUSE_CONTROL_UNAVAILABLE`;
-- fail-open read paths return no synthetic allow/limit result and remain observable by the future provider integration.
+- raw IP strings and arbitrary forwarding-header key sources are rejected;
+- spoofed `X-Forwarded-For`, `CF-Connecting-IP` and `True-Client-IP` headers cannot select the abuse key;
+- provider decisions are strict `allow | deny | unavailable` contracts;
+- deny returns HTTP 429 with no-store/nosniff and bounded Retry-After when supplied;
+- policy/provider revision and opaque abuse-key details are not reflected in buyer responses;
+- fail-closed provider unavailability returns HTTP 503 `STOREFRONT_ABUSE_CONTROL_UNAVAILABLE`.
 
-Unit coverage in `tests/unit/storefront-abuse-control.test.mjs` proves route separation, trusted-key source enforcement, spoofed forwarding-header resistance, fail-open/fail-closed semantics, 429 response safety and strict provider-output validation.
+Runtime counting/enforcement remains intentionally unwired until Issue #107 supplies distributed/provider-backed state across Worker isolates/regions.
 
-Runtime counting/enforcement is intentionally not wired yet. It remains blocked on Issue #107 because the production state must be distributed/provider-backed across Worker isolates/regions.
+H7-ABUSE-CONTRACT-02 was fully verified at exact head `967a66e58ae89c408a5b3e75afc3a95a2d13fad4`, Storefront CI `30724380521`.
+
+## H7-OBS-RUNBOOK-03 — complete and verified
+
+Added `storefront-operational-event.v1` in `modules/storefront/src/observability.ts` as a strict, privacy-safe operational event envelope.
+
+The event taxonomy is bounded to:
+
+- `storefront.cache.decision`;
+- `storefront.public_host.resolve`;
+- `storefront.private_access.decision`;
+- `storefront.abuse_control.decision`;
+- `storefront.domain.lifecycle`;
+- `storefront.checkout.guard`.
+
+The envelope supports only bounded request/trace correlation, safe tenant/storefront/channel identifiers and fixed low-cardinality cache/abuse/domain dimensions. It intentionally has no free-form metadata object.
+
+Strict tests prove the envelope rejects:
+
+- customer IDs and contact details;
+- request/custom hostnames;
+- raw IP/forwarding-header identity and opaque abuse keys;
+- provider hostname/reference/challenge data;
+- payment intent/provider IDs;
+- warehouse/reservation authority;
+- R2 object keys/private storage paths;
+- arbitrary staff/internal/free-form metadata;
+- arbitrary high-cardinality event/cache/policy labels.
+
+`docs/architecture/storefront/operations-runbook.md` now defines incident handling for:
+
+- public-host/domain resolution failures;
+- cross-tenant/hostname cache contamination;
+- private account/order access anomalies;
+- checkout/commerce guard unavailability;
+- abuse-control provider failure;
+- domain provider ambiguity/outage;
+- Cloudflare preview/runtime anomalies and cleanup;
+- PostgreSQL and non-destructive Neon recovery;
+- buyer return/support boundaries.
+
+The runbook explicitly forbids bypassing fail-closed authority, manually manufacturing provider state, widening repository ownership queries, or substituting Worker-memory rate limiting for distributed enforcement.
+
+Issue #108 tracks the remaining shared telemetry-sink integration. MOD-H does not create an ad-hoc logger or allow a future sink to widen the validated envelope with request/body/exception metadata.
 
 ## Latest verified evidence
 
-Exact head `967a66e58ae89c408a5b3e75afc3a95a2d13fad4`, Storefront CI `30724380521`:
+Exact head `a4030ef44814b740538bb3d8a2b7a192bf44ba2a`, Storefront CI `30724857648`:
 
-- root format, lint, boundaries, TypeScript, database validation, complete test gate and security/dependency gates: **passed**;
-- Astro Cloudflare build: **passed**;
-- PostgreSQL 17 storefront rehearsal: **passed**;
-- buyer/recovery/order-tracking/admin browser and accessibility evidence: **passed**;
-- Cloudflare preview deploy, runtime metrics and cleanup: **passed**;
-- non-destructive Neon recovery: **passed**.
+- verify job `91434520353`: format, lint, module boundaries, TypeScript, database validation, complete tests, Astro build and security/dependency gates — **passed**;
+- PostgreSQL 17 rehearsal job `91434580011` — **passed**;
+- buyer/admin browser and accessibility job `91434579986` — **passed**;
+- Cloudflare preview deploy/runtime metrics/cleanup job `91434579971` — **passed**;
+- non-destructive Neon recovery job `91434580104` — **passed**.
+
+The same exact head also passed Storefront H1 Validation, Storefront Lockfile, Foundation Design CI and Foundation CI.
 
 ## Remaining H7 work
 
 1. integrate the distributed runtime abuse provider once Issue #107 is available;
-2. add storefront-specific operational observability/runbook evidence for cache, public host/domain failures, private route safety and abuse-control decisions without sensitive-key leakage;
-3. consolidate final migration/recovery, Cloudflare evidence, known blockers and serial integration instructions into the MOD-H handoff;
-4. keep provider/domain, customer/order and H4 commerce mutation routes fail closed until their owning-module blockers are resolved.
+2. connect the validated operational envelope to the approved shared telemetry sink once Issue #108 is resolved;
+3. keep final hardening/handoff documentation current while cross-module H4–H6 blockers are resolved;
+4. run fresh exact-head migration/recovery/Cloudflare/browser evidence after the final owning-module integrations;
+5. do not mark MOD-H complete while checkout, private customer/order or trusted provider lifecycle remains fail closed.
 
 ## Current blockers carried into hardening
 
@@ -95,4 +138,5 @@ Exact head `967a66e58ae89c408a5b3e75afc3a95a2d13fad4`, Storefront CI `3072438052
 - #101 — trusted customer binding + storefront-scoped MOD-C order reads;
 - #102 — buyer-safe return/support request capability;
 - #104 — trusted custom-hostname verification/certificate provider lifecycle;
-- #107 — distributed storefront abuse/rate-limit provider.
+- #107 — distributed storefront abuse/rate-limit provider;
+- #108 — approved shared operational telemetry sink preserving the strict storefront envelope.
