@@ -395,9 +395,23 @@ checkpoints:
         completed:
           - generic_ACCOUNT_ACCESS_DENIED_403_without_scope_or_ownership_detail_leakage
           - private_no_store_cache_headers_preserved
+      H5-PAGINATION-04:
+        status: complete_verified_boundary_unregistered
+        completed:
+          - order_history_cursor_treated_as_bounded_URL_safe_opaque_token
+          - UUID_cursors_remain_valid_subset_without_constraining_MOD_C_pagination_scheme
+          - unsafe_path_whitespace_control_and_oversized_cursors_fail_closed
+          - customer_order_product_variant_identities_remain_UUID_only
+          - client_and_module_round_trip_cursor_without_browser_customer_identity
+          - private_routes_remain_unregistered_pending_issue_101
     exact_head_evidence:
-      head: b35b0e260abdcfd882240437f47f59f98a2e7548
-      storefront_ci_run: 30723499435
+      head: 7485f4e80c468de328093fcc09fd22efdc25a110
+      storefront_ci_run: 30727323408
+      storefront_verify_job: 91441336353
+      postgres_rehearsal_job: 91441384231
+      browser_evidence_job: 91441384334
+      cloudflare_preview_job: 91441384267
+      neon_recovery_job: 91441384470
       result: all_storefront_CI_lanes_passed
     blockers:
       - issue_101_trusted_session_to_canonical_customer_binding_and_storefront_scoped_MOD_C_order_reads
@@ -538,8 +552,12 @@ last_commits:
     purpose: H3 SEO media cache and multilingual low-bandwidth exact-head evidence
   - sha: db135e7c72ac418ee1158ab10cb3665ee88ab943
     purpose: H4 exact cart checkout recovery verified code checkpoint
+  - sha: 2f8569a2e47922bb5d77e584f605fac85dabeb5f
+    purpose: H4 recovery factual input refinement without evidence escape casts
   - sha: b35b0e260abdcfd882240437f47f59f98a2e7548
     purpose: H5 private customer order read tracking and access hardening verified checkpoint
+  - sha: 7485f4e80c468de328093fcc09fd22efdc25a110
+    purpose: H5 bounded opaque MOD_C order history pagination verified checkpoint
   - sha: f0ed777350cc67145381ec02911ea53e9ab72c4d
     purpose: H6 custom domain provider trust and read-only lifecycle verified checkpoint
   - sha: 0f4c14bfddad9e69ac1b51976f6a6fe262c9ae43
@@ -557,14 +575,14 @@ evidence:
   github:
     pr: 48
     base_sha: fd63dfde4d5940112a9c77c2743b281e49ff6b55
-    verified_implementation_head: 8666a1440d5139a132c5028f3b64ad0912855eaf
-    verified_validation_head: 8666a1440d5139a132c5028f3b64ad0912855eaf
-    latest_storefront_ci_run: 30726322406
-    latest_storefront_verify_job: 91439163345
-    latest_postgres_rehearsal_job: 91439153771
-    latest_browser_evidence_job: 91439153689
-    latest_cloudflare_preview_job: 91439153617
-    latest_neon_recovery_job: 91439153353
+    verified_implementation_head: 7485f4e80c468de328093fcc09fd22efdc25a110
+    verified_validation_head: 7485f4e80c468de328093fcc09fd22efdc25a110
+    latest_storefront_ci_run: 30727323408
+    latest_storefront_verify_job: 91441336353
+    latest_postgres_rehearsal_job: 91441384231
+    latest_browser_evidence_job: 91441384334
+    latest_cloudflare_preview_job: 91441384267
+    latest_neon_recovery_job: 91441384470
     bounded_performance_requests: 64
     bounded_performance_concurrency: 8
     bounded_performance_p95_ms: 86.31
