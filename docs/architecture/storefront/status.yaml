@@ -467,12 +467,36 @@ checkpoints:
           - progress_handoff_with_verified_checkpoint_ledger_and_fail_closed_matrix
         exact_head: a4030ef44814b740538bb3d8a2b7a192bf44ba2a
         storefront_ci_run: 30724857648
-        storefront_verify_job: 91434520353
-        postgres_rehearsal_job: 91434580011
-        browser_evidence_job: 91434579986
-        cloudflare_preview_job: 91434579971
-        neon_recovery_job: 91434580104
-        result: all_storefront_CI_lanes_passed
+      H7-FAIL-CLOSED-MATRIX-04:
+        status: complete_verified
+        completed:
+          - blocked_commerce_and_private_handlers_absent_from_live_API_root
+          - domain_provider_guard_precedes_provider_observation_command_path
+          - abuse_and_operational_sink_not_silently_wired
+          - machine_tracker_blocker_state_enforced_by_CI
+          - future_safe_non_H3_verified_head_assertion
+        exact_head: 7b858b601cc83fc7bd65d3847ebaa7d9e5998cdc
+        storefront_ci_run: 30726144155
+      H7-PERF-CACHE-05:
+        status: complete_verified
+        completed:
+          - bounded_local_synthetic_performance_rehearsal_64_requests_concurrency_8
+          - performance_report_explicit_productionSla_false
+          - performance_64_of_64_success_p95_86_31_ms
+          - reason_to_cache_family_invalidation_policy_rehearsal
+          - unknown_invalidation_reason_conservatively_advances_all_nine_families
+          - targeted_media_invalidation_does_not_advance_catalog
+          - cache_invalidation_replay_conflict_audit_outbox_and_privilege_evidence
+        exact_head: 8666a1440d5139a132c5028f3b64ad0912855eaf
+        storefront_ci_run: 30726322406
+        storefront_verify_job: 91439163345
+        postgres_rehearsal_job: 91439153771
+        browser_evidence_job: 91439153689
+        cloudflare_preview_job: 91439153617
+        neon_recovery_job: 91439153353
+        cloudflare_first_attempt_result: transient_local_preview_502_then_targeted_rerun_passed
+        neon_first_attempt_result: concurrency_cancelled_then_targeted_rerun_passed
+        result: all_storefront_CI_lanes_passed_without_weakening_source_guards_or_budgets
     blockers:
       - issue_107_distributed_storefront_abuse_rate_limit_provider
       - issue_108_approved_shared_operational_telemetry_sink
@@ -524,19 +548,27 @@ last_commits:
     purpose: H7 abuse control contract verified checkpoint
   - sha: a4030ef44814b740538bb3d8a2b7a192bf44ba2a
     purpose: H7 privacy safe observability runbook and progress handoff exact-head verified checkpoint
+  - sha: 7b858b601cc83fc7bd65d3847ebaa7d9e5998cdc
+    purpose: H7 future-safe fail-closed release matrix verified checkpoint
+  - sha: 8666a1440d5139a132c5028f3b64ad0912855eaf
+    purpose: H7 bounded performance and cache invalidation policy verified checkpoint
 
 evidence:
   github:
     pr: 48
     base_sha: fd63dfde4d5940112a9c77c2743b281e49ff6b55
-    verified_implementation_head: a4030ef44814b740538bb3d8a2b7a192bf44ba2a
-    verified_validation_head: a4030ef44814b740538bb3d8a2b7a192bf44ba2a
-    latest_storefront_ci_run: 30724857648
-    latest_storefront_verify_job: 91434520353
-    latest_postgres_rehearsal_job: 91434580011
-    latest_browser_evidence_job: 91434579986
-    latest_cloudflare_preview_job: 91434579971
-    latest_neon_recovery_job: 91434580104
+    verified_implementation_head: 8666a1440d5139a132c5028f3b64ad0912855eaf
+    verified_validation_head: 8666a1440d5139a132c5028f3b64ad0912855eaf
+    latest_storefront_ci_run: 30726322406
+    latest_storefront_verify_job: 91439163345
+    latest_postgres_rehearsal_job: 91439153771
+    latest_browser_evidence_job: 91439153689
+    latest_cloudflare_preview_job: 91439153617
+    latest_neon_recovery_job: 91439153353
+    bounded_performance_requests: 64
+    bounded_performance_concurrency: 8
+    bounded_performance_p95_ms: 86.31
+    bounded_performance_production_sla: false
     integration_sync_pr: 53
     integration_sync_report: docs/architecture/storefront/integration-conflicts.txt
   neon:
