@@ -2,8 +2,8 @@ workpack:
   id: MOD-H
   title: Storefront Commerce and Custom Domains
   status: active
-  current_checkpoint: H4
-  updated_at: 2026-08-01
+  current_checkpoint: H7
+  updated_at: 2026-08-02
   owner_model: one_agent_complete_workpack
   pull_request: 48
   pull_request_state: draft
@@ -317,36 +317,171 @@ checkpoints:
 
   H4:
     title: Exact cart and checkout
-    status: active
-    active_slice:
-      id: H4-QUOTE-01
-      description: Establish authority-safe cart intent and exact server quote contracts before wiring MOD-A/B/C/E/F adapters.
-      plan_doc: docs/architecture/storefront/exact-cart-checkout-plan.md
-      implementation_head: c155871efcfccb930d4408f82cd204a0cf42a0ac
-      completed_so_far:
-        - strict_versioned_cart_quote_request_contract
-        - browser_commercial_authority_field_rejection
-        - exact_quantity_coupon_country_and_idempotency_validation
-        - versioned_exact_quote_envelope_contract
-        - price_list_publication_calculation_and_inventory_evidence_reconciliation
-        - focused_cart_quote_contract_tests
+    status: blocked_on_cross_module_authority
+    completed_slices:
+      H4-QUOTE-01:
+        status: complete_verified
+        completed:
+          - strict_authority_free_cart_draft_and_quote_request_contract
+          - exact_quantity_coupon_country_and_revision_validation
+          - browser_commercial_authority_rejection
+          - deterministic_cart_draft_to_quote_request_projection
+      H4-QUOTE-02:
+        status: boundary_complete_activation_blocked
+        completed:
+          - trusted_authenticated_customer_principal_boundary
+          - published_product_variant_revalidation
+          - full_sales_channel_multi_warehouse_MOD_B_availability_revalidation
+          - exact_trusted_RequestContext_forwarding_to_MOD_C_quote_service
+          - canonical_quote_scope_item_snapshot_revision_and_expiry_revalidation
+          - unregistered_no_store_quote_handler_and_client
+      H4-CHECKOUT-03:
+        status: contract_boundary_complete_activation_blocked
+        completed:
+          - strict_checkout_capability_request_without_browser_amount_authority
+          - versioned_shipping_and_payment_capability_references
+          - quote_country_shipping_payment_revision_and_expiry_reconciliation
+          - ready_changed_unavailable_recovery_state
+          - unregistered_no_store_checkout_capability_handler_and_client
+      H4-SUBMIT-04:
+        status: pre_side_effect_complete_activation_blocked
+        completed:
+          - strict_submission_intent_without_totals_tax_payment_amount_or_warehouse_authority
+          - exact_quote_country_shipping_payment_freshness_preflight
+          - deterministic_SHA_256_idempotency_request_hash
+          - no_MOD_C_order_MOD_B_reservation_MOD_E_payment_or_accounting_side_effect_wired
+      H4-RECOVERY-05:
+        status: complete_verified
+        completed:
+          - typed_cart_quote_country_shipping_payment_recovery_model
+          - English_Bengali_Arabic_RTL_and_Japanese_server_rendered_recovery_UI
+          - bounded_3G_keyboard_Axe_200_percent_text_and_reduced_motion_evidence
+    exact_head_evidence:
+      head: db135e7c72ac418ee1158ab10cb3665ee88ab943
+      storefront_ci_run: 30710984952
+      result: all_storefront_CI_lanes_passed
+    blockers:
+      - issue_97_lossless_MOD_A_price_tax_into_MOD_C_and_pre_order_shipping
+      - issue_98_MOD_E_side_effect_free_public_payment_capability
+      - issue_100_MOD_F_typed_checkout_country_address_contact_policy
     remaining:
-      - authoritative_MOD_A_MOD_B_MOD_C_quote_adapter
-      - quote_persistence_expiry_revision_and_revalidation_recovery
-      - MOD_F_country_address_contact_policy
-      - MOD_C_shipping_capability_projection
-      - MOD_E_payment_capability_projection
-      - idempotent_order_reservation_payment_submission_and_unknown_state_recovery
-      - checkout_browser_PostgreSQL_Cloudflare_and_Neon_evidence
+      - integrate_issue_97_98_100_owning_module_capabilities
+      - activate_and_verify_public_quote_checkout_and_submit_routes_only_after_authority_exists
+      - prove_retry_concurrency_no_duplicate_order_reservation_payment_or_ledger_effects
+
   H5:
     title: Customer and order experience
-    status: blocked_by_H4
+    status: blocked_on_trusted_customer_order_and_return_capabilities
+    completed_slices:
+      H5-ACCOUNT-01:
+        status: complete_verified_boundary_unregistered
+        completed:
+          - versioned_private_customer_profile_order_history_and_order_detail_contracts
+          - authenticated_session_only_principal_boundary
+          - no_browser_selected_customer_identity_or_permission_synthesis
+          - tenant_legal_entity_store_customer_storefront_sales_channel_revalidation
+          - buyer_safe_profile_and_order_projection_with_internal_authority_redaction
+          - credentialed_HTTPS_no_store_private_clients
+          - unregistered_private_account_handler
+      H5-TRACKING-02:
+        status: complete_verified
+        completed:
+          - canonical_buyer_safe_read_only_order_tracking_view
+          - exact_integer_string_money_and_quantity_rendering
+          - no_synthetic_carrier_event_tracking_URL_ETA_return_or_refund_authority
+          - English_Bengali_Arabic_RTL_and_Japanese_tracking_evidence
+      H5-PRIVATE-HARDEN-03:
+        status: complete_verified
+        completed:
+          - generic_ACCOUNT_ACCESS_DENIED_403_without_scope_or_ownership_detail_leakage
+          - private_no_store_cache_headers_preserved
+    exact_head_evidence:
+      head: b35b0e260abdcfd882240437f47f59f98a2e7548
+      storefront_ci_run: 30723499435
+      result: all_storefront_CI_lanes_passed
+    blockers:
+      - issue_101_trusted_session_to_canonical_customer_binding_and_storefront_scoped_MOD_C_order_reads
+      - issue_102_buyer_safe_idempotent_return_support_request_capability
+    remaining:
+      - integrate_issue_101_before_registering_private_routes
+      - integrate_issue_102_before_buyer_return_support_actions
+
   H6:
     title: Custom domains and SaaS operations
-    status: blocked_by_H2_and_MOD_G_provider_control_plane
+    status: blocked_on_trusted_provider_control_plane
+    completed_slices:
+      H6-PROVIDER-TRUST-01:
+        status: complete_verified
+        completed:
+          - external_tenant_admin_provider_verification_and_certificate_mutations_fail_closed_503
+          - forged_verified_certificate_active_provider_IDs_cannot_reach_domain_command_service
+          - domain_registration_intent_remains_available
+      H6-DOMAIN-READ-02:
+        status: complete_verified
+        completed:
+          - provider_secret_free_read_only_domain_lifecycle_projection
+          - strict_provider_reference_challenge_and_failure_detail_rejection
+          - active_phase_requires_domain_active_verification_verified_and_certificate_active
+          - provider_availability_changes_guidance_not_authority_facts
+    exact_head_evidence:
+      head: f0ed777350cc67145381ec02911ea53e9ab72c4d
+      storefront_ci_run: 30723955210
+      result: all_storefront_CI_lanes_passed_after_targeted_Neon_rerun
+    blockers:
+      - issue_104_trusted_MOD_G_shared_Cloudflare_custom_hostname_provider_lifecycle
+    remaining:
+      - integrate_provider_create_challenge_verification_certificate_suspend_delete_reconcile_capability
+      - verify_conflict_takeover_certificate_and_offboarding_evidence
+
   H7:
     title: Hardening and handoff
-    status: blocked_by_H4_to_H6
+    status: active_with_external_runtime_blockers
+    completed_slices:
+      H7-CACHE-ISOLATION-01:
+        status: complete_verified
+        completed:
+          - pairwise_tenant_storefront_channel_hostname_locale_currency_commercial_revision_cache_isolation
+          - delimiter_collision_resistance
+          - private_cart_checkout_account_and_evidence_route_public_cache_bypass
+          - unsafe_cache_scope_and_resource_tokens_fail_closed
+        exact_head: 0f4c14bfddad9e69ac1b51976f6a6fe262c9ae43
+        storefront_ci_run: 30724190935
+      H7-ABUSE-CONTRACT-02:
+        status: complete_verified_runtime_provider_blocked
+        completed:
+          - public_private_checkout_and_admin_policy_classification
+          - trusted_edge_and_authenticated_session_opaque_key_contracts
+          - spoofed_forwarding_header_resistance
+          - strict_allow_deny_unavailable_decision_contract
+          - safe_429_retry_after_no_store_and_503_fail_closed_semantics
+          - no_Worker_isolate_memory_limiter_faked_as_production_control
+        exact_head: 967a66e58ae89c408a5b3e75afc3a95a2d13fad4
+        storefront_ci_run: 30724380521
+      H7-OBS-RUNBOOK-03:
+        status: complete_verified_sink_integration_blocked
+        completed:
+          - strict_privacy_safe_storefront_operational_event_v1_envelope
+          - fixed_low_cardinality_cache_public_host_private_access_abuse_domain_checkout_taxonomy
+          - customer_hostname_IP_abuse_provider_payment_storage_and_free_form_metadata_rejection
+          - operational_runbook_for_cache_private_domain_checkout_abuse_Cloudflare_PostgreSQL_Neon_and_return_support_incidents
+          - progress_handoff_with_verified_checkpoint_ledger_and_fail_closed_matrix
+        exact_head: a4030ef44814b740538bb3d8a2b7a192bf44ba2a
+        storefront_ci_run: 30724857648
+        storefront_verify_job: 91434520353
+        postgres_rehearsal_job: 91434580011
+        browser_evidence_job: 91434579986
+        cloudflare_preview_job: 91434579971
+        neon_recovery_job: 91434580104
+        result: all_storefront_CI_lanes_passed
+    blockers:
+      - issue_107_distributed_storefront_abuse_rate_limit_provider
+      - issue_108_approved_shared_operational_telemetry_sink
+      - inherited_issue_97_98_100_101_102_104_completion_dependencies
+    remaining:
+      - integrate_issue_107_distributed_runtime_abuse_provider
+      - integrate_issue_108_shared_telemetry_sink_without_widening_event_envelope
+      - rerun_fresh_final_exact_head_CI_after_all_owning_module_integrations
+      - replace_progress_handoff_with_final_completion_receipt
 
 module_authority:
   catalog_pricing_tax: MOD-A
@@ -358,9 +493,9 @@ module_authority:
   storefront_publication_presentation_domains: MOD-H
 
 next_action:
-  id: H4-QUOTE-01
-  description: Wire the strict cart intent contract to an authoritative server quote adapter that resolves MOD-A price and tax, MOD-B availability and MOD-C sales quote orchestration without trusting browser commercial values.
-  documentation_first: docs/architecture/storefront/exact-cart-checkout-plan.md
+  id: H7-DEPENDENCY-INTEGRATION
+  description: Keep verified MOD-H boundaries fail closed while integrating Issues 97, 98, 100, 101, 102, 104, 107 and 108 through their owning modules or approved shared runtime adapters; then run fresh final exact-head Storefront CI and produce the final handoff.
+  documentation_first: docs/agent-handoffs/MOD-H-STOREFRONT-COMMERCE-PROGRESS.md
 
 last_commits:
   - sha: e9dc992ded901452b3633b3d20a261e50668bc88
@@ -377,16 +512,31 @@ last_commits:
     purpose: H3 category collection search filters PostgreSQL truth Cloudflare retention and exact-head evidence
   - sha: d5e5c6a0b0a780a89c9702f0ade6f632c0dc60ab
     purpose: H3 SEO media cache and multilingual low-bandwidth exact-head evidence
-  - sha: c155871efcfccb930d4408f82cd204a0cf42a0ac
-    purpose: H4 authority-safe cart quote contracts and focused tests
+  - sha: db135e7c72ac418ee1158ab10cb3665ee88ab943
+    purpose: H4 exact cart checkout recovery verified code checkpoint
+  - sha: b35b0e260abdcfd882240437f47f59f98a2e7548
+    purpose: H5 private customer order read tracking and access hardening verified checkpoint
+  - sha: f0ed777350cc67145381ec02911ea53e9ab72c4d
+    purpose: H6 custom domain provider trust and read-only lifecycle verified checkpoint
+  - sha: 0f4c14bfddad9e69ac1b51976f6a6fe262c9ae43
+    purpose: H7 cache isolation hardening verified checkpoint
+  - sha: 967a66e58ae89c408a5b3e75afc3a95a2d13fad4
+    purpose: H7 abuse control contract verified checkpoint
+  - sha: a4030ef44814b740538bb3d8a2b7a192bf44ba2a
+    purpose: H7 privacy safe observability runbook and progress handoff exact-head verified checkpoint
 
 evidence:
   github:
     pr: 48
     base_sha: fd63dfde4d5940112a9c77c2743b281e49ff6b55
-    verified_implementation_head: d5e5c6a0b0a780a89c9702f0ade6f632c0dc60ab
-    verified_validation_head: d5e5c6a0b0a780a89c9702f0ade6f632c0dc60ab
-    active_H4_head: c155871efcfccb930d4408f82cd204a0cf42a0ac
+    verified_implementation_head: a4030ef44814b740538bb3d8a2b7a192bf44ba2a
+    verified_validation_head: a4030ef44814b740538bb3d8a2b7a192bf44ba2a
+    latest_storefront_ci_run: 30724857648
+    latest_storefront_verify_job: 91434520353
+    latest_postgres_rehearsal_job: 91434580011
+    latest_browser_evidence_job: 91434579986
+    latest_cloudflare_preview_job: 91434579971
+    latest_neon_recovery_job: 91434580104
     integration_sync_pr: 53
     integration_sync_report: docs/architecture/storefront/integration-conflicts.txt
   neon:
@@ -410,6 +560,8 @@ evidence:
     upstream_business_authority_imported: false
   known_risks:
     - dedicated_neon_branch_waiting_for_safe_quota_slot
-    - custom_domain_provider_execution_requires_MOD_G_control_plane_adapter
-    - H4_quote_checkout_requires_authoritative_MOD_A_B_C_E_F_adapter_composition
-    - customer_auth_order_experience_custom_domain_and_final_hardening_remain_future_checkpoints
+    - issue_97_98_100_keep_live_checkout_authority_fail_closed
+    - issue_101_102_keep_private_customer_order_and_return_mutations_fail_closed
+    - issue_104_keeps_external_provider_verification_and_certificate_mutation_fail_closed
+    - issue_107_keeps_distributed_abuse_enforcement_unwired
+    - issue_108_keeps_operational_event_envelope_unwired_to_shared_sink
