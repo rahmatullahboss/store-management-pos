@@ -94,7 +94,7 @@ test("POS Sync exposes conflicts as blocking evidence instead of presenting queu
   assert.match(html, /role="alert"/);
   assert.match(html, /Not confirmed/);
   assert.match(html, /Sync provenance/);
-  assert.match(html, /Retry eligible" disabled/);
+  assert.match(html, /disabled>Retry eligible</);
 });
 
 test("POS device diagnostics renders component health, evidence rail and RTL-safe shell", () => {
