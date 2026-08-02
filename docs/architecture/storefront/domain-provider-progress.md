@@ -2,11 +2,11 @@
 
 Status: **active, provider-blocked**
 
-Completed slices: `H6-PROVIDER-TRUST-01`, `H6-DOMAIN-READ-02`
+Completed slices: `H6-PROVIDER-TRUST-01`, `H6-DOMAIN-READ-02`, `H6-PROVIDER-BRIDGE-03`
 
-Latest fully verified implementation head: `f0ed777350cc67145381ec02911ea53e9ab72c4d`
+Latest fully verified implementation head: `c52b688f28595cd41c5d735d038436670e638b68`
 
-Storefront CI: `30723955210`
+Storefront CI: `30727839962`
 
 ## Objective
 
@@ -16,7 +16,7 @@ A merchant/admin request may express domain intent. It must never manufacture pr
 
 ## Existing MOD-H foundation
 
-The storefront domain foundation already includes:
+The storefront domain foundation includes:
 
 - tenant-scoped `storefront.domains` and append-only `storefront.domain_verifications`;
 - domain states for pending, verification pending, certificate pending, active, suspended, failed, deleting and deleted;
@@ -28,30 +28,20 @@ The storefront domain foundation already includes:
 - transition invariants, including completed verification + active certificate before local active state;
 - deleted-domain non-reactivation and deleting-before-deleted rules;
 - canonical selection only for active domains;
-- public hostname resolution that requires active domain + active certificate + active storefront/channel binding and therefore fails closed for stale/failed/suspended/deleting/deleted hosts.
-
-## Trust-boundary defect found
-
-The existing merchant/admin command API exposed:
-
-- `POST /v1/storefront/domains/:id/verifications`, accepting body-supplied verification result, challenge evidence, provider reference and observation timestamps;
-- `POST /v1/storefront/domains/:id/transition`, accepting body-supplied domain status, certificate status, provider hostname ID and failure detail.
-
-Both ultimately used the tenant-facing privileged `storefront.domain.manage` authority. Although SQL activation required a completed verification and active certificate, those provider facts themselves were client-assertable. A tenant/admin could therefore attempt to manufacture the facts required for activation.
-
-This is not an acceptable ownership/certificate trust boundary.
+- public hostname resolution that requires active domain + active certificate + active storefront/channel binding and fails closed for stale/failed/suspended/deleting/deleted hosts.
 
 ## H6-PROVIDER-TRUST-01 — complete and verified
 
-- Domain registration remains available through the tenant/admin API.
-- External merchant/admin provider-observation endpoints fail closed before command execution:
-  - `POST /v1/storefront/domains/:id/verifications`
-  - `POST /v1/storefront/domains/:id/transition`
-- Both return HTTP `503` with `{ "error": { "code": "DOMAIN_PROVIDER_CONTROL_UNAVAILABLE" } }`.
-- Responses are `no-store` and `nosniff`.
-- Forged `resultStatus: verified`, provider reference, `certificateStatus: active`, provider hostname ID and canonical activation cannot reach the domain command service through the external handler.
-- Existing internal MOD-H command/state-machine code remains available for a future trusted provider adapter; the security fix does not delete domain lifecycle capabilities.
-- Unit tests prove domain registration still executes while forged provider verification/transition requests return 503 and leave the command call count unchanged.
+A trust-boundary defect was found in the original tenant/admin command path: body-supplied verification status, provider references, certificate status and provider hostname IDs could reach domain commands under tenant-facing domain management authority.
+
+The external merchant/admin provider-observation endpoints now fail closed before command execution:
+
+- `POST /v1/storefront/domains/:id/verifications`
+- `POST /v1/storefront/domains/:id/transition`
+
+Both return HTTP `503` with `DOMAIN_PROVIDER_CONTROL_UNAVAILABLE`, `no-store` and `nosniff` semantics. Domain registration intent remains available.
+
+Forged `verified`, certificate `active`, provider IDs and canonical activation therefore cannot reach the domain command service through the tenant-facing API.
 
 This slice was fully verified at exact head `1e56068eb924876754a97afa58935a4b92aa4157`, Storefront CI `30723743976`.
 
@@ -59,19 +49,9 @@ This slice was fully verified at exact head `1e56068eb924876754a97afa58935a4b92a
 
 Added a strict provider-independent read-only lifecycle projection in `modules/storefront/src/domain-lifecycle.ts`.
 
-The input snapshot contains only local buyer/admin-safe domain facts:
+The safe snapshot contains only domain/storefront identity, normalized hostname, domain kind, local domain/certificate/verification status, canonical flag and update timestamp. Provider hostname IDs, provider references, challenge values/hashes and provider failure detail are rejected from this merchant/admin lifecycle view contract.
 
-- domain/storefront identity;
-- normalized hostname and domain kind;
-- local domain status;
-- local certificate status;
-- local verification status;
-- canonical flag;
-- update timestamp.
-
-The parser rejects unsupported fields, including provider hostname IDs, provider references, challenge values/hashes and provider failure detail. Those values therefore cannot accidentally become part of the merchant/admin lifecycle view contract.
-
-The projection derives only read-only local phases:
+The projection derives only local read-only phases:
 
 - `setup_pending`;
 - `ownership_pending`;
@@ -82,57 +62,102 @@ The projection derives only read-only local phases:
 - `removing`;
 - `removed`.
 
-An `active` phase requires all three local facts at once: domain status `active`, verification `verified`, and certificate `active`. Any missing/stale fact prevents active presentation.
+An `active` phase requires local domain `active`, verification `verified` and certificate `active` simultaneously. Provider availability may change guidance only; it cannot change authority facts.
 
-Provider availability may change guidance only (`review_configuration`, `wait_for_provider`, `contact_support`, `none`); it cannot change domain/verification/certificate facts. No `mark verified`, activation, provider-ID or certificate mutation action exists in the lifecycle view.
+This slice was fully verified at exact head `f0ed777350cc67145381ec02911ea53e9ab72c4d`, Storefront CI `30723955210`.
 
-Unit tests cover:
+## H6-PROVIDER-BRIDGE-03 — complete and verified; provider transport still blocked
 
-- strict provider/challenge/failure-field rejection;
-- lifecycle phase derivation;
-- active-state conjunction;
-- provider-unavailable guidance;
-- absence of activation/provider-authority fields in the output.
+Added `modules/storefront/src/domain-provider-bridge.ts` as a pure trusted-observation parser/mapper. It does **not** own Cloudflare credentials, network calls, webhook verification or provider polling.
 
-## Latest verified evidence
+### Trusted verification observation
 
-Exact head `f0ed777350cc67145381ec02911ea53e9ab72c4d`, Storefront CI `30723955210`:
+`storefront-trusted-domain-verification-observation.v1` requires:
 
-- root format, lint, boundaries, TypeScript, database validation, complete test gate and security/dependency gates: **passed**;
-- Astro Cloudflare build: **passed**;
-- PostgreSQL 17 storefront migration/command rehearsal: **passed**;
-- buyer/recovery/order-tracking/admin browser and accessibility evidence: **passed**;
-- Cloudflare preview deploy, runtime metrics and cleanup: **passed**;
-- Neon recovery initially concurrency-cancelled, then the exact cancelled job was targeted-rerun and the non-destructive recovery drill **passed**.
+- source exactly `trusted-control-plane`;
+- bounded opaque observation ID;
+- canonical domain UUID;
+- attempt 1..1000;
+- bounded DNS/HTTP challenge metadata;
+- SHA-256 challenge-value digest only, never raw challenge secret;
+- explicit `pending | verified | failed | expired` verification state;
+- optional bounded provider reference;
+- observation/expiry timestamps with expiry strictly after observation.
+
+The mapper produces existing internal `RecordDomainVerificationInput` with deterministic idempotency `domain-provider-verification:<observationId>`. `observedDetail` is fixed to `{ source, observationId }`; raw provider payload/detail cannot enter the command.
+
+### Trusted lifecycle observation
+
+`storefront-trusted-domain-lifecycle-observation.v1` requires:
+
+- source exactly `trusted-control-plane`;
+- bounded observation ID and domain UUID;
+- normalized local domain and certificate states;
+- optional bounded provider hostname ID;
+- optional low-cardinality failure code;
+- observation timestamp.
+
+Important invariants:
+
+- an `active` provider observation requires certificate `active` and a provider hostname ID;
+- a `failed` observation requires a bounded low-cardinality failure code;
+- raw failure detail/provider token/free-form metadata is rejected;
+- provider observation cannot assert local `canonical` state;
+- `canonical` is supplied separately as a local MOD-H fact and may be preserved only for an active trusted provider observation.
+
+The mapper produces existing internal `TransitionDomainInput` with deterministic idempotency `domain-provider-lifecycle:<observationId>`.
+
+### Public/tenant isolation
+
+The fail-closed release matrix now statically proves that the trusted provider bridge and mapper functions are not imported by:
+
+- `apps/api/src/index.ts`;
+- `apps/api/src/modules/storefront/handler.ts`;
+- `apps/storefront-web/src/runtime.ts`.
+
+The bridge therefore cannot become an accidental tenant/public route. External provider verification/certificate mutation remains 503 until Issue #104 supplies the approved trusted transport/control-plane integration.
+
+### Exact verified evidence
+
+Implementation head: `c52b688f28595cd41c5d735d038436670e638b68`
+
+Storefront CI: `30727839962`
+
+- verify `91442940083` — **passed**;
+- PostgreSQL 17 rehearsal `91442990684` — **passed**;
+- buyer/admin browser, accessibility and bounded performance `91442990692` — **passed**;
+- Cloudflare preview/runtime/cleanup `91442789500` — **passed**;
+- non-destructive Neon recovery `91442990854` — **passed** after targeted rerun of the earlier concurrency-cancelled job.
+
+No public provider route was enabled and no provider/runtime authority was moved into MOD-H.
 
 ## Provider blocker
 
-Issue #104 tracks the required trusted MOD-G/shared Cloudflare custom-hostname provider capability.
+Issue #104 remains open because the trusted transport/provider capability still has to own:
 
-The trusted provider path must own/observe:
-
-1. provider custom-hostname creation;
-2. DNS/HTTP ownership challenge material;
-3. ownership verification status;
-4. certificate pending/active/expiring/failed/revoked status;
+1. Cloudflare custom-hostname creation;
+2. DNS/HTTP ownership challenge material and secure provider interaction;
+3. ownership verification observation;
+4. certificate pending/active/expiring/failed/revoked observation;
 5. provider hostname identifiers;
 6. suspension/deletion/offboarding reconciliation;
 7. ambiguous provider/network outcomes, retry/backoff and idempotency;
 8. provider-secret redaction and audit/correlation evidence.
 
-Tenant/admin input must remain distinct from provider-observed facts.
+The existing integrated MOD-G release provides generic connector/webhook/credential infrastructure, but no storefront custom-hostname lifecycle authority was found. The bridge added here is therefore preparation for #104, not a replacement for it.
 
 ## Current safety posture
 
-Until Issue #104 has a concrete trusted provider adapter:
+Until Issue #104 is resolved and integrated:
 
-- merchant/admin can register a domain intent but cannot assert it verified;
-- merchant/admin cannot assert certificate activation or provider identifiers;
-- merchant/admin-facing lifecycle projection is read-only and provider-secret-free;
-- local public host resolution continues to require active + certificate-active state;
+- merchant/admin may register domain intent but cannot assert it verified;
+- merchant/admin cannot assert certificate activation or provider IDs;
+- merchant/admin lifecycle projection remains read-only/provider-secret-free;
+- local public host resolution still requires active + certificate-active state;
+- trusted provider bridge remains unreachable from tenant/public roots;
 - no custom domain can be safely advanced to production-active through the external tenant API;
 - provider mutation endpoints remain fail closed with 503.
 
-## Next safe work
+## Next work
 
-Continue H7 blocker-independent hardening while Issue #104 is open: abuse/rate-limit coverage, multi-tenant/hostname cache isolation, observability/runbook evidence and final handoff preparation. Provider lifecycle mutation remains blocked until the trusted MOD-G/shared adapter exists.
+Issue #104 is now integration-ready on the MOD-H side: a trusted control-plane implementation can feed the strict observation bridge without changing tenant/public contracts. Actual Cloudflare credentials/network/provider reconciliation must stay in the approved MOD-G/shared runtime authority, followed by conflict/takeover/certificate/offboarding tests and fresh exact-head Storefront CI.
