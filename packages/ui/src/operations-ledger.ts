@@ -99,6 +99,7 @@ export const operationsLedgerBridgeStyles = `<style data-operations-ledger-bridg
 .app-shell .shell-main .modg-int-cards{display:block;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:var(--surface)}
 .app-shell .shell-main .modg-int-cards article{border:0;border-block-end:1px solid var(--line);border-radius:0;background:transparent}
 .app-shell .shell-main .modg-int-cards article:last-child{border-block-end:0}
+.app-shell .shell-main .modg-int-cards dl div{background:var(--surface)!important;border:1px solid var(--line)!important;color:var(--ink)!important}
 .app-shell .shell-main .modg-saas-subscription dl div{background:#f1f2ed!important;border:1px solid var(--line);color:var(--ink)}
 .app-shell .shell-main .modg-saas-subscription dl div dt{color:var(--muted)!important}
 .app-shell .shell-main .modg-saas-subscription dl div dd{color:var(--ink)!important}
