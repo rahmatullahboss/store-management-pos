@@ -11,6 +11,7 @@ import {
   renderTaxConfigurationAdminPage,
   renderTaxExemptionsAdminPage,
 } from "../../build/apps/admin-web/src/app-shell/index.js";
+import { operationsLedgerBridgeStyles } from "../../build/packages/ui/src/operations-ledger.js";
 import {
   OPERATIONS_LEDGER_ADMIN_SCREENS,
   canonicalOperationsLedgerAdminPath,
@@ -154,6 +155,13 @@ test("Tax Exemptions has its own evidence registry and semantic state surface", 
   assert.match(html, /Certificate evidence/);
   assert.match(html, /Tax authority evidence/);
   assert.match(html, /font-variant-numeric:tabular-nums/);
+});
+
+test("Operations Ledger bridge keeps integration metric labels on the accessible shared surface", () => {
+  assert.match(
+    operationsLedgerBridgeStyles,
+    /\.modg-int-cards dl div\{background:var\(--surface\)!important;border:1px solid var\(--line\)!important;color:var\(--ink\)!important\}/,
+  );
 });
 
 test("Bengali and Arabic route-specific headings remain supported with RTL-safe shell composition", () => {
